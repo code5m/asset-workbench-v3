@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_84b63a13-b9e9-4bdd-b58a-990dd5408d81",
+  "type": "conversation",
+  "title": "knowledge capture verify",
+  "source": "codebuddy",
+  "createdAt": "2026-09-29T05:11:42.569Z",
+  "updatedAt": "2026-09-29T05:11:42.569Z",
+  "captureMode": "agent-work-record",
+  "relatedAssetPaths": [],
+  "promotedTo": []
+}

@@ -1,0 +1,32 @@
+{
+  "name": "asset-workbench-v3",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test:managed": "node --experimental-strip-types scripts/test-managed-assets.ts",
+    "agent:preflight": "node --experimental-strip-types scripts/agent-preflight.ts",
+    "agent:close": "node --experimental-strip-types scripts/agent-close.ts",
+    "verify:knowledge": "node --experimental-strip-types scripts/verify-knowledge.ts",
+    "test:agent": "node --experimental-strip-types scripts/test-agent-knowledge-capture.ts",
+    "test:transcript": "node --experimental-strip-types scripts/test-transcript-model.ts",
+    "test:capture": "node --experimental-strip-types scripts/test-capture-kernel.ts",
+    "test:providers": "node --experimental-strip-types scripts/test-provider-adapters.ts",
+    "capture:import:codex": "node --experimental-strip-types scripts/import-codex-history.ts"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "lucide-react": "^0.544.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0"
+  }
+}

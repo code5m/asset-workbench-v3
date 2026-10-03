@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_47715d3e-bc8f-4622-8fb4-860a8f357852",
+  "type": "agent-work-record",
+  "title": "Multi-Agent Capture Adapters",
+  "source": "codex",
+  "createdAt": "2026-10-03T03:29:38.146Z",
+  "updatedAt": "2026-10-03T03:29:38.168Z",
+  "captureMode": "agent-work-record",
+  "relatedAssetPaths": [
+    ".codex/hooks.json",
+    "server/providerAdapterService.ts",
+    "server/captureService.ts",
+    "server/assetPlugin.ts",
+    "scripts/capture-provider-event.ts",
+    "scripts/import-codex-history.ts",
+    "scripts/test-provider-adapters.ts",
+    "src/components/WelcomePage.tsx",
+    "src/services/assetClient.ts",
+    "03-docs/guides/provider-adapters.md",
+    "README.md",
+    "AGENTS.md"
+  ],
+  "promotedTo": [
+    {
+      "type": "design",
+      "id": "design_f2adac95-f21e-4b47-b14d-b59313cfc74a"
+    }
+  ],
+  "agentSessionId": "session_2817eb82-f464-4a23-9ffa-a5f3d7f7b8e4"
+}

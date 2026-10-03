@@ -1,0 +1,10 @@
+{
+  "description": "Asset Workbench provider-neutral Codex conversation capture.",
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node --experimental-strip-types scripts/capture-provider-event.ts", "async": true, "timeout": 3 }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "node --experimental-strip-types scripts/capture-provider-event.ts", "async": true, "timeout": 3 }] }],
+    "PostToolUse": [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "node --experimental-strip-types scripts/capture-provider-event.ts", "async": true, "timeout": 3 }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "node --experimental-strip-types scripts/capture-provider-event.ts", "timeout": 3 }] }],
+    "SessionEnd": [{ "hooks": [{ "type": "command", "command": "node --experimental-strip-types scripts/capture-provider-event.ts", "timeout": 3 }] }]
+  }
+}

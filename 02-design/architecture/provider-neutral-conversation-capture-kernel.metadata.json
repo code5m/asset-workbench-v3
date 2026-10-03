@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "design_abc5f60b-02d2-4205-8172-d5544817efb4",
+  "type": "design",
+  "title": "Provider-neutral conversation capture kernel",
+  "designArea": "architecture",
+  "createdAt": "2026-09-30T07:28:16.409Z",
+  "updatedAt": "2026-09-30T07:28:16.409Z",
+  "sourceConversations": [
+    "conv_720b146e-2843-4e68-ad7a-c3f889ffcd05"
+  ],
+  "relatedAssetPaths": [
+    "server/captureService.ts",
+    "server/assetPlugin.ts",
+    "src/domain/asset.ts",
+    "src/components/AssetExplorer.tsx",
+    "README.md",
+    "docs/product-skeleton.md",
+    "AGENTS.md",
+    "scripts/test-capture-kernel.ts",
+    "package.json"
+  ],
+  "promotedToDecisions": []
+}

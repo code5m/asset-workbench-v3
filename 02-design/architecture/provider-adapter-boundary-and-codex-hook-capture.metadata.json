@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "design_f2adac95-f21e-4b47-b14d-b59313cfc74a",
+  "type": "design",
+  "title": "Provider Adapter Boundary and Codex Hook Capture",
+  "designArea": "architecture",
+  "createdAt": "2026-10-03T03:29:38.162Z",
+  "updatedAt": "2026-10-03T03:29:38.162Z",
+  "sourceConversations": [
+    "conv_47715d3e-bc8f-4622-8fb4-860a8f357852"
+  ],
+  "relatedAssetPaths": [
+    ".codex/hooks.json",
+    "server/providerAdapterService.ts",
+    "server/captureService.ts",
+    "server/assetPlugin.ts",
+    "scripts/capture-provider-event.ts",
+    "scripts/import-codex-history.ts",
+    "scripts/test-provider-adapters.ts",
+    "src/components/WelcomePage.tsx",
+    "src/services/assetClient.ts",
+    "03-docs/guides/provider-adapters.md",
+    "README.md",
+    "AGENTS.md"
+  ],
+  "promotedToDecisions": []
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "transcript_bdb3b0ab-2759-426a-abfc-a95a32f3ba9a",
+  "type": "conversation-transcript",
+  "title": "Capture codex 5cf1845c",
+  "source": "codex",
+  "createdAt": "2026-10-03T03:22:17.814Z",
+  "updatedAt": "2026-10-03T03:22:17.814Z",
+  "captureMode": "full-transcript",
+  "completeness": "full",
+  "capturedAt": "2026-10-03T03:22:17.814Z",
+  "sourceSessionId": "01a0ffc8-9731-7f60-af71-f781e4a064a3",
+  "sourceMetadata": {
+    "provider": "codex",
+    "captureSource": "native-hook",
+    "captureSessionId": "capture_8510cba5-fdbf-4ba2-a1de-1e015cf1845c",
+    "eventCount": 1
+  },
+  "relatedAssetPaths": []
+}

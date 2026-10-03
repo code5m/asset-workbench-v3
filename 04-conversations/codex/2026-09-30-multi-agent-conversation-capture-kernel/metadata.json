@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_720b146e-2843-4e68-ad7a-c3f889ffcd05",
+  "type": "agent-work-record",
+  "title": "Multi-Agent Conversation Capture Kernel",
+  "source": "codex",
+  "createdAt": "2026-09-30T07:28:16.386Z",
+  "updatedAt": "2026-09-30T07:28:16.416Z",
+  "captureMode": "agent-work-record",
+  "relatedAssetPaths": [
+    "server/captureService.ts",
+    "server/assetPlugin.ts",
+    "src/domain/asset.ts",
+    "src/components/AssetExplorer.tsx",
+    "README.md",
+    "docs/product-skeleton.md",
+    "AGENTS.md",
+    "scripts/test-capture-kernel.ts",
+    "package.json"
+  ],
+  "promotedTo": [
+    {
+      "type": "design",
+      "id": "design_abc5f60b-02d2-4205-8172-d5544817efb4"
+    }
+  ],
+  "agentSessionId": "session_0b830de3-0798-4c51-8bf8-052888719364"
+}

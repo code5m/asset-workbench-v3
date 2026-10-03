@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "transcript_cbbfae14-ae66-42af-8da4-1c682cca4968",
+  "type": "conversation-transcript",
+  "title": "Capture other 43756b59",
+  "source": "other",
+  "createdAt": "2026-09-30T07:27:52.653Z",
+  "updatedAt": "2026-09-30T07:27:52.653Z",
+  "captureMode": "full-transcript",
+  "completeness": "full",
+  "capturedAt": "2026-09-30T07:27:52.653Z",
+  "sourceSessionId": "runtime-e2e-20260930",
+  "sourceMetadata": {
+    "provider": "other",
+    "captureSource": "test",
+    "captureSessionId": "capture_cb9d9fe6-5215-4e12-9329-facc43756b59",
+    "eventCount": 4
+  },
+  "relatedAssetPaths": []
+}
