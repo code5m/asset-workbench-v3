@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_4c95a201-f2dd-43c3-9a38-93fb5f3bdc30",
+  "type": "agent-work-record",
+  "title": "Provider final wiring: OpenCode install+adapter+E2E, Trae hook re-verification, ChatGPT boundary, CodeBuddy audit",
+  "source": "codebuddy",
+  "createdAt": "2026-10-04T19:10:06.983Z",
+  "updatedAt": "2026-10-04T19:10:06.983Z",
+  "captureMode": "agent-work-record",
+  "relatedAssetPaths": [
+    "server/providerAdapterService.ts",
+    "server/managedAssetService.ts",
+    "scripts/import-opencode-session.ts",
+    "scripts/test-opencode-capture.ts",
+    "scripts/test-trae-capture.ts",
+    "scripts/test-chatgpt-import.ts",
+    ".opencode/plugins/awb-capture.js",
+    ".trae/hooks.json",
+    "docs/provider-capture.md",
+    "03-docs/guides/provider-adapters.md",
+    "AGENTS.md",
+    "README.md",
+    "package.json"
+  ],
+  "promotedTo": [],
+  "agentSessionId": "session_d4b702d8-ac8f-4aac-b7a2-cc1976c28355"
+}

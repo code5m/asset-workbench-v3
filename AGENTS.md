@@ -334,6 +334,19 @@ and never build a private capture path for one provider.
 
 Real statuses and evidence live in `docs/provider-capture.md`. Summary:
 Codex = ENABLED (hooks, verified); CodeBuddy = ENABLED (official hooks + official
-session transcript, verified); CodeArts = BLOCKED (no AK/SK credentials);
-OpenCode = NOT_INSTALLED (no executable); Trae = UNSUPPORTED (installed IDE, no
-official session/hook interface); ChatGPT = LIMITED (explicit import only).
+session transcript; realtime PASS, auto `SessionEnd` NOT_RUNTIME_VERIFIED);
+OpenCode = ENABLED (official plugin + official export, E2E verified, 1.18.34);
+Trae = LIMITED (official workspace hooks ARE supported and configured, but no real
+Trae event observed yet — needs an interactive logged-in Trae IDE session; the
+build has no `SessionEnd`, so finalization is LIMITED and never faked);
+CodeArts = BLOCKED (no AK/SK credentials); ChatGPT = LIMITED (explicit import only;
+no product realtime hook, and an OpenAI API Agent webhook is a different thing
+that must never be reported as ChatGPT realtime capture).
+
+Two permanent anti-regression facts:
+
+- Trae is an IDE product. **"No CLI" is not "no hooks"** — hooks are configured in
+  `.trae/hooks.json` and must be judged by the installed build's real capability.
+- OpenCode streams many `message.part.updated` events. One assistant answer must
+  produce **one** canonical `assistant.message` (merge by `messageID`), and the
+  role must come from `message.updated` → `properties.info.role`.

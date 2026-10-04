@@ -139,7 +139,9 @@ function relToAbs(root: string, rel: string): string {
 export function metadataRelForContent(contentRel: string): string {
   const dir = path.posix.dirname(contentRel);
   const base = path.posix.basename(contentRel);
-  if (base === 'conversation.md') return path.posix.join(dir, 'metadata.json');
+  // Both managed conversation assets keep their sidecar as `metadata.json`:
+  //   conversation.md (Agent Work Record) and transcript.md (Transcript).
+  if (base === 'conversation.md' || base === 'transcript.md') return path.posix.join(dir, 'metadata.json');
   const stem = base.replace(/\.md$/i, '');
   return path.posix.join(dir, `${stem}.metadata.json`);
 }

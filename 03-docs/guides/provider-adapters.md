@@ -22,8 +22,8 @@ create the final Transcript.
 | Codex | `codex-cli 0.149.0` | project lifecycle hooks + JSONL importer | yes / yes / PostToolUse | yes | yes | ENABLED, runtime verified |
 | CodeBuddy | `2.127.0`, hooks supported by the installed build | official `.codebuddy/settings.json` lifecycle hooks + official session transcript | yes / yes / Pre+PostToolUse | yes | yes (official transcript) | ENABLED, runtime verified |
 | CodeArts | `26.9.3` | official `run` / `export`, both credential-gated | not reachable | no | blocked | BLOCKED, no `CODEARTS_CLI_AK`/`CODEARTS_CLI_SK` |
-| OpenCode | no executable anywhere | plugin / SDK event stream | not available | no | no | NOT_INSTALLED |
-| Trae | `trae-cn 1.107.1` (IDE) | none found in the installed build | not available | no | no | UNSUPPORTED, no official session/hook interface |
+| OpenCode | `1.18.34` (installed via `npm i -g opencode-ai`) | official `.opencode/plugins/` event stream + official `opencode export` | yes / yes / tool parts | yes | yes | ENABLED, runtime verified |
+| Trae | `trae-cn 1.107.1` | official workspace hooks (`.trae/hooks.json`) | adapter ready, no real event yet | yes (hook config) | no | LIMITED, hooks supported+configured but no real Trae turn observed; no `SessionEnd` in build |
 | ChatGPT desktop | desktop app present | explicit transcript import | imported content only | no | user import | LIMITED |
 | WorkBuddy | no local installation found | future provider integration | not available | no | no | NOT_INSTALLED |
 

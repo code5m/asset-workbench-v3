@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "transcript_0426f9c9-3361-48d7-99b7-7888e1dc738c",
+  "type": "conversation-transcript",
+  "title": "Capture opencode 9586c225",
+  "source": "other",
+  "createdAt": "2026-10-04T18:59:09.832Z",
+  "updatedAt": "2026-10-04T18:59:09.832Z",
+  "captureMode": "full-transcript",
+  "completeness": "full",
+  "capturedAt": "2026-10-04T18:59:09.832Z",
+  "sourceSessionId": "ses_ef7bbe890ffesPJ6kOChat1V2a",
+  "sourceMetadata": {
+    "provider": "opencode",
+    "captureSource": "import",
+    "captureSessionId": "capture_3b2f7bba-3d9f-485f-a771-06bb9586c225",
+    "eventCount": 8
+  },
+  "relatedAssetPaths": []
+}

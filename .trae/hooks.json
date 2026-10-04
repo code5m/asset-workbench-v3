@@ -1,0 +1,78 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --experimental-strip-types /home/ainfinit/Documents/Knowledge-Base/secondBrain/asset-workbench-v3/scripts/capture-provider-event.ts --provider trae",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --experimental-strip-types /home/ainfinit/Documents/Knowledge-Base/secondBrain/asset-workbench-v3/scripts/capture-provider-event.ts --provider trae",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --experimental-strip-types /home/ainfinit/Documents/Knowledge-Base/secondBrain/asset-workbench-v3/scripts/capture-provider-event.ts --provider trae",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --experimental-strip-types /home/ainfinit/Documents/Knowledge-Base/secondBrain/asset-workbench-v3/scripts/capture-provider-event.ts --provider trae",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --experimental-strip-types /home/ainfinit/Documents/Knowledge-Base/secondBrain/asset-workbench-v3/scripts/capture-provider-event.ts --provider trae",
+            "async": false,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --experimental-strip-types /home/ainfinit/Documents/Knowledge-Base/secondBrain/asset-workbench-v3/scripts/capture-provider-event.ts --provider trae",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

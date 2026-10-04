@@ -119,13 +119,21 @@ export function detectProviders(projectRoot: string): ProviderStatus[] {
   const codeartsInstalled = commandExists('codearts');
   // CodeArts CLI refuses every command (including `session list`) without these.
   const codeartsCreds = Boolean(process.env.CODEARTS_CLI_AK && process.env.CODEARTS_CLI_SK);
-  const opencodePath = firstExistingPath([
-    path.join(home, '.local', 'bin', 'opencode'),
-    path.join(home, '.opencode', 'bin', 'opencode'),
-    '/usr/local/bin/opencode',
-    '/usr/bin/opencode',
-  ]);
+  const opencodePath = commandExists('opencode')
+    ? 'opencode'
+    : firstExistingPath([
+      path.join(home, '.local', 'bin', 'opencode'),
+      path.join(home, '.opencode', 'bin', 'opencode'),
+      '/usr/local/bin/opencode',
+      '/usr/bin/opencode',
+    ]);
+  // Official OpenCode plugin location for this workspace.
+  const opencodePlugin = fs.existsSync(path.join(projectRoot, '.opencode', 'plugins', 'awb-capture.js'));
+  const opencodeEvidence = runtimeVerificationFor('opencode');
   const traePath = commandExists('trae-cn') ? 'trae-cn' : fs.existsSync('/usr/bin/trae-cn') ? '/usr/bin/trae-cn' : undefined;
+  // Official Trae workspace hook config.
+  const traeHooks = readHookConfigured(path.join(projectRoot, '.trae', 'hooks.json'));
+  const traeEvidence = runtimeVerificationFor('trae');
   const chatgptInstalled = commandExists('chatgpt');
 
   return [
@@ -196,39 +204,54 @@ export function detectProviders(projectRoot: string): ProviderStatus[] {
     },
     {
       provider: 'opencode',
-      status: opencodePath ? 'AVAILABLE' : 'NOT_INSTALLED',
-      captureMethod: 'official plugin / SDK event stream (pending executable)',
-      realtime: false,
-      historicalImport: false,
-      runtimeVerified: false,
+      status: !opencodePath ? 'NOT_INSTALLED' : opencodePlugin ? 'ENABLED' : 'AVAILABLE',
+      captureMethod: 'official plugin (.opencode/plugins) event stream + official `opencode export` session import',
+      realtime: true,
+      historicalImport: true,
+      runtimeVerified: opencodeEvidence.verified,
+      lastVerifiedAt: opencodeEvidence.lastVerifiedAt,
       installed: Boolean(opencodePath),
-      configured: Boolean(opencodePath),
-      capabilities: [],
-      limitations: opencodePath
-        ? []
-        : ['No OpenCode executable found in PATH, ~/.local/bin, ~/.opencode/bin, /usr/local/bin or /usr/bin. A leftover ~/.local/share/opencode data directory exists but its internal DB schema is deliberately not used as a capture source.'],
-      detail: opencodePath
-        ? `OpenCode executable detected at ${opencodePath}, but no adapter is wired yet.`
-        : 'OpenCode executable not installed; no event source is reachable.',
+      version: opencodePath ? probeVersion('opencode') : undefined,
+      configured: opencodePlugin,
+      capabilities: opencodePlugin
+        ? ['realtime-plugin-events', 'official-session-export', 'semantic-stream-merge', 'raw-events', 'canonical-events', 'tool-events']
+        : [],
+      limitations: [
+        'Streaming is merged semantically: many message.part.updated / delta events collapse to one assistant message per messageId.',
+      ],
+      detail: !opencodePath
+        ? 'OpenCode executable not installed; no event source is reachable.'
+        : opencodePlugin
+          ? (opencodeEvidence.verified
+            ? 'Official plugin installed and a real OpenCode session was captured and materialized into a transcript.'
+            : 'Official plugin installed; awaiting a real captured OpenCode session.')
+          : 'OpenCode detected but no capture plugin is installed in this workspace.',
     },
     {
       provider: 'trae',
-      status: traePath ? 'UNSUPPORTED' : 'NOT_INSTALLED',
-      captureMethod: 'no official session/hook interface found in the installed build',
-      realtime: false,
+      status: !traePath ? 'NOT_INSTALLED' : traeHooks ? 'LIMITED' : 'AVAILABLE',
+      captureMethod: 'official workspace hooks (SessionStart/UserPromptSubmit/PreToolUse/PostToolUse/Stop/Notification); this build has no SessionEnd',
+      realtime: true,
       historicalImport: false,
-      runtimeVerified: false,
+      runtimeVerified: traeEvidence.verified,
+      lastVerifiedAt: traeEvidence.lastVerifiedAt,
       installed: Boolean(traePath),
       version: traePath ? probeVersion(traePath) : undefined,
-      configured: false,
-      capabilities: [],
+      configured: traeHooks,
+      capabilities: traeHooks
+        ? ['realtime-hook-configured', 'user-prompt', 'tool-events', 'assistant-final-via-stop']
+        : [],
       limitations: [
-        'The installed Trae CN binary exposes only editor options (diff/merge/add/goto/new-window/user-data-dir); no AI session CLI, hook event names, or documented session export.',
-        'A SessionEnd-like lifecycle event was NOT found, and none will be fabricated.',
+        'The installed build exposes NO SessionEnd lifecycle event, so session finalization cannot be auto-confirmed; none will be fabricated.',
+        'Trae is an IDE product: a real AI turn requires an interactive logged-in Trae session, which cannot be driven headlessly here, so no real Trae event has been observed yet.',
       ],
-      detail: traePath
-        ? `Trae CN IDE detected at ${traePath}, but it exposes no official realtime session event or hook interface that this adapter can subscribe to, so no capture is claimed.`
-        : 'No Trae executable or local state was detected.',
+      detail: !traePath
+        ? 'No Trae executable or local state was detected.'
+        : traeHooks
+          ? (traeEvidence.verified
+            ? 'Trae hooks installed and a real Trae capture was materialized into a transcript.'
+            : 'Trae hooks are installed and the adapter is wired, but no real Trae AI turn has been observed yet (needs an interactive logged-in Trae session).')
+          : 'Trae detected but no hook configuration is installed in this workspace.',
     },
     {
       provider: 'chatgpt',
@@ -472,6 +495,201 @@ function iso(value: string | number | undefined, fallback: string): string {
   if (typeof value === 'number' && Number.isFinite(value)) return new Date(value).toISOString();
   if (typeof value === 'string' && value && !Number.isNaN(Date.parse(value))) return new Date(value).toISOString();
   return fallback;
+}
+
+// ---------------------------------------------------------------------------
+// OpenCode
+// ---------------------------------------------------------------------------
+
+/** One normalized OpenCode record: either a live plugin event or an export part. */
+interface OpencodeRecord {
+  type?: string;
+  timestamp?: number | string;
+  sessionID?: string;
+  role?: string;
+  part?: Record<string, any>;
+  properties?: Record<string, any>;
+}
+
+function opencodePart(record: OpencodeRecord): Record<string, any> | null {
+  const direct = record.part;
+  if (direct && typeof direct === 'object') return direct;
+  const nested = record.properties?.part ?? record.properties;
+  if (nested && typeof nested === 'object' && 'type' in nested) return nested as Record<string, any>;
+  return null;
+}
+
+/**
+ * Merge OpenCode records into canonical events with SEMANTIC dedupe.
+ *
+ * OpenCode streams many `message.part.updated` / `text` events for one answer.
+ * Every part is keyed by (messageID, partId), so repeated stream updates for the
+ * same part overwrite in place and each assistant answer produces exactly ONE
+ * `assistant.message`. Tool parts remain their own independent events.
+ */
+function opencodeRecordsToEvents(records: OpencodeRecord[], providerSessionId: string): AppendCaptureEventInput[] {
+  interface Bucket { role: string; parts: Map<string, { index: number; part: Record<string, any> }>; }
+  const messages = new Map<string, Bucket>();
+  const order: string[] = [];
+  let counter = 0;
+
+  // Pass 1: authoritative roles from `message.updated` (properties.info.role).
+  // Live plugin events do not carry a role on the part itself, so without this
+  // pass user prompts would be misattributed to the assistant.
+  const roles = new Map<string, string>();
+  for (const record of records) {
+    const info = (record.properties as any)?.info ?? (record as any).info;
+    const id = typeof info?.id === 'string' ? info.id : undefined;
+    if (id && typeof info.role === 'string') roles.set(id, info.role);
+    const partIdMsg = typeof record.part?.messageID === 'string' ? record.part.messageID : undefined;
+    if (partIdMsg && typeof record.role === 'string') roles.set(partIdMsg, record.role);
+  }
+
+  for (const record of records) {
+    const part = opencodePart(record);
+    if (!part) continue;
+    const messageID = typeof part.messageID === 'string' ? part.messageID : `__nomessage_${counter}`;
+    if (!messages.has(messageID)) {
+      messages.set(messageID, { role: roles.get(messageID) ?? 'assistant', parts: new Map() });
+      order.push(messageID);
+    }
+    const bucket = messages.get(messageID)!;
+    const role = roles.get(messageID);
+    if (role) bucket.role = role;
+    const partId = typeof part.id === 'string' ? part.id : `part_${counter}`;
+    // Same partId seen again = streaming update: overwrite, never append.
+    if (!bucket.parts.has(partId)) bucket.parts.set(partId, { index: counter, part });
+    else bucket.parts.set(partId, { index: bucket.parts.get(partId)!.index, part });
+    counter += 1;
+  }
+
+  const events: AppendCaptureEventInput[] = [];
+  let sequence = 0;
+  const stamp = (value: unknown): string => {
+    if (typeof value === 'number' && Number.isFinite(value)) return new Date(value).toISOString();
+    if (typeof value === 'string' && value && !Number.isNaN(Date.parse(value))) return new Date(value).toISOString();
+    return now();
+  };
+
+  for (const messageID of order) {
+    const bucket = messages.get(messageID)!;
+    const parts = [...bucket.parts.values()].sort((a, b) => a.index - b.index);
+
+    // Chat text: all `text` parts of one message collapse into ONE message event.
+    const texts = parts
+      .filter((entry) => entry.part.type === 'text' && typeof entry.part.text === 'string' && entry.part.text.trim())
+      .map((entry) => String(entry.part.text));
+    if (texts.length > 0 && (bucket.role === 'user' || bucket.role === 'assistant')) {
+      events.push({
+        eventId: `opencode:${providerSessionId}:${messageID}:text`,
+        eventType: bucket.role === 'user' ? 'user.message' : 'assistant.message',
+        sequence: sequence++,
+        timestamp: stamp(parts[0]?.part?.time?.start ?? parts[0]?.part?.time?.created),
+        actor: bucket.role,
+        content: texts.join('\n'),
+        attachments: [{ providerMessageId: messageID, captureSourceType: 'opencode-official' }],
+      });
+    }
+
+    // Tool parts stay independent canonical events.
+    for (const entry of parts) {
+      if (entry.part.type !== 'tool') continue;
+      const state = (entry.part.state ?? {}) as Record<string, any>;
+      const partId = String(entry.part.id ?? `tool_${entry.index}`);
+      events.push({
+        eventId: `opencode:${providerSessionId}:${messageID}:tool:${partId}`,
+        eventType: 'tool.completed',
+        sequence: sequence++,
+        timestamp: stamp(state.time?.end ?? state.time?.start),
+        actor: 'tool',
+        toolCall: { name: entry.part.tool, toolUseId: entry.part.callID, input: state.input },
+        toolResult: { output: state.output, ok: state.status !== 'error', status: state.status },
+        attachments: [{ providerMessageId: messageID, partId }],
+      });
+    }
+  }
+  return events;
+}
+
+function opencodeWithSession(providerSessionId: string, captureSource: 'native-hook' | 'import', events: AppendCaptureEventInput[]) {
+  return withProviderLock('opencode', providerSessionId, () => {
+    let state = readState('opencode', providerSessionId);
+    if (!state) {
+      const session = createCaptureSession({ provider: 'opencode', providerSessionId, captureSource });
+      state = { captureSessionId: session.captureSessionId, providerSessionId, updatedAt: now() };
+      saveState('opencode', state);
+    }
+    // Keep sequences monotonic across successive imports of the same session so
+    // later turns cannot be rendered before earlier ones.
+    let offset = 0;
+    try {
+      const current = getCaptureSession(state.captureSessionId);
+      if (typeof current.lastSequence === 'number') offset = current.lastSequence + 1;
+    } catch { offset = 0; }
+    for (const event of events) {
+      if (typeof event.sequence === 'number') event.sequence = offset + event.sequence;
+    }
+    const result = events.length ? appendCaptureEvents(state.captureSessionId, events) : { accepted: [] };
+    state.updatedAt = now(); saveState('opencode', state);
+    return { captureSessionId: state.captureSessionId, imported: result.accepted.length };
+  });
+}
+
+/** Drain the fail-open plugin inbox (`.opencode/plugins/awb-capture.js`) into the Capture Kernel. */
+export function importOpencodeInbox(inboxPath: string): { captureSessionId: string; imported: number } {
+  const records: OpencodeRecord[] = fs.readFileSync(inboxPath, 'utf8').split('\n').filter(Boolean).flatMap((line) => {
+    try { return [JSON.parse(line) as OpencodeRecord]; } catch { return []; }
+  });
+  const sessionIds = new Set<string>();
+  for (const record of records) {
+    const sid = record.sessionID ?? (record.part as any)?.sessionID ?? (record.properties as any)?.sessionID;
+    if (typeof sid === 'string') sessionIds.add(sid);
+  }
+  if (sessionIds.size === 0) throw new Error('no OpenCode session id found in inbox');
+  let last = { captureSessionId: '', imported: 0 };
+  for (const sid of sessionIds) {
+    const scoped = records.filter((record) => {
+      const s = record.sessionID ?? (record.part as any)?.sessionID ?? (record.properties as any)?.sessionID;
+      return s === sid;
+    });
+    last = opencodeWithSession(sid, 'native-hook', opencodeRecordsToEvents(scoped, sid));
+  }
+  return last;
+}
+
+/** Import an official `opencode export <sessionID>` JSON into the Capture Kernel. */
+export function importOpencodeSession(exportPath: string): { captureSessionId: string; imported: number } {
+  const parsed = JSON.parse(fs.readFileSync(exportPath, 'utf8')) as {
+    info?: { id?: string; model?: { id?: string; providerID?: string }; agent?: string; version?: string };
+    messages?: Array<{ info?: { id?: string; role?: string; time?: { created?: number } }; parts?: Array<Record<string, any>> }>;
+  };
+  const providerSessionId = parsed.info?.id;
+  if (!providerSessionId) throw new Error('OpenCode export missing info.id');
+
+  const records: OpencodeRecord[] = [];
+  for (const message of parsed.messages ?? []) {
+    const role = message.info?.role ?? 'assistant';
+    for (const part of message.parts ?? []) {
+      records.push({
+        type: typeof part.type === 'string' ? part.type : undefined,
+        timestamp: message.info?.time?.created,
+        sessionID: providerSessionId,
+        role,
+        part,
+      });
+    }
+  }
+  const events = opencodeRecordsToEvents(records, providerSessionId);
+  // Preserve real provider provenance on every event.
+  const provenance = {
+    model: parsed.info?.model?.id ? `${parsed.info.model.providerID ?? 'opencode'}/${parsed.info.model.id}` : undefined,
+    agentId: parsed.info?.agent,
+    providerVersion: parsed.info?.version,
+  };
+  for (const event of events) {
+    event.attachments = [...(event.attachments ?? []), provenance];
+  }
+  return opencodeWithSession(providerSessionId, 'import', events);
 }
 
 /**

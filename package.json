@@ -17,7 +17,11 @@
     "test:providers": "node --experimental-strip-types scripts/test-provider-adapters.ts",
     "test:codebuddy-capture": "node --experimental-strip-types scripts/test-codebuddy-capture.ts",
     "capture:import:codex": "node --experimental-strip-types scripts/import-codex-history.ts",
-    "capture:import:codebuddy": "node --experimental-strip-types scripts/import-codebuddy-history.ts"
+    "capture:import:codebuddy": "node --experimental-strip-types scripts/import-codebuddy-history.ts",
+    "test:opencode-capture": "node --experimental-strip-types scripts/test-opencode-capture.ts",
+    "test:trae-capture": "node --experimental-strip-types scripts/test-trae-capture.ts",
+    "capture:import:opencode": "node --experimental-strip-types scripts/import-opencode-session.ts",
+    "test:chatgpt-import": "node --experimental-strip-types scripts/test-chatgpt-import.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.4",

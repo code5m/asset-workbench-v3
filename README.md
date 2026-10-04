@@ -24,7 +24,8 @@ The product rule is simple:
 ## Conversation Capture Kernel
 
 The workbench has a provider-neutral Capture Kernel and verified provider
-adapters for **Codex** and **CodeBuddy** lifecycle hooks. The CodeBuddy adapter
+adapters for **Codex**, **CodeBuddy** and **OpenCode**, plus a configured hook
+integration for **Trae**. The CodeBuddy adapter
 consumes the official hook payload (`session_id`, `hook_event_name`, `prompt`,
 `tool_*`, `last_assistant_message`, `generation_id`, model/agent provenance) and
 can also import the official session transcript published via the hook payload's
