@@ -20,15 +20,17 @@ create the final Transcript.
 | Provider | Installed evidence | Supported path | User / assistant / tools | Real-time | History | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | Codex | `codex-cli 0.149.0` | project lifecycle hooks + JSONL importer | yes / yes / PostToolUse | yes | yes | ENABLED, runtime verified |
-| CodeBuddy | CLI exposes ACP and stream JSON | generic ACP/stream event contract | contract only | no configured subscriber | no verified importer | LIMITED |
-| CodeArts | CLI exposes ACP, `session list`, and `export` | generic ACP / export ingestion boundary | contract only | no configured subscriber | CLI export is available | LIMITED |
-| OpenCode | local state found, no executable or stable schema | future local-history adapter | not verified | no | no | LIMITED |
-| Trae | no local installation found | future provider integration | not available | no | no | NOT_INSTALLED |
-| ChatGPT desktop | no workspace-accessible event feed | explicit transcript import | imported content only | no | user export/import | LIMITED |
+| CodeBuddy | `2.127.0`, hooks supported by the installed build | official `.codebuddy/settings.json` lifecycle hooks + official session transcript | yes / yes / Pre+PostToolUse | yes | yes (official transcript) | ENABLED, runtime verified |
+| CodeArts | `26.9.3` | official `run` / `export`, both credential-gated | not reachable | no | blocked | BLOCKED, no `CODEARTS_CLI_AK`/`CODEARTS_CLI_SK` |
+| OpenCode | no executable anywhere | plugin / SDK event stream | not available | no | no | NOT_INSTALLED |
+| Trae | `trae-cn 1.107.1` (IDE) | none found in the installed build | not available | no | no | UNSUPPORTED, no official session/hook interface |
+| ChatGPT desktop | desktop app present | explicit transcript import | imported content only | no | user import | LIMITED |
 | WorkBuddy | no local installation found | future provider integration | not available | no | no | NOT_INSTALLED |
 
-`LIMITED` is intentional: it means the workbench has not observed a reliable,
-automatic live feed and will not label a reconstructed summary as a transcript.
+`LIMITED`, `BLOCKED`, and `UNSUPPORTED` are intentional and honest states: they
+mean the workbench has not observed a reliable, automatic live feed from that
+provider and will not label a reconstructed summary as a transcript. Full
+evidence for each row is in [`docs/provider-capture.md`](../../docs/provider-capture.md).
 
 ## Codex automatic capture
 
@@ -58,6 +60,43 @@ The importer reads the source without modifying it. Event ids use the original
 session id and line ordinal, so repeating the command imports zero duplicates.
 Imported messages retain their source session id; sequence gaps remain visible
 and result in a partial transcript when materialized.
+
+## CodeBuddy automatic capture
+
+This project contains `.codebuddy/settings.json`, which registers official
+CodeBuddy lifecycle hooks:
+
+```text
+SessionStart        -> session.started
+UserPromptSubmit    -> user.message          (payload field `prompt`)
+PreToolUse          -> tool.started
+PostToolUse         -> tool.completed
+PostToolUseFailure  -> tool.completed (ok=false)
+PreCompact          -> session.compacted
+Stop                -> assistant.message    (payload field `last_assistant_message`)
+SubagentStart/Stop  -> no canonical event   (never a separate main transcript)
+```
+
+The adapter keys everything on the official `session_id`, so one CodeBuddy
+session is exactly one CaptureSession. Hooks are fail-open and mostly async.
+
+CodeBuddy also publishes its official session transcript location in the hook
+payload's `transcript_path`. That directory (`index.json` + `messages/*.json`)
+can be imported for full-fidelity user/assistant text:
+
+```bash
+npm run capture:import:codebuddy -- <transcript-path-from-hook-payload>
+```
+
+The import is idempotent and suppresses exact duplicate content, so a provider
+re-emission (for example, re-sending the leading prompt) does not produce a
+duplicated message.
+
+Limitation: creating a brand-new CodeBuddy session headlessly (`codebuddy -p`,
+or ACP `session/new`) returns `default agent undefined is not registered` /
+`Authentication required`, i.e. it needs an interactive provider login. Real
+sessions that the user actually runs are captured; sessions cannot be
+fabricated unattended.
 
 ## Adding another provider
 

@@ -305,3 +305,35 @@ Provider Adapter → Capture API → CaptureSession/Event Store → Transcript M
   is runtime-verified for a complete user/assistant transcript. Do not claim
   that ChatGPT, CodeBuddy, Trae, OpenCode, CodeArts, ACP, A2A, or MCP is
   connected unless its own real adapter has been implemented and verified.
+
+### Provider Adapter rules (anti-regression)
+
+All providers must flow through the same boundary:
+`Provider → Provider Adapter → Capture Kernel → Managed Transcript`. Never add a
+second session store, never let an adapter write `04-conversations/` directly,
+and never build a private capture path for one provider.
+
+1. `runtimeVerified=true` requires a **real ended capture with a materialized
+   transcript**. A config file, a compiling adapter, or a mocked test is never
+   enough. Do not confuse "officially supported" with "verified here".
+2. Providers are independent. A missing binary, missing login, missing API key,
+   or unsupported version blocks **only that provider**: record the blocker with
+   evidence, then continue to the next one. Never abort the whole task.
+3. Never fabricate a lifecycle event. If a provider has no `SessionEnd`-like
+   event, do not invent one — keep the session honestly open/partial instead.
+4. Capture is **fail-open**. Capture failure must never block, slow, or alter the
+   provider's own answer.
+5. Identity comes from real stable provider fields (`provider` +
+   `providerSessionId`, plus `providerMessageId` / `generation_id` /
+   `toolCallId` where available). Never infer session identity from `cwd`,
+   time windows, filenames, or prompt text alone.
+6. Preserve raw provider payloads in `raw-events.jsonl`. Providers may re-emit
+   content (resume, re-sent leading prompt); suppress only **exact** duplicates.
+
+### Verified provider status (this machine)
+
+Real statuses and evidence live in `docs/provider-capture.md`. Summary:
+Codex = ENABLED (hooks, verified); CodeBuddy = ENABLED (official hooks + official
+session transcript, verified); CodeArts = BLOCKED (no AK/SK credentials);
+OpenCode = NOT_INSTALLED (no executable); Trae = UNSUPPORTED (installed IDE, no
+official session/hook interface); ChatGPT = LIMITED (explicit import only).

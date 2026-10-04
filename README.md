@@ -23,11 +23,14 @@ The product rule is simple:
 
 ## Conversation Capture Kernel
 
-The workbench has a provider-neutral Capture Kernel and a verified first
-provider adapter for **Codex lifecycle hooks**. Its adapter turns Codex session
-start, user prompt, tool completion, and final response events into canonical
-events; ending the Codex session materializes a managed Transcript. Other
-providers remain capability-gated rather than being presented as connected.
+The workbench has a provider-neutral Capture Kernel and verified provider
+adapters for **Codex** and **CodeBuddy** lifecycle hooks. The CodeBuddy adapter
+consumes the official hook payload (`session_id`, `hook_event_name`, `prompt`,
+`tool_*`, `last_assistant_message`, `generation_id`, model/agent provenance) and
+can also import the official session transcript published via the hook payload's
+`transcript_path`. Ending a captured session materializes a managed Transcript.
+Other providers are honestly capability-gated (BLOCKED / NOT_INSTALLED /
+UNSUPPORTED / LIMITED); see `docs/provider-capture.md` for real evidence.
 
 ```text
 Provider Adapter → Asset Workbench Capture API → Capture Event Kernel

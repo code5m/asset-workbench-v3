@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "transcript_43321d8a-e596-44ac-978a-e311e4fd821d",
+  "type": "conversation-transcript",
+  "title": "Capture codebuddy 30f133e2",
+  "source": "codebuddy",
+  "createdAt": "2026-10-04T17:29:47.393Z",
+  "updatedAt": "2026-10-04T17:29:47.393Z",
+  "captureMode": "full-transcript",
+  "completeness": "full",
+  "capturedAt": "2026-10-04T17:29:47.393Z",
+  "sourceSessionId": "dbd3e2e415024c979a432e241742f1cc",
+  "sourceMetadata": {
+    "provider": "codebuddy",
+    "captureSource": "import",
+    "captureSessionId": "capture_40126a9f-c8de-4cb0-b505-f78330f133e2",
+    "eventCount": 821
+  },
+  "relatedAssetPaths": []
+}

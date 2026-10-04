@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_d20d8a09-7585-4896-9700-9b88fcf4fd35",
+  "type": "agent-work-record",
+  "title": "Provider capture: wire remaining providers to the real adapter/kernel chain",
+  "source": "codebuddy",
+  "createdAt": "2026-10-04T18:12:16.708Z",
+  "updatedAt": "2026-10-04T18:14:05.761Z",
+  "captureMode": "agent-work-record",
+  "relatedAssetPaths": [
+    "server/providerAdapterService.ts",
+    "scripts/capture-provider-event.ts",
+    "scripts/import-codebuddy-history.ts",
+    "scripts/test-codebuddy-capture.ts",
+    ".codebuddy/settings.json",
+    "docs/provider-capture.md",
+    "03-docs/guides/provider-adapters.md",
+    "AGENTS.md",
+    "README.md",
+    "package.json"
+  ],
+  "promotedTo": [
+    {
+      "type": "design",
+      "id": "design_566cb679-8e45-4f01-9887-f6f6cd162474"
+    }
+  ],
+  "agentSessionId": "session_c60627b0-c924-4a2d-8d4b-c94c479945c0"
+}
