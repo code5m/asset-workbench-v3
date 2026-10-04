@@ -86,6 +86,17 @@
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --experimental-strip-types /home/ainfinit/Documents/Knowledge-Base/secondBrain/asset-workbench-v3/scripts/capture-provider-event.ts --provider codebuddy",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }
