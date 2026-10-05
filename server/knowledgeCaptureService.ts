@@ -295,6 +295,16 @@ export function checkRelationConsistency(ids: string[]): RelationIssue[] {
   }
   for (const [id, { meta, contentRel }] of map) {
     if (meta.type === 'conversation' || meta.type === 'agent-work-record') {
+      if (meta.sourceTranscriptId) {
+        const transcript = map.get(meta.sourceTranscriptId);
+        if (!transcript) {
+          issues.push({ assetId: id, path: contentRel, message: `sourceTranscript ${meta.sourceTranscriptId} missing` });
+        } else if (transcript.meta.type !== 'conversation-transcript') {
+          issues.push({ assetId: id, path: contentRel, message: `sourceTranscript ${meta.sourceTranscriptId} is not a transcript` });
+        } else if (transcript.meta.workRecordId !== id) {
+          issues.push({ assetId: id, path: contentRel, message: `transcript ${meta.sourceTranscriptId} missing workRecord back-link` });
+        }
+      }
       for (const p of meta.promotedTo ?? []) {
         const d = map.get(p.id);
         if (!d) {
@@ -326,6 +336,14 @@ export function checkRelationConsistency(ids: string[]): RelationIssue[] {
         if (!(c.meta.promotedTo ?? []).some((p) => p.type === 'design' && p.id === id)) {
           issues.push({ assetId: id, path: contentRel, message: `sourceConversation ${cid} missing promotedTo back-link` });
         }
+      }
+    }
+    if (meta.type === 'conversation-transcript' && meta.workRecordId) {
+      const workRecord = map.get(meta.workRecordId);
+      if (!workRecord) {
+        issues.push({ assetId: id, path: contentRel, message: `workRecord ${meta.workRecordId} missing` });
+      } else if (workRecord.meta.sourceTranscriptId !== id) {
+        issues.push({ assetId: id, path: contentRel, message: `workRecord ${meta.workRecordId} missing sourceTranscript back-link` });
       }
     }
     if (meta.type === 'decision') {
@@ -371,6 +389,7 @@ function scanTempResidue(root: string): string[] {
 export interface VerifyResult {
   ok: boolean;
   issues: string[];
+  warnings: string[];
 }
 
 /**
@@ -378,12 +397,13 @@ export interface VerifyResult {
  */
 export function verifyKnowledgeCapture(sessionId?: string): VerifyResult {
   const issues: string[] = [];
+  const warnings: string[] = [];
   const id = sessionId ?? currentSessionId();
   if (!id) {
-    return { ok: false, issues: ['no active AgentSession (run agent:preflight first)'] };
+    return { ok: false, issues: ['no active AgentSession (run agent:preflight first)'], warnings };
   }
   const session = readSession(id);
-  if (!session) return { ok: false, issues: [`AgentSession not found: ${id}`] };
+  if (!session) return { ok: false, issues: [`AgentSession not found: ${id}`], warnings };
 
   if (session.closureStatus !== 'closed') {
     issues.push(`closureStatus is '${session.closureStatus}', expected 'closed' (run agent:close first)`);
@@ -419,7 +439,16 @@ export function verifyKnowledgeCapture(sessionId?: string): VerifyResult {
       }
     }
 
-    // Transcript checks: required only when a transcript was reported available.
+    // Transcript checks: required when a transcript was reported available.
+    // Providers with a real transcript-capable integration must never silently
+    // look "complete" when no original conversation was obtained.
+    const transcriptCapable = session.agentType === 'codex' || session.agentType === 'codebuddy' || session.agentType === 'opencode';
+    if (tcs === 'unavailable' && transcriptCapable) {
+      warnings.push(`${session.agentType}: original transcript was not obtained; only the Agent Work Record is available`);
+    }
+    if (tcs === 'partial') {
+      warnings.push(`${session.agentType}: only a partial original transcript was obtained`);
+    }
     if (tcs !== 'unavailable') {
       if (!transcriptId) {
         issues.push(`transcriptCaptureStatus is '${tcs}' but no transcriptAssetId present`);
@@ -456,5 +485,5 @@ export function verifyKnowledgeCapture(sessionId?: string): VerifyResult {
     if (residue.length > 0) issues.push(`temp write residue found: ${residue.map((r) => path.relative(getProjectRoot(), r)).join(', ')}`);
   }
 
-  return { ok: issues.length === 0, issues };
+  return { ok: issues.length === 0, issues, warnings };
 }
