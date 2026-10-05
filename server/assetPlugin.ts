@@ -160,10 +160,12 @@ function createHandler() {
       if (req.method === 'POST' && pathPart === '/workspace/scan') {
         const result = await assetService.scan();
         sendJson(res, 200, {
-          scannedAt: result.root.modifiedAt,
+          scannedAt: result.parent.modifiedAt,
           nodeCount: result.nodeCount,
           fileCount: result.fileCount,
           directoryCount: result.directoryCount,
+          statsScope: result.statsScope,
+          cachedDirectoryCount: result.cachedDirectoryCount,
         });
         return;
       }
@@ -178,10 +180,12 @@ function createHandler() {
         const result = await assetService.scan();
         sendJson(res, 200, {
           projectRoot: getProjectRoot(),
-          scannedAt: result.root.modifiedAt,
+          scannedAt: result.parent.modifiedAt,
           nodeCount: result.nodeCount,
           fileCount: result.fileCount,
           directoryCount: result.directoryCount,
+          statsScope: result.statsScope,
+          cachedDirectoryCount: result.cachedDirectoryCount,
         });
         return;
       }
