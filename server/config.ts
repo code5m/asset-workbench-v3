@@ -58,8 +58,11 @@ export function setProjectRoot(root: string): WorkbenchConfig {
   if (!fs.existsSync(resolved)) {
     throw new Error(`project root does not exist: ${resolved}`);
   }
-  currentRoot = resolved;
+  if (!fs.statSync(resolved).isDirectory()) {
+    throw new Error(`project root is not a directory: ${resolved}`);
+  }
+  currentRoot = fs.realpathSync(resolved);
   ensureDataDir();
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify({ projectRoot: resolved }, null, 2), 'utf8');
-  return { projectRoot: resolved };
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify({ projectRoot: currentRoot }, null, 2), 'utf8');
+  return { projectRoot: currentRoot };
 }
