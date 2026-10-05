@@ -27,14 +27,18 @@ try {
     finalization: { strategy: 'manual' },
     verification: { required: [], requireTranscript: false },
   }), /cannot contain executable commands/);
-  credentialStore.save(credentialProvider, 'TEST_SECRET', `runtime-${process.pid}-${Date.now()}`);
-  assert.equal(credentialStore.has(credentialProvider, 'TEST_SECRET'), true);
-  assert.equal(execFileSync(process.execPath, ['--experimental-strip-types', 'scripts/credential-store-probe.ts', credentialProvider, 'TEST_SECRET'], { encoding: 'utf8' }).trim(), 'configured');
-  assert.ok(!JSON.stringify(getProviderDetail('codearts')).includes('runtime-'));
-  credentialStore.delete(credentialProvider, 'TEST_SECRET');
-  assert.equal(credentialStore.has(credentialProvider, 'TEST_SECRET'), false);
+  if (!process.env.CI) {
+    credentialStore.save(credentialProvider, 'TEST_SECRET', `runtime-${process.pid}-${Date.now()}`);
+    assert.equal(credentialStore.has(credentialProvider, 'TEST_SECRET'), true);
+    assert.equal(execFileSync(process.execPath, ['--experimental-strip-types', 'scripts/credential-store-probe.ts', credentialProvider, 'TEST_SECRET'], { encoding: 'utf8' }).trim(), 'configured');
+    assert.ok(!JSON.stringify(getProviderDetail('codearts')).includes('runtime-'));
+    credentialStore.delete(credentialProvider, 'TEST_SECRET');
+    assert.equal(credentialStore.has(credentialProvider, 'TEST_SECRET'), false);
+  }
 } finally {
-  credentialStore.delete(credentialProvider, 'TEST_SECRET');
+  if (!process.env.CI) {
+    try { credentialStore.delete(credentialProvider, 'TEST_SECRET'); } catch { /* OS secure store unavailable */ }
+  }
   try { deleteCustomDefinition(fixtureId); } catch { /* fixture was never created */ }
 }
 console.log('PROVIDER_PLATFORM_TEST PASS');
