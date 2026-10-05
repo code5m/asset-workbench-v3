@@ -318,6 +318,7 @@ export function AssetExplorer({ deepLink }: { deepLink: { path: string; token: n
         <section className="stat-row">
           <span><strong>{stats.fileCount}</strong> {t('statFiles')}</span>
           <span><strong>{stats.directoryCount}</strong> {t('statDirs')}</span>
+          <span className="stats-scope-note">{t('statsLoadedScope')}</span>
           <span><strong>{repoCount}</strong> {t('statRepos')}</span>
           {scannedAt ? <span>{t('scannedAt')} {formatDate(scannedAt)}</span> : null}
         </section>
@@ -473,6 +474,7 @@ function DetailPanel({ node, content, contentLoading, contentError, managedMeta,
         <Field label={t('assetKind')} value={node.kind === 'directory' ? t('kindDirectory') : t('kindFile')} />
         <Field label={t('assetPath')} value={node.relativePath || '/'} wide />
         {node.kind === 'file' ? <Field label={t('fileSize')} value={formatSize(node.size)} /> : null}
+        {node.codeLanguage ? <Field label={t('codeLanguage')} value={t(`codeLanguage_${node.codeLanguage}`)} /> : null}
         <Field label={t('updatedAt')} value={formatDate(node.modifiedAt)} />
         {node.kind === 'directory' ? (
           <>
