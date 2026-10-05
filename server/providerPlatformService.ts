@@ -51,7 +51,7 @@ function authStatusFor(def: ProviderDefinition): string {
     const configured = credentialStore.listConfiguredFields(def.id, fields);
     return configured.length === fields.length ? 'CONFIGURED' : 'NOT_CONFIGURED';
   }
-  return def.auth.type.toUpperCase();
+  return 'EXTERNAL';
 }
 
 function platformStatus(status: ProviderStatus, def: ProviderDefinition, active: boolean): ProviderPlatformStatus {
