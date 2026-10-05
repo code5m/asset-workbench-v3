@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { getDataDir, getProjectRoot } from './config.ts';
-import { detectProviders, type ProviderStatus } from './providerAdapterService.ts';
+import type { ProviderStatus } from './providerAdapterService.ts';
+import { getProviderSnapshot, invalidateProviderSnapshot } from './providerSnapshot.ts';
 import { credentialStore } from './credentialStore.ts';
 import { isProviderEnabled, setProviderRuntimeEnabled } from './providerRuntimeState.ts';
 
@@ -21,7 +22,7 @@ export interface ProviderDefinition {
   verification: { required: string[]; optional?: string[]; requireTranscript: boolean };
   installation?: { supported: boolean; source?: string; command?: string[] };
 }
-export interface ProviderDetail { definition: ProviderDefinition; status: ProviderStatus & { platformStatus: ProviderPlatformStatus; authStatus: string; enabled: boolean }; recentEvents: string[]; verification: Array<{ step: string; status: 'PASS' | 'FAIL' | 'BLOCKED' | 'WAITING'; detail: string }>; }
+export interface ProviderDetail { definition: ProviderDefinition; status: ProviderStatus & { platformStatus: ProviderPlatformStatus; authStatus: string; enabled: boolean }; recentEvents: string[]; verification: Array<{ step: string; status: 'PASS' | 'FAIL' | 'BLOCKED' | 'WAITING'; detail: string }>; detectedAt?: string; }
 
 const builtins: ProviderDefinition[] = [
   { schemaVersion: 1, version: '1.0.0', id: 'codex', displayName: 'Codex', description: 'Automatic project conversation capture.', providerType: 'coding-agent', documentationUrl: 'https://learn.chatgpt.com/docs/hooks', discovery: { executables: ['codex'], versionCommand: ['codex', '--version'], configPaths: ['.codex/hooks.json'] }, auth: { type: 'existing-session' }, eventSource: { type: 'hooks', projectConfigPath: '.codex/hooks.json' }, events: { SessionStart: { canonical: 'session.started' }, UserPromptSubmit: { canonical: 'user.message', contentPath: 'prompt' }, PostToolUse: { canonical: 'tool.completed' }, Stop: { canonical: 'assistant.message', contentPath: 'last_assistant_message' }, SessionEnd: { canonical: 'session.ended' } }, finalization: { strategy: 'explicit-event', event: 'SessionEnd' }, verification: { required: ['user.message', 'assistant.message'], optional: ['tool.completed'], requireTranscript: true } },
@@ -103,18 +104,38 @@ export function listProviderDefinitions(): ProviderDefinition[] { return [...bui
 export function getProviderDetail(id: string): ProviderDetail {
   const def = definition(id);
   const fallback: ProviderStatus = { provider: def.id as ProviderStatus['provider'], status: def.id === 'workbuddy' ? 'NOT_INSTALLED' : 'LIMITED', captureMethod: def.eventSource.type, realtime: false, historicalImport: false, runtimeVerified: false, installed: false, configured: false, detail: def.id === 'workbuddy' ? 'No WorkBuddy installation was detected.' : 'Custom Provider Definition is saved; a trusted adapter is still required.' };
-  const base: ProviderStatus = detectProviders(getProjectRoot()).find((item) => item.provider === id) ?? fallback;
+  const snapshot = getProviderSnapshot(false);
+  const base: ProviderStatus = snapshot.providers.find((item) => item.provider === id) ?? fallback;
   const active = isProviderEnabled(id);
   const authStatus = authStatusFor(def);
   const verification = verificationFor(def, base);
-  return { definition: def, status: { ...base, platformStatus: platformStatus(base, def, active), authStatus, enabled: active }, recentEvents: [], verification };
+  return { definition: def, status: { ...base, platformStatus: platformStatus(base, def, active), authStatus, enabled: active }, recentEvents: [], verification, detectedAt: snapshot.detectedAt };
 }
 
-export function listProviderStatuses(): Array<ProviderDetail['status']> {
-  return listProviderDefinitions().map((item) => getProviderDetail(item.id).status);
+function buildProviderStatuses(force = false): { providers: Array<ProviderDetail['status']>; detectedAt: string } {
+  const snapshot = getProviderSnapshot(force);
+  const providers = listProviderDefinitions().map((item) => {
+    const def = definition(item.id);
+    const fallback: ProviderStatus = { provider: def.id as ProviderStatus['provider'], status: def.id === 'workbuddy' ? 'NOT_INSTALLED' : 'LIMITED', captureMethod: def.eventSource.type, realtime: false, historicalImport: false, runtimeVerified: false, installed: false, configured: false, detail: def.id === 'workbuddy' ? 'No WorkBuddy installation was detected.' : 'Custom Provider Definition is saved; a trusted adapter is still required.' };
+    const base = snapshot.providers.find((candidate) => candidate.provider === item.id) ?? fallback;
+    const active = isProviderEnabled(item.id);
+    return { ...base, platformStatus: platformStatus(base, def, active), authStatus: authStatusFor(def), enabled: active };
+  });
+  return { providers, detectedAt: snapshot.detectedAt };
+}
+
+export function listProviderStatuses(): { providers: Array<ProviderDetail['status']>; detectedAt: string } {
+  return buildProviderStatuses(false);
+}
+
+export function redetectProviderStatuses(): { providers: Array<ProviderDetail['status']>; detectedAt: string } {
+  invalidateProviderSnapshot();
+  return buildProviderStatuses(true);
 }
 
 export function runProviderVerification(id: string): ProviderDetail & { verificationRunAt: string; authProbe?: ReturnType<typeof verifyProviderAuth> } {
+  invalidateProviderSnapshot();
+  getProviderSnapshot(true);
   const def = definition(id);
   let authProbe: ReturnType<typeof verifyProviderAuth> | undefined;
   if ((def.auth.type === 'ak-sk' || def.auth.type === 'api-key') && authStatusFor(def) !== 'NOT_CONFIGURED') {

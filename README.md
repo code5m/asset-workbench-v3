@@ -322,3 +322,31 @@ Asset Workbench V3 uses its own Git repository. Its standalone history begins
 from the Provider Platform v1 baseline; earlier development occurred under an
 unmanaged parent-repository boundary. Runtime data, local Agent configuration,
 and operating-system credentials are deliberately excluded from Git.
+
+
+## Performance model
+
+The Asset Space uses true lazy directory loading:
+
+- `/workspace/tree?path=...` returns direct children only.
+- The server keeps a bounded LRU-style cache of at most 96 loaded directories.
+- File content is read only when selected; text previews read at most 256 KiB.
+- The watcher observes only the root and directories that have actually been loaded.
+- Filesystem bursts are debounced and invalidate affected directory caches instead of rebuilding an in-memory whole-project tree.
+
+This keeps large Java / JavaScript / TypeScript / Python / Rust repositories from
+turning UI navigation into a whole-repository memory allocation.
+
+## Language & open-source readiness
+
+The shared asset engine is language-neutral, with explicit regression coverage for
+Java, JavaScript/TypeScript, Python, and Rust. See
+[`docs/language-support.md`](docs/language-support.md).
+
+The UI ships Simplified Chinese and English dictionaries. New UI text should go
+through the i18n registry; Provider UX no longer hard-codes Chinese labels in the
+component.
+
+Contribution guidance is in [`CONTRIBUTING.md`](CONTRIBUTING.md). A project license
+must be selected by the project owner before representing a public release as licensed
+open source.

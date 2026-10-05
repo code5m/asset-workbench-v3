@@ -72,17 +72,17 @@ export function WorkspaceConsole({ activeStep }: WorkspaceConsoleProps) {
         <article className="metric-card">
           <span>{t('statFiles')}</span>
           <strong>{loading ? '—' : fileCount}</strong>
-          <small>{t('discoveredAssets')}</small>
+          <small>{t('loadedAssets')}</small>
         </article>
         <article className="metric-card">
           <span>{t('statDirs')}</span>
           <strong>{loading ? '—' : directoryCount}</strong>
-          <small>{t('discoveredDirectories')}</small>
+          <small>{t('loadedDirectories')}</small>
         </article>
         <article className="metric-card">
           <span>{t('statRepos')}</span>
           <strong>{loading ? '—' : repos.length}</strong>
-          <small>{t('discoveredRepositories')}</small>
+          <small>{t('loadedRepositories')}</small>
         </article>
         <article className="metric-card">
           <span>{t('scannedAt')}</span>

@@ -25,6 +25,16 @@ const IGNORED_DIRS = new Set([
   '.turbo',
   '.output',
   '.parcel-cache',
+  '__pycache__',
+  '.venv',
+  'venv',
+  '.pytest_cache',
+  '.mypy_cache',
+  '.ruff_cache',
+  '.tox',
+  '.nox',
+  '.gradle',
+  '.settings',
 ]);
 
 const IGNORED_FILES = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini', 'ehthumbs.db']);

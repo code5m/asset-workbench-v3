@@ -27,7 +27,7 @@ import {
   getCaptureSession,
 } from './captureService.ts';
 import { detectProviders } from './providerAdapterService.ts';
-import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, listProviderStatuses, runProviderVerification, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
+import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, listProviderStatuses, redetectProviderStatuses, runProviderVerification, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 
 /**
@@ -133,7 +133,11 @@ function createHandler() {
         return;
       }
       if (req.method === 'GET' && pathPart === '/providers') {
-        sendJson(res, 200, { providers: listProviderStatuses() });
+        sendJson(res, 200, listProviderStatuses());
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/provider-manager/redetect') {
+        sendJson(res, 200, redetectProviderStatuses());
         return;
       }
       if (req.method === 'GET' && pathPart === '/provider-manager/definitions') { sendJson(res, 200, { definitions: listProviderDefinitions() }); return; }
@@ -160,10 +164,12 @@ function createHandler() {
       if (req.method === 'POST' && pathPart === '/workspace/scan') {
         const result = await assetService.scan();
         sendJson(res, 200, {
-          scannedAt: result.root.modifiedAt,
+          scannedAt: result.parent.modifiedAt,
           nodeCount: result.nodeCount,
           fileCount: result.fileCount,
           directoryCount: result.directoryCount,
+          statsScope: result.statsScope,
+          cachedDirectoryCount: result.cachedDirectoryCount,
         });
         return;
       }
@@ -178,10 +184,12 @@ function createHandler() {
         const result = await assetService.scan();
         sendJson(res, 200, {
           projectRoot: getProjectRoot(),
-          scannedAt: result.root.modifiedAt,
+          scannedAt: result.parent.modifiedAt,
           nodeCount: result.nodeCount,
           fileCount: result.fileCount,
           directoryCount: result.directoryCount,
+          statsScope: result.statsScope,
+          cachedDirectoryCount: result.cachedDirectoryCount,
         });
         return;
       }
