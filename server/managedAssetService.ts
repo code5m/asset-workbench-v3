@@ -88,6 +88,10 @@ const SOURCE_DIR: Record<ConversationSource, string> = {
   chatgpt: 'chatgpt',
   codex: 'codex',
   codebuddy: 'codebuddy',
+  opencode: 'opencode',
+  trae: 'trae',
+  codearts: 'codearts',
+  workbuddy: 'workbuddy',
   manual: 'manual',
   other: 'other',
 };
