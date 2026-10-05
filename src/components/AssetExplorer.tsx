@@ -539,8 +539,41 @@ function ManagedRelations({
   const completenessKey =
     meta.completeness === 'full' ? 'completenessFull' : meta.completeness === 'partial' ? 'completenessPartial' : 'completenessUnknown';
 
+  const transcriptStatusKey =
+    meta.transcriptCaptureStatus === 'available'
+      ? 'tcsAvailable'
+      : meta.transcriptCaptureStatus === 'partial'
+        ? 'tcsPartial'
+        : meta.transcriptCaptureStatus === 'imported'
+          ? 'tcsImported'
+          : 'tcsUnavailable';
+
   return (
     <div className="managed-block">
+      {isTranscript ? (
+        <div className="banner">
+          <strong>{t('type_conversation_transcript')}</strong>
+          <span>{t('transcriptEvidenceNotice')}</span>
+        </div>
+      ) : null}
+      {isWorkRecord ? (
+        <div className={`banner ${meta.transcriptCaptureStatus === 'unavailable' ? 'warn' : ''}`}>
+          <strong>{t('type_agent_work_record')}</strong>
+          <span>{t('workRecordEvidenceNotice')}</span>
+        </div>
+      ) : null}
+      {isWorkRecord && meta.transcriptCaptureStatus === 'unavailable' ? (
+        <div className="banner warn">
+          <AlertTriangle size={16} />
+          <span>{t('transcriptUnavailableNotice')}</span>
+        </div>
+      ) : null}
+      {isWorkRecord && meta.transcriptCaptureStatus === 'partial' ? (
+        <div className="banner warn">
+          <AlertTriangle size={16} />
+          <span>{t('transcriptPartialNotice')}</span>
+        </div>
+      ) : null}
       <p className="eyebrow">{t('detailRelations')}</p>
       <div className="detail-grid">
         <Field label={t('detailType')} value={t(`type_${meta.type}`)} />
@@ -562,11 +595,14 @@ function ManagedRelations({
           </>
         ) : null}
         {isWorkRecord ? (
-          <Field
-            label={t('relSourceTranscript')}
-            value={meta.sourceTranscriptId ?? t('relNone')}
-            wide
-          />
+          <>
+            <Field label={t('transcriptCaptureStatus')} value={t(transcriptStatusKey)} />
+            <Field
+              label={t('relSourceTranscript')}
+              value={meta.sourceTranscriptId ?? t('relNone')}
+              wide
+            />
+          </>
         ) : null}
         {meta.agentSessionId ? <Field label={t('relAgentSession')} value={meta.agentSessionId} wide /> : null}
         {meta.status ? <Field label={t('relDecisionStatus')} value={meta.status} /> : null}
