@@ -346,8 +346,8 @@ test('Scenario C: imported transcript is typed imported-transcript and linkable'
   assert.equal(meta.captureMode, 'imported-transcript');
   assert.equal(meta.type, 'conversation-transcript');
   assert.equal(meta.agentSessionId, session.id);
-  // The import directory segment must be `imported`.
-  assert.ok(imported.path.includes('04-conversations/transcripts/imported/'), imported.path);
+  // Provider identity owns the directory; import vs realtime is metadata.
+  assert.ok(imported.path.includes('04-conversations/transcripts/chatgpt/'), imported.path);
 });
 
 // Scenario D: a Work Record must never be mislabeled as a full transcript.

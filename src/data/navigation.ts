@@ -19,7 +19,7 @@ export const navigationItems: NavigationItem[] = [
   { id: 'guide', title: { 'zh-CN': '引导', en: 'Guide' }, eyebrow: { 'zh-CN': '首次导入', en: 'First import' }, icon: BookOpen },
   { id: 'assets', title: { 'zh-CN': '资产空间', en: 'Assets' }, eyebrow: { 'zh-CN': '目录与文件', en: 'Folders and files' }, icon: FolderTree },
   { id: 'console', title: { 'zh-CN': '工作台', en: 'Console' }, eyebrow: { 'zh-CN': '版本冻结', en: 'Version freeze' }, icon: LayoutDashboard },
-  { id: 'providers', title: { 'zh-CN': 'Provider 管理', en: 'Providers' }, eyebrow: { 'zh-CN': '连接与采集', en: 'Connect and capture' }, icon: Plug },
+  { id: 'providers', title: { 'zh-CN': 'AI 接入', en: 'AI Connect' }, eyebrow: { 'zh-CN': '入门与采集', en: 'Learn and capture' }, icon: Plug },
 ];
 
 export const wizardSteps: WizardStep[] = [

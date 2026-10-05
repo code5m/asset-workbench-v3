@@ -72,7 +72,7 @@ V3 now treats the top level as a Project Workspace, not only a code workspace:
 - `01-code/`: source code, Git repositories, Raw, versions, and diffs.
 - `02-design/`: architecture, product plans, technical designs, and decisions.
 - `03-docs/`: README files, manuals, requirements, reports, and drafts.
-- `04-conversations/`: ChatGPT, Codex, CodeBuddy, and human discussion records.
+- `04-conversations/`: original Transcripts and Agent Work Records, separated by evidence type first and Provider second.
 - `05-derived/`: CodeGraph, semantic indexes, summaries, tags, and knowledge graphs.
 
 Every directory must be enterable. Every file should use one asset-detail model:
@@ -93,8 +93,15 @@ asset-workbench-v3/
 │   ├── guides/
 │   └── reports/
 ├── 04-conversations/
-│   ├── chatgpt/
-│   └── codex/
+│   ├── transcripts/
+│   │   ├── codex/
+│   │   ├── codebuddy/
+│   │   ├── opencode/
+│   │   └── chatgpt/
+│   └── work-records/
+│       ├── codex/
+│       ├── codebuddy/
+│       └── manual/
 ├── 05-derived/
 │   ├── codegraph/
 │   ├── semantic-index/
@@ -203,9 +210,7 @@ it never accepts a filesystem output path.
 See [provider adapter guide](03-docs/guides/provider-adapters.md) for the
 capability matrix, real Codex setup, limits, and safe history import.
 
-Provider Manager is the control plane for installation detection, authentication,
-event-source configuration, verification evidence, and enable/disable state.
-See [Provider Integration Platform](docs/provider-integration-platform.md).
+**AI 接入** is the product entry for conversation capture. Its onboarding tab explains Provider, Hook, Plugin, ACP, Transcript, Work Record and Runtime Verification in plain language; Provider Manager remains the control plane for installation detection, authentication, event-source configuration, real verification evidence, and enable/disable state. Disable is enforced in the capture data plane, not only in the UI. See [Provider Integration Platform](docs/provider-integration-platform.md).
 
 ### Managed Knowledge Asset Persistence
 
@@ -227,12 +232,13 @@ format):
 - **Conversation** is now split into two distinct `managedType`s (the dual
   evidence model):
   - **Agent Work Record** (`agent-work-record`) = the Agent's structured record of
-    one task. Lives under `04-conversations/{source}/<date>-<slug>/conversation.md`
+    one task. Lives under `04-conversations/work-records/{source}/<date>-<slug>/conversation.md`
     + `metadata.json`. Always produced for substantive tasks.
   - **Transcript** (`conversation-transcript`) = the *original* raw chat when
-    genuinely obtainable. Lives under `04-conversations/transcripts/{source|imported}/<date>-<slug>/transcript.md`
-    + `metadata.json`. Sources: chatgpt / codex / codebuddy / opencode / trae / codearts / workbuddy / manual / other;
-    imports go under `transcripts/imported/`.
+    genuinely obtainable. Lives under `04-conversations/transcripts/{source}/<date>-<slug>/transcript.md`
+    + `metadata.json`. Sources: chatgpt / codex / codebuddy / opencode / trae / codearts / workbuddy / manual / other.
+    Import vs realtime capture is represented by `captureMode`, not by a separate
+    `imported/` directory.
   The Classifier (`server/assetClassifier.ts` `resolveManagedType`) decides the
   concrete type from each asset's `metadata.json` — path alone is insufficient.
 - **Design** = a formal design proposal. Lives under `02-design/<area>/<slug>.md`

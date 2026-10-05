@@ -5,12 +5,19 @@ import path from 'node:path';
 import { getProjectRoot, setProjectRoot } from '../server/config.ts';
 import { endProviderSession, importCodexHistory, ingestProviderEvent } from '../server/providerAdapterService.ts';
 import { getCaptureSession, getCaptureStorePaths } from '../server/captureService.ts';
+import { setProviderEnabled } from '../server/providerPlatformService.ts';
 
 const original = getProjectRoot();
 const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-provider-test-'));
 fs.mkdirSync(path.join(workspace, '04-conversations/transcripts'), { recursive: true });
 setProjectRoot(workspace);
 try {
+  setProviderEnabled('codex', false);
+  const disabled = ingestProviderEvent({ provider: 'codex', providerSessionId: 'disabled-session', hookEventName: 'UserPromptSubmit', turnId: '1', prompt: 'must not be captured' });
+  assert.equal(disabled.captureSessionId, '');
+  assert.deepEqual(disabled.accepted, []);
+  setProviderEnabled('codex', true);
+
   const start = ingestProviderEvent({ provider: 'codex', providerSessionId: 'codex-test-1', hookEventName: 'SessionStart', cwd: workspace });
   const user = ingestProviderEvent({ provider: 'codex', providerSessionId: 'codex-test-1', hookEventName: 'UserPromptSubmit', turnId: 'turn-1', prompt: 'hello capture' });
   const tool = ingestProviderEvent({ provider: 'codex', providerSessionId: 'codex-test-1', hookEventName: 'PostToolUse', turnId: 'turn-1', toolName: 'Bash', toolInput: { command: 'pwd' }, toolResponse: { output: workspace } });

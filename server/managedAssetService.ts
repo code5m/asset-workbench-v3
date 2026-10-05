@@ -99,9 +99,6 @@ const SOURCE_DIR: Record<ConversationSource, string> = {
   other: 'other',
 };
 
-/** Sub-directory segment used for imported transcripts (transcripts/imported/...). */
-export const IMPORTED_TRANSCRIPT_SEGMENT = 'imported';
-
 const VALID_SOURCES = new Set(Object.keys(SOURCE_DIR));
 const DECISION_STATUSES: DecisionStatus[] = ['Accepted', 'Proposed', 'Superseded', 'Deprecated'];
 
@@ -327,7 +324,7 @@ export async function createConversation(input: CreateConversationInput): Promis
   const related = normalizeRelated(input.relatedAssetPaths);
   const root = getProjectRoot();
   const id = newId('conv');
-  const dirRel = `04-conversations/${SOURCE_DIR[source]}/${dateStamp()}-${slugifyTitle(title)}`;
+  const dirRel = `04-conversations/work-records/${SOURCE_DIR[source]}/${dateStamp()}-${slugifyTitle(title)}`;
   const contentRel = `${dirRel}/conversation.md`;
   const absDir = assertManagedWritable(root, dirRel);
   if (fs.existsSync(absDir)) {
@@ -391,8 +388,7 @@ export async function createTranscript(input: CreateTranscriptInput): Promise<Ma
   const related = normalizeRelated(input.relatedAssetPaths);
   const root = getProjectRoot();
   const id = newId('transcript');
-  const segment =
-    input.captureMode === 'imported-transcript' ? IMPORTED_TRANSCRIPT_SEGMENT : SOURCE_DIR[source] ?? 'other';
+  const segment = SOURCE_DIR[source] ?? 'other';
   const dirRel = `04-conversations/transcripts/${segment}/${dateStamp()}-${slugifyTitle(title)}`;
   const contentRel = `${dirRel}/transcript.md`;
   const absDir = assertManagedWritable(root, dirRel);

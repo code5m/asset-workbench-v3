@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { getDataDir, getProjectRoot } from './config.ts';
 import { currentSession } from './agentSessionService.ts';
+import { isProviderEnabled } from './providerRuntimeState.ts';
 import { appendCaptureEvents, createCaptureSession, endCaptureSession, getCaptureSession, getCaptureStorePaths } from './captureService.ts';
 import type { AppendCaptureEventInput } from './captureService.ts';
 import type { CaptureProvider } from '../src/domain/asset.ts';
@@ -338,6 +339,7 @@ function provenanceOf(input: AdapterEventInput): Record<string, unknown> {
   return merged;
 }
 export function ingestProviderEvent(input: AdapterEventInput): { captureSessionId: string; accepted: string[]; duplicates: string[] } {
+  if (!isProviderEnabled(input.provider)) return { captureSessionId: '', accepted: [], duplicates: [] };
   return withProviderLock(input.provider, input.providerSessionId, () => {
     let state = readState(input.provider, input.providerSessionId);
     if (!state) {
@@ -450,6 +452,7 @@ export function ingestProviderEvent(input: AdapterEventInput): { captureSessionI
 }
 
 export async function endProviderSession(provider: CaptureProvider, providerSessionId: string): Promise<void> {
+  if (!isProviderEnabled(provider)) return;
   const state = readState(provider, providerSessionId);
   if (!state) return;
   if (getCaptureSession(state.captureSessionId).status === 'active') await endCaptureSession(state.captureSessionId);

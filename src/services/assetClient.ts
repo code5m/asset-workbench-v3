@@ -24,6 +24,9 @@ export interface ProviderStatusView {
   lastVerifiedAt?: string;
   capabilities?: string[];
   limitations?: string[];
+  platformStatus?: string;
+  authStatus?: string;
+  enabled?: boolean;
 }
 export interface ProviderDetailView { definition: any; status: ProviderStatusView & { platformStatus: string; authStatus: string; enabled: boolean }; verification: Array<{ step: string; status: string; detail: string }>; recentEvents: string[]; }
 
