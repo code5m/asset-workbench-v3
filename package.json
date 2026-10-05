@@ -24,12 +24,13 @@
     "capture:import:opencode": "node --experimental-strip-types scripts/import-opencode-session.ts",
     "test:chatgpt-import": "node --experimental-strip-types scripts/test-chatgpt-import.ts",
     "test:security": "node --experimental-strip-types scripts/test-security-boundaries.ts",
-    "check": "npm run build && npm run test:security && npm run test:managed && npm run test:performance-v3 && npm run test:conversation-ia-v2 && npm run test:agent && npm run test:transcript && npm run test:transcript-linkage && npm run test:capture && npm run test:providers && npm run test:provider-platform && npm run test:codebuddy-capture && npm run test:opencode-capture && npm run test:trae-capture && npm run test:chatgpt-import",
+    "check": "npm run build && npm run test:security && npm run test:managed && npm run test:performance-v3 && npm run test:v3-audit-hardening && npm run test:conversation-ia-v2 && npm run test:agent && npm run test:transcript && npm run test:transcript-linkage && npm run test:capture && npm run test:providers && npm run test:provider-platform && npm run test:codebuddy-capture && npm run test:opencode-capture && npm run test:trae-capture && npm run test:chatgpt-import",
     "typecheck": "tsc -b",
     "test:transcript-linkage": "node --experimental-strip-types scripts/test-transcript-linkage.ts",
     "migrate:conversations-v2": "node --experimental-strip-types scripts/migrate-conversations-v2.ts",
     "test:conversation-ia-v2": "node --experimental-strip-types scripts/test-conversation-ia-v2.ts",
-    "test:performance-v3": "node --experimental-strip-types scripts/test-performance-v3.ts"
+    "test:performance-v3": "node --experimental-strip-types scripts/test-performance-v3.ts",
+    "test:v3-audit-hardening": "node --experimental-strip-types scripts/test-v3-audit-hardening.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.4",

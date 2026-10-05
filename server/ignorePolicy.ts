@@ -64,3 +64,10 @@ export function isIgnoredPath(absolutePath: string): boolean {
   const parts = absolutePath.split(/[\\/]/);
   return parts.some((p) => isIgnoredDir(p));
 }
+
+
+/** True when any segment of a project-relative path is an ignored directory. */
+export function isIgnoredRelativePath(relativePath: string): boolean {
+  if (!relativePath) return false;
+  return relativePath.split(/[\\/]/).filter(Boolean).some((part) => isIgnoredDir(part));
+}
