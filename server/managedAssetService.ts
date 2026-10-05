@@ -132,7 +132,9 @@ export function slugifyTitle(title: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60);
-  return ascii || 'asset';
+  if (ascii) return ascii;
+  const fingerprint = crypto.createHash('sha256').update(title.normalize('NFC')).digest('hex').slice(0, 10);
+  return `asset-${fingerprint}`;
 }
 
 function relToAbs(root: string, rel: string): string {
