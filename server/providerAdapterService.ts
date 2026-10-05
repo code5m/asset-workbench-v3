@@ -7,7 +7,7 @@ import { appendCaptureEvents, createCaptureSession, endCaptureSession, getCaptur
 import type { AppendCaptureEventInput } from './captureService.ts';
 import type { CaptureProvider } from '../src/domain/asset.ts';
 
-export type ProviderAvailability = 'AVAILABLE' | 'ENABLED' | 'DISABLED' | 'NOT_INSTALLED' | 'NEEDS_AUTH' | 'LIMITED' | 'ERROR';
+export type ProviderAvailability = 'AVAILABLE' | 'ENABLED' | 'DISABLED' | 'NOT_INSTALLED' | 'NEEDS_AUTH' | 'LIMITED' | 'BLOCKED' | 'ERROR';
 export interface ProviderStatus {
   provider: CaptureProvider;
   status: ProviderAvailability;
@@ -619,17 +619,29 @@ function opencodeWithSession(providerSessionId: string, captureSource: 'native-h
       state = { captureSessionId: session.captureSessionId, providerSessionId, updatedAt: now() };
       saveState('opencode', state);
     }
-    // Keep sequences monotonic across successive imports of the same session so
-    // later turns cannot be rendered before earlier ones.
+    // Cumulative exports include old events again. Remove already-stored event
+    // identities BEFORE assigning sequence numbers, then number only newly
+    // accepted events contiguously after the current tail. This prevents false
+    // sequence gaps on V1 -> cumulative V2 imports.
+    const existingIds = new Set<string>();
+    try {
+      const lines = fs.readFileSync(getCaptureStorePaths(state.captureSessionId).events, 'utf8').split('\n').filter(Boolean);
+      for (const line of lines) {
+        try {
+          const prior = JSON.parse(line) as { eventId?: string };
+          if (prior.eventId) existingIds.add(prior.eventId);
+        } catch { continue; }
+      }
+    } catch { /* first import */ }
+
+    const newEvents = events.filter((event) => !existingIds.has(event.eventId));
     let offset = 0;
     try {
       const current = getCaptureSession(state.captureSessionId);
       if (typeof current.lastSequence === 'number') offset = current.lastSequence + 1;
     } catch { offset = 0; }
-    for (const event of events) {
-      if (typeof event.sequence === 'number') event.sequence = offset + event.sequence;
-    }
-    const result = events.length ? appendCaptureEvents(state.captureSessionId, events) : { accepted: [] };
+    newEvents.forEach((event, index) => { event.sequence = offset + index; });
+    const result = newEvents.length ? appendCaptureEvents(state.captureSessionId, newEvents) : { accepted: [] };
     state.updatedAt = now(); saveState('opencode', state);
     return { captureSessionId: state.captureSessionId, imported: result.accepted.length };
   });
@@ -731,25 +743,9 @@ export async function importCodebuddyHistory(sourcePath: string): Promise<{ capt
     const events: AppendCaptureEventInput[] = [];
     let sequence = 0;
 
-    /**
-     * Exact-duplicate suppression: some re-emissions (session resume, provider
-     * re-sending the leading prompt) repeat identical conversation content under
-     * a NEW provider message id, so id-based dedupe alone is not enough.
-     * Suppressing identical (eventType + content) pairs keeps one correct message
-     * without relying on content-only ids that would also drop genuinely repeated
-     * short replies during a single pass.
-     */
-    const seenContent = new Set<string>();
-    const contentKey = (eventType: string, content: string): string => `${eventType}|${stableHash([content])}`;
-    try {
-      const existing = fs.readFileSync(getCaptureStorePaths(state.captureSessionId).events, 'utf8').split('\n').filter(Boolean);
-      for (const line of existing) {
-        try {
-          const prior = JSON.parse(line) as { eventType?: string; content?: string };
-          if (prior.content && prior.eventType) seenContent.add(contentKey(prior.eventType, prior.content));
-        } catch { continue; }
-      }
-    } catch { /* no prior events yet */ }
+    // Provider message identity is the dedupe key. Identical text in two
+    // different provider messages is legitimate conversation evidence and must
+    // be preserved. appendCaptureEvents remains idempotent by eventId.
 
     for (const messageId of orderedIds) {
       const file = path.join(messagesDir, `${messageId}.json`);
@@ -770,9 +766,6 @@ export async function importCodebuddyHistory(sourcePath: string): Promise<{ capt
       const texts = parsed.content.filter((part) => part.type === 'text').map(textOf).filter(Boolean);
       if (texts.length > 0 && (parsed.role === 'user' || parsed.role === 'assistant')) {
         const content = texts.join('\n');
-        const key = contentKey(parsed.role === 'user' ? 'user.message' : 'assistant.message', content);
-        if (seenContent.has(key)) continue;
-        seenContent.add(key);
         events.push({
           eventId: `codebuddy-transcript:${providerSessionId}:${messageId}:text`,
           eventType: parsed.role === 'user' ? 'user.message' : 'assistant.message',
