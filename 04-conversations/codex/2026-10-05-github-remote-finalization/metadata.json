@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_baf45adf-e94b-4328-ac27-d9f55794ac5d",
+  "type": "agent-work-record",
+  "title": "GitHub remote finalization",
+  "source": "codex",
+  "createdAt": "2026-10-05T04:28:45.671Z",
+  "updatedAt": "2026-10-05T04:28:45.671Z",
+  "captureMode": "agent-work-record",
+  "relatedAssetPaths": [
+    ".git/config"
+  ],
+  "promotedTo": [],
+  "agentSessionId": "session_25f6189f-8129-4b55-9b26-16bd5cf34f9b"
+}
