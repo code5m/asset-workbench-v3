@@ -12,6 +12,7 @@ import {
   updateDesign,
   updateDecision,
   findAssetById,
+  metadataRelForContent,
 } from './managedAssetService.ts';
 import { captureTranscript } from './transcript/transcriptSource.ts';
 import { currentSessionId, readSession, updateSession, SessionError } from './agentSessionService.ts';
@@ -137,40 +138,56 @@ export async function runClosure(sessionId: string, input: ClosureInput): Promis
     return { session: closed, skipped: true };
   }
 
-  // --- 1. Attempt to capture the original Transcript (if the platform allows it) ---
-  // Honest: when no programmatic transcript exists, this returns `unavailable`
-  // and no transcript asset is written. A Work Record is still produced below.
-  const capture = await captureTranscript({
-    agentType: working.agentType,
-    agentSessionId: working.id,
-    override: input.transcript
-      ? {
-          content: input.transcript.content,
-          sourceSessionId: input.transcript.sourceSessionId,
-          completeness: input.transcript.completeness,
-          sourceType: input.transcript.sourceType,
-        }
-      : undefined,
-  });
-
+  // --- 1. Reuse an already materialized provider Transcript when SessionEnd
+  // happened before agent:close; otherwise consult the explicit/platform source.
   let transcript: ManagedAssetResult | undefined;
-  let transcriptCaptureStatus: AgentSession['transcriptCaptureStatus'] = 'unavailable';
-  if (capture.status !== 'unavailable' && capture.content) {
-    const isImported = capture.sourceType === 'imported';
-    const transcriptSource: ConversationSource = isImported
-      ? ((input.transcript?.source as ConversationSource) ?? 'other')
-      : (working.agentType as ConversationSource);
-    transcript = await createTranscript({
-      title: working.taskTitle,
-      source: transcriptSource,
-      content: capture.content,
-      captureMode: isImported ? 'imported-transcript' : 'full-transcript',
-      completeness: capture.completeness,
-      sourceSessionId: capture.sourceSessionId,
+  let transcriptCaptureStatus: AgentSession['transcriptCaptureStatus'] = working.transcriptCaptureStatus ?? 'unavailable';
+
+  if (working.transcriptAssetId) {
+    const existing = findAssetById(working.transcriptAssetId);
+    if (existing?.metadata.type === 'conversation-transcript') {
+      transcript = {
+        id: existing.metadata.id,
+        type: 'conversation-transcript',
+        path: existing.contentRel,
+        metadataPath: metadataRelForContent(existing.contentRel),
+      };
+    }
+  }
+
+  if (!transcript) {
+    const capture = await captureTranscript({
+      agentType: working.agentType,
       agentSessionId: working.id,
-      sourceMetadata: { provider: working.agentType, transcriptSource: capture.sourceType },
+      override: input.transcript
+        ? {
+            content: input.transcript.content,
+            sourceSessionId: input.transcript.sourceSessionId,
+            completeness: input.transcript.completeness,
+            sourceType: input.transcript.sourceType,
+          }
+        : undefined,
     });
-    transcriptCaptureStatus = capture.status === 'partial' ? 'partial' : isImported ? 'imported' : 'available';
+
+    if (capture.status !== 'unavailable' && capture.content) {
+      const isImported = capture.sourceType === 'imported';
+      const transcriptSource: ConversationSource = isImported
+        ? ((input.transcript?.source as ConversationSource) ?? 'other')
+        : (working.agentType as ConversationSource);
+      transcript = await createTranscript({
+        title: working.taskTitle,
+        source: transcriptSource,
+        content: capture.content,
+        captureMode: isImported ? 'imported-transcript' : 'full-transcript',
+        completeness: capture.completeness,
+        sourceSessionId: capture.sourceSessionId,
+        agentSessionId: working.id,
+        sourceMetadata: { provider: working.agentType, transcriptSource: capture.sourceType },
+      });
+      transcriptCaptureStatus = capture.status === 'partial' ? 'partial' : isImported ? 'imported' : 'available';
+    } else {
+      transcriptCaptureStatus = 'unavailable';
+    }
   }
 
   // --- 2. Always produce the Agent Work Record (structured evidence) ---
