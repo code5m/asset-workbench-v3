@@ -41,11 +41,13 @@ function credentialFields(def: ProviderDefinition): string[] { return def.auth.f
 function platformStatus(status: ProviderStatus, def: ProviderDefinition): ProviderPlatformStatus { if (!status.installed && def.id !== 'chatgpt') return 'NOT_INSTALLED'; if (def.auth.type === 'ak-sk' && credentialStore.listConfiguredFields(def.id, credentialFields(def)).length !== credentialFields(def).length) return 'BLOCKED_AUTH'; if (def.id === 'trae' && !status.runtimeVerified) return 'WAITING_REAL_EVENT'; if (status.runtimeVerified && status.configured) return 'ENABLED'; return status.status === 'ERROR' ? 'ERROR' : 'LIMITED'; }
 export function listProviderDefinitions(): ProviderDefinition[] { return [...builtins, ...custom()]; }
 export function getProviderDetail(id: string): ProviderDetail {
-  const def = definition(id); const base = detectProviders(getProjectRoot()).find((item) => item.provider === id) ?? { provider: id as any, status: 'NOT_INSTALLED', captureMethod: def.eventSource.type, realtime: false, historicalImport: false, runtimeVerified: false, detail: 'Custom definition.' };
+  const def = definition(id);
+  const fallback: ProviderStatus = { provider: 'other', status: 'NOT_INSTALLED', captureMethod: def.eventSource.type, realtime: false, historicalImport: false, runtimeVerified: false, installed: false, configured: false, detail: 'Custom definition.' };
+  const base: ProviderStatus = detectProviders(getProjectRoot()).find((item) => item.provider === id) ?? fallback;
   const state = enabled(); const active = state[id] !== false;
   const configuredFields = def.auth.type === 'ak-sk' ? credentialStore.listConfiguredFields(id, credentialFields(def)) : [];
   const authStatus = def.auth.type === 'ak-sk' ? (configuredFields.length === credentialFields(def).length ? 'CONFIGURED' : 'NOT_CONFIGURED') : def.auth.type === 'none' ? 'NOT_REQUIRED' : 'EXISTING_SESSION';
-  const verification = [{ step: 'Discovery', status: base.installed || id === 'chatgpt' ? 'PASS' : 'FAIL', detail: base.detail }, { step: 'Authentication', status: authStatus === 'NOT_CONFIGURED' ? 'BLOCKED' : 'PASS', detail: authStatus }, { step: 'Integration', status: base.configured ? 'PASS' : 'WAITING', detail: base.captureMethod }, { step: 'Transcript', status: base.runtimeVerified ? 'PASS' : 'WAITING', detail: base.runtimeVerified ? 'A real materialized transcript exists.' : 'Awaiting real provider evidence.' }];
+  const verification: ProviderDetail['verification'] = [{ step: 'Discovery', status: base.installed || id === 'chatgpt' ? 'PASS' : 'FAIL', detail: base.detail }, { step: 'Authentication', status: authStatus === 'NOT_CONFIGURED' ? 'BLOCKED' : 'PASS', detail: authStatus }, { step: 'Integration', status: base.configured ? 'PASS' : 'WAITING', detail: base.captureMethod }, { step: 'Transcript', status: base.runtimeVerified ? 'PASS' : 'WAITING', detail: base.runtimeVerified ? 'A real materialized transcript exists.' : 'Awaiting real provider evidence.' }];
   return { definition: def, status: { ...base, platformStatus: platformStatus(base, def), authStatus, enabled: active }, recentEvents: [], verification };
 }
 export function saveCredentials(id: string, values: Record<string, unknown>): { configured: boolean; fields: string[] } { const def = definition(id); if (def.auth.type !== 'ak-sk' && def.auth.type !== 'api-key') throw new Error('this provider does not accept stored credentials'); const fields = credentialFields(def); for (const field of fields) { const value = values[field]; if (typeof value === 'string' && value) credentialStore.save(id, field, value); } const configured = credentialStore.listConfiguredFields(id, fields); if (configured.length !== fields.length) throw new Error('all required credentials are required'); return { configured: true, fields: configured }; }
@@ -58,7 +60,7 @@ export function verifyProviderAuth(id: string): { authStatus: 'VERIFIED' | 'INVA
     return { authStatus: 'ERROR', detail: 'Custom provider command verification is not permitted.' };
   }
   const fields = credentialFields(def);
-  const values = Object.fromEntries(fields.map((field) => [field, credentialStore.get(id, field)]));
+  const values: Record<string, string | undefined> = Object.fromEntries(fields.map((field) => [field, credentialStore.get(id, field) ?? undefined]));
   if (Object.values(values).some((value) => !value)) return { authStatus: 'NOT_CONFIGURED', detail: 'Required credentials are not configured.' };
   try {
     execFileSync(builtin.auth.verifyCommand[0], builtin.auth.verifyCommand.slice(1), { env: { ...process.env, ...values }, timeout: 5000, stdio: ['ignore', 'pipe', 'pipe'] });
