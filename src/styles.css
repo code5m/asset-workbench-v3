@@ -1546,3 +1546,198 @@ code {
   gap: 12px;
   min-width: 0;
 }
+
+
+/* ---- Provider UX & Conversation IA v2 ---- */
+.provider-tabs {
+  display: inline-flex;
+  width: max-content;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+}
+.provider-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #475467;
+  font-weight: 750;
+  cursor: pointer;
+}
+.provider-tabs button.selected {
+  background: #176b87;
+  color: #ffffff;
+}
+.provider-intro {
+  display: grid;
+  gap: 16px;
+}
+.provider-intro-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+.provider-intro-hero p,
+.provider-concept p,
+.provider-console-head p {
+  color: #4a5565;
+  line-height: 1.6;
+}
+.provider-concept-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.provider-concept {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.provider-concept h3,
+.provider-concept p {
+  margin: 0;
+}
+.provider-concept svg {
+  color: #176b87;
+}
+.capture-flow {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+.capture-flow-item {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  min-height: 94px;
+  align-content: start;
+  padding: 12px;
+  border: 1px solid #d7dee8;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.capture-flow-item span {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: #176b87;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+.capture-flow-item strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+.concept-compare {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.concept-compare > div {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #d7dee8;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.concept-compare strong {
+  color: #176b87;
+}
+.concept-compare span {
+  color: #344054;
+  font-size: 13px;
+}
+.concept-compare small {
+  color: #667085;
+  line-height: 1.45;
+}
+.provider-console-head {
+  padding: 4px 0;
+}
+.provider-console-head h2 {
+  margin: 0;
+}
+.provider-facts span {
+  display: grid;
+  gap: 4px;
+}
+.provider-facts span small {
+  color: #667085;
+  font-size: 12px;
+}
+.provider-facts span strong {
+  color: #1d2939;
+  font-size: 14px;
+}
+.provider-detail details {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid #d7dee8;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.provider-detail details summary {
+  cursor: pointer;
+  font-weight: 750;
+}
+.provider-detail pre {
+  overflow: auto;
+  max-height: 260px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #111827;
+  color: #f8fafc;
+  font-size: 12px;
+}
+.status-badge.enabled,
+.status-badge.pass {
+  border-color: #b9e3d2;
+  background: #ecfdf5;
+  color: #027a48;
+}
+.status-badge.disabled,
+.status-badge.limited,
+.status-badge.waiting,
+.status-badge.waiting-real-event {
+  border-color: #f6d79d;
+  background: #fff7e6;
+  color: #9a5b00;
+}
+.status-badge.blocked-auth,
+.status-badge.fail,
+.status-badge.error {
+  border-color: #f0b8b3;
+  background: #fff1f0;
+  color: #b42318;
+}
+@media (max-width: 1160px) {
+  .provider-concept-grid,
+  .concept-compare,
+  .capture-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 620px) {
+  .provider-intro-hero {
+    display: grid;
+  }
+  .provider-concept-grid,
+  .concept-compare,
+  .capture-flow {
+    grid-template-columns: 1fr;
+  }
+}
