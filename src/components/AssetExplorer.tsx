@@ -46,6 +46,9 @@ export function AssetExplorer({ deepLink }: { deepLink: { path: string; token: n
   const [createMode, setCreateMode] = useState<CreateMode | null>(null);
   const [promoteFrom, setPromoteFrom] = useState<PromoteFrom | null>(null);
   const [managedMeta, setManagedMeta] = useState<ManagedAssetMetadata | null>(null);
+  const expandedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => { expandedRef.current = expanded; }, [expanded]);
 
   const refreshTree = useCallback(
     async (keepSelection: boolean) => {
@@ -100,12 +103,38 @@ export function AssetExplorer({ deepLink }: { deepLink: { path: string; token: n
     const es = assetClient.events();
     es.onmessage = (ev) => {
       try {
-        const data = JSON.parse(ev.data) as { type: string };
+        const data = JSON.parse(ev.data) as { type: string; invalidatedPaths?: string[] };
         if (data.type === 'connected') {
           setWatcher('connected');
-        } else if (data.type === 'scan' || data.type === 'refresh') {
+        } else if (data.type === 'scan') {
           setWatcher('connected');
           refreshTree(true).catch(() => undefined);
+        } else if (data.type === 'refresh') {
+          setWatcher('connected');
+          const invalidated = new Set(data.invalidatedPaths ?? ['']);
+          const reload = async () => {
+            const nextCache: Record<string, AssetNode[]> = {};
+            if (invalidated.has('')) {
+              const root = await assetClient.tree('');
+              setRootChildren(root.children);
+              setStats({ nodeCount: root.nodeCount, fileCount: root.fileCount, directoryCount: root.directoryCount });
+              setScannedAt(root.parent.modifiedAt);
+              const [sk, repos] = await Promise.all([assetClient.skeleton(), assetClient.repositories()]);
+              setSkeleton(sk);
+              setRepoCount(repos.length);
+            }
+            for (const rel of expandedRef.current) {
+              if (!invalidated.has(rel)) continue;
+              try {
+                const subtree = await assetClient.tree(rel);
+                nextCache[rel] = subtree.children;
+              } catch {
+                nextCache[rel] = [];
+              }
+            }
+            if (Object.keys(nextCache).length > 0) setChildrenCache((prev) => ({ ...prev, ...nextCache }));
+          };
+          reload().catch(() => undefined);
         } else if (data.type === 'error') {
           setWatcher('connected');
         }
