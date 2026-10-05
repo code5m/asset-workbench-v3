@@ -238,6 +238,14 @@ export interface ManagedAssetResult {
 
 export type AssetSourceKind = 'discovered' | 'expected';
 
+export type CodeLanguage =
+  | 'java'
+  | 'javascript'
+  | 'typescript'
+  | 'python'
+  | 'rust'
+  | 'other';
+
 /** Read-only Git identity/version evidence for one discovered repository. */
 export interface RepositoryRevision {
   repositoryId: string;
@@ -270,6 +278,8 @@ export interface AssetNode {
   children?: AssetNode[];
   /** Semantic managed-asset type when the node lives in a managed knowledge area. */
   managedType?: ManagedAssetType;
+  /** Programming language for code files when it can be determined cheaply from the path. */
+  codeLanguage?: CodeLanguage;
 }
 
 export interface AssetManifest {
@@ -310,15 +320,20 @@ export interface AssetContent {
 }
 
 export interface TreeResponse {
+  /** Parent is intentionally shallow: it never embeds recursive children. */
   parent: AssetNode;
+  /** Direct children only. Descendants are loaded with another /tree request. */
   children: AssetNode[];
+  /** Counts describe the directories currently held in the bounded lazy cache, not the whole project. */
   nodeCount: number;
   fileCount: number;
   directoryCount: number;
+  statsScope?: 'loaded';
+  cachedDirectoryCount?: number;
 }
 
 export type ServerEvent =
   | { type: 'connected'; scannedAt?: string }
   | { type: 'scan'; scannedAt: string; nodeCount: number; fileCount: number; directoryCount: number }
-  | { type: 'refresh'; scannedAt: string }
+  | { type: 'refresh'; scannedAt: string; invalidatedPaths?: string[] }
   | { type: 'error'; message: string };
