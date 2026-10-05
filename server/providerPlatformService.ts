@@ -112,8 +112,8 @@ export function getProviderDetail(id: string): ProviderDetail {
   return { definition: def, status: { ...base, platformStatus: platformStatus(base, def, active), authStatus, enabled: active }, recentEvents: [], verification, detectedAt: snapshot.detectedAt };
 }
 
-export function listProviderStatuses(): { providers: Array<ProviderDetail['status']>; detectedAt: string } {
-  const snapshot = getProviderSnapshot(false);
+function buildProviderStatuses(force = false): { providers: Array<ProviderDetail['status']>; detectedAt: string } {
+  const snapshot = getProviderSnapshot(force);
   const providers = listProviderDefinitions().map((item) => {
     const def = definition(item.id);
     const fallback: ProviderStatus = { provider: def.id as ProviderStatus['provider'], status: def.id === 'workbuddy' ? 'NOT_INSTALLED' : 'LIMITED', captureMethod: def.eventSource.type, realtime: false, historicalImport: false, runtimeVerified: false, installed: false, configured: false, detail: def.id === 'workbuddy' ? 'No WorkBuddy installation was detected.' : 'Custom Provider Definition is saved; a trusted adapter is still required.' };
@@ -122,6 +122,15 @@ export function listProviderStatuses(): { providers: Array<ProviderDetail['statu
     return { ...base, platformStatus: platformStatus(base, def, active), authStatus: authStatusFor(def), enabled: active };
   });
   return { providers, detectedAt: snapshot.detectedAt };
+}
+
+export function listProviderStatuses(): { providers: Array<ProviderDetail['status']>; detectedAt: string } {
+  return buildProviderStatuses(false);
+}
+
+export function redetectProviderStatuses(): { providers: Array<ProviderDetail['status']>; detectedAt: string } {
+  invalidateProviderSnapshot();
+  return buildProviderStatuses(true);
 }
 
 export function runProviderVerification(id: string): ProviderDetail & { verificationRunAt: string; authProbe?: ReturnType<typeof verifyProviderAuth> } {
