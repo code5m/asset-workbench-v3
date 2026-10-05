@@ -78,6 +78,23 @@ const STEP_KEYS: Record<string, string> = {
   Transcript: 'providerStepTranscript',
 };
 
+const PROVIDER_DESCRIPTION_KEYS: Record<string, string> = {
+  codex: 'providerDescCodex',
+  codebuddy: 'providerDescCodebuddy',
+  opencode: 'providerDescOpencode',
+  trae: 'providerDescTrae',
+  codearts: 'providerDescCodearts',
+  chatgpt: 'providerDescChatgpt',
+  workbuddy: 'providerDescWorkbuddy',
+};
+
+function verificationDetail(status: string, t: (key: string) => string): string {
+  if (status === 'PASS') return t('providerVerificationPass');
+  if (status === 'BLOCKED') return t('providerVerificationBlocked');
+  if (status === 'FAIL') return t('providerVerificationFail');
+  return t('providerVerificationWaiting');
+}
+
 export function ProviderManager() {
   const { t } = useI18n();
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -267,7 +284,7 @@ function ProviderConsole() {
             <div>
               <p className="eyebrow">{detail.definition.providerType}</p>
               <h2>{detail.definition.displayName}</h2>
-              <p>{detail.definition.description}</p>
+              <p>{PROVIDER_DESCRIPTION_KEYS[selected] ? t(PROVIDER_DESCRIPTION_KEYS[selected]) : detail.definition.description}</p>
             </div>
             <span className={`status-badge ${detail.status.platformStatus.toLowerCase().replaceAll('_','-')}`}>{statusLabel(detail.status.platformStatus)}</span>
           </div>
@@ -330,7 +347,7 @@ function ProviderConsole() {
           <div className="skeleton-rows">
             {detail.verification.map((row) => <div className="skeleton-row" key={row.step}>
               <strong>{stepLabel(row.step)}</strong>
-              <span>{row.detail}</span>
+              <span>{verificationDetail(row.status, t)}</span>
               <span className={`status-badge ${row.status.toLowerCase()}`}>{row.status}</span>
             </div>)}
           </div>
@@ -342,6 +359,8 @@ function ProviderConsole() {
             <p>{t('providerConfigPath')}: {detail.definition.eventSource.projectConfigPath ?? t('providerNoConfig')}</p>
             <pre>{JSON.stringify(detail.definition.events, null, 2)}</pre>
             <p>{detail.definition.finalization.limitation ?? t('providerFinalDefault')}</p>
+            <h4>{t('providerRawVerificationDetail')}</h4>
+            {detail.verification.map((row) => <p key={`raw-${row.step}`}><code>{row.step}</code>: {row.detail}</p>)}
           </details>
         </> : <p>{t('providerLoading')}</p>}
       </div>
