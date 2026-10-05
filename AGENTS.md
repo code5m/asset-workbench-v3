@@ -156,11 +156,11 @@ Hard rules (anti-regression):
    Record `captureMode: full-transcript`.
 2. Only content that genuinely came from a real platform transcript / export may
    be labeled `full-transcript` (or `imported-transcript` for user imports).
-3. When no programmatic transcript is available (e.g. CodeBuddy / Codex / ChatGPT
-   in the current runtime), the session MUST be marked `transcriptCaptureStatus:
-   unavailable` and only a Work Record is produced. This is an honest, supported
-   state — the Knowledge Gate does NOT fail because a platform withholds a
-   transcript.
+3. When no genuine transcript is available, the session MUST be marked
+   `transcriptCaptureStatus: unavailable` and only a Work Record is produced.
+   Codex / CodeBuddy / OpenCode may obtain real transcripts through the Provider
+   Capture Kernel; ChatGPT remains explicit-import only; Trae remains limited by
+   its real lifecycle support. Never infer availability from the Provider name alone.
 4. Never reconstruct a "full transcript" from memory and label it `full-transcript`.
    Even text that looks like `User:` / `Assistant:` swaps is fabricated evidence.
 5. A Work Record is still mandatory for substantive tasks; it is the structural
@@ -172,12 +172,14 @@ Hard rules (anti-regression):
 `metadata.json` — path alone is insufficient because both live under
 `04-conversations`.
 
-New transcripts are written under `04-conversations/transcripts/<seg>/…`
-(`transcripts/<source>/` for real captures, `transcripts/imported/` for imports);
-legacy `agent-work-record` files under `04-conversations/<source>/…` remain
-readable and are classified as `agent-work-record` (no forced migration). An
-`AgentSession` can link BOTH a `transcriptAssetId` and a `workRecordAssetId`, with
-bidirectional back-links in each asset's `metadata.json`.
+New transcripts are written under `04-conversations/transcripts/<source>/…`.
+Import vs realtime capture is represented by `captureMode`, not by a special
+directory. Agent Work Records are written under
+`04-conversations/work-records/<source>/…`. Legacy layouts are migrated
+explicitly with `npm run migrate:conversations-v2`; the project does not
+permanently dual-write old and new layouts. An `AgentSession` can link BOTH a
+`transcriptAssetId` and a `workRecordAssetId`, with bidirectional back-links in
+each asset's `metadata.json`.
 
 ## Agent Knowledge Capture Protocol
 
