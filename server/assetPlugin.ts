@@ -28,6 +28,7 @@ import {
 } from './captureService.ts';
 import { detectProviders } from './providerAdapterService.ts';
 import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
+import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 
 /**
  * Vite plugin that mounts the Local Asset API under /api.
@@ -40,7 +41,14 @@ import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProvi
 function readBodyRaw(req: Connect.IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     let data = '';
-    req.on('data', (chunk) => {
+    let size = 0;
+    req.on('data', (chunk: Buffer | string) => {
+      size += Buffer.byteLength(chunk);
+      if (size > MAX_API_BODY_BYTES) {
+        reject(new InvalidInputError('request body too large'));
+        req.destroy();
+        return;
+      }
       data += chunk;
     });
     req.on('end', () => resolve(data));
@@ -89,6 +97,10 @@ function createHandler() {
     const url = req.url ?? '';
     const [pathPart, query] = url.split('?');
     try {
+      if (!isLocalApiRequest(req)) {
+        sendJson(res, 403, { error: 'Local Asset API accepts loopback connections only.' });
+        return;
+      }
       if (req.method === 'GET' && pathPart === '/workspace') {
         await assetService.ensureScanned();
         sendJson(res, 200, assetService.getWorkspace());
