@@ -20,7 +20,9 @@ import {
   isManagedWritableRelative,
   assertManagedWritable,
   WritePolicyError,
+  MANAGED_ROOTS,
 } from '../server/managedPathPolicy.ts';
+import { recoverDurableTransactions } from '../server/durableWrite.ts';
 import {
   createConversation,
   createDesign,
@@ -147,6 +149,31 @@ test('slugifyTitle produces safe ascii slugs', async () => {
 // ---------------------------------------------------------------------------
 // Conversation create + persistence
 // ---------------------------------------------------------------------------
+test('durable pair recovery rolls forward an interrupted Markdown + metadata commit', () => {
+  const dir = path.join(workspace, '02-design', 'architecture');
+  const id = 'deadbeef01';
+  const contentStage = `.awtxn-${id}.content`;
+  const metadataStage = `.awtxn-${id}.metadata`;
+  const markerName = `.awtxn-${id}.json`;
+  fs.writeFileSync(path.join(dir, contentStage), '# recovered\n', 'utf8');
+  fs.writeFileSync(path.join(dir, metadataStage), '{"schemaVersion":1}', 'utf8');
+  fs.writeFileSync(path.join(dir, markerName), JSON.stringify({
+    version: 1,
+    contentStage,
+    metadataStage,
+    contentTarget: 'recovered.md',
+    metadataTarget: 'recovered.metadata.json',
+  }), 'utf8');
+
+  recoverDurableTransactions(workspace, MANAGED_ROOTS);
+
+  assert.equal(fs.readFileSync(path.join(dir, 'recovered.md'), 'utf8'), '# recovered\n');
+  assert.equal(fs.readFileSync(path.join(dir, 'recovered.metadata.json'), 'utf8'), '{"schemaVersion":1}');
+  assert.equal(fs.existsSync(path.join(dir, markerName)), false, 'transaction marker cleared after recovery');
+  assert.equal(fs.existsSync(path.join(dir, contentStage)), false, 'content stage cleared');
+  assert.equal(fs.existsSync(path.join(dir, metadataStage)), false, 'metadata stage cleared');
+});
+
 test('createConversation writes real files on disk', async () => {
   const res = await createConversation({
     title: 'Asset Workbench Persistence Test',
