@@ -13,11 +13,13 @@ export class AssetWatcher {
   private watchers = new Map<string, fs.FSWatcher>();
   private pending = new Set<string>();
   private timer: NodeJS.Timeout | null = null;
+  private root: string;
+  private onChanged: (invalidatedPaths: string[]) => void;
 
-  constructor(
-    private root: string,
-    private onChanged: (invalidatedPaths: string[]) => void,
-  ) {}
+  constructor(root: string, onChanged: (invalidatedPaths: string[]) => void) {
+    this.root = root;
+    this.onChanged = onChanged;
+  }
 
   start(): void {
     this.watchDirectory('');
