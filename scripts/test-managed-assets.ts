@@ -103,6 +103,22 @@ test('assertManagedWritable rejects src/ and escapes with proper error', () => {
   const abs = assertManagedWritable(workspace, '04-conversations/manual/a/conversation.md');
   assert.ok(abs.startsWith(workspace));
 });
+test('assertManagedWritable rejects symlink escapes from managed roots', () => {
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-outside-'));
+  const link = path.join(workspace, '04-conversations', 'escape-link');
+  fs.symlinkSync(outside, link, 'dir');
+  try {
+    assert.throws(
+      () => assertManagedWritable(workspace, '04-conversations/escape-link/pwned.md'),
+      /path escapes project root/,
+    );
+    assert.equal(fs.existsSync(path.join(outside, 'pwned.md')), false);
+  } finally {
+    fs.rmSync(link, { force: true });
+    fs.rmSync(outside, { recursive: true, force: true });
+  }
+});
+
 
 // ---------------------------------------------------------------------------
 // Classifier priority
