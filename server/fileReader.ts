@@ -2,16 +2,7 @@ import fs from 'node:fs';
 import { resolveWithinRoot, assertWithinRoot } from './pathGuard.ts';
 import type { AssetContent } from '../src/domain/asset';
 
-/**
- * File content reader with a single, centralized text-preview policy.
- *
- * - A hard size ceiling prevents pushing huge files to the browser.
- * - Known binary extensions are rejected up front.
- * - A NUL-byte scan rejects files that merely lack a known extension.
- * Files are read read-only and only after a path-safety check.
- */
-
-export const TEXT_PREVIEW_LIMIT = 1024 * 1024; // 1 MB
+export const TEXT_PREVIEW_LIMIT = 256 * 1024; // read at most 256 KiB into memory
 
 const BINARY_EXT = new Set([
   'png', 'jpg', 'jpeg', 'gif', 'bmp', 'ico', 'webp', 'mp3', 'mp4', 'avi',
@@ -30,33 +21,35 @@ export function readAssetContent(root: string, relativePath: string): AssetConte
   assertWithinRoot(root, abs);
 
   let stat: fs.Stats;
-  try {
-    stat = fs.statSync(abs);
-  } catch {
-    throw new Error(`file not found: ${relativePath}`);
-  }
-  if (stat.isDirectory()) {
-    throw new Error(`not a file: ${relativePath}`);
-  }
+  try { stat = fs.statSync(abs); } catch { throw new Error(`file not found: ${relativePath}`); }
+  if (stat.isDirectory()) throw new Error(`not a file: ${relativePath}`);
 
   const id = relativePath;
-  if (stat.size > TEXT_PREVIEW_LIMIT) {
-    return { id, path: relativePath, previewable: false, truncated: false, size: stat.size, reason: 'file too large to preview' };
-  }
   if (BINARY_EXT.has(extOf(relativePath))) {
     return { id, path: relativePath, previewable: false, truncated: false, size: stat.size, reason: 'binary file' };
   }
 
-  const buf = fs.readFileSync(abs);
-  if (buf.includes(0)) {
+  const bytesToRead = Math.min(stat.size, TEXT_PREVIEW_LIMIT);
+  const buf = Buffer.allocUnsafe(bytesToRead);
+  let fd: number | undefined;
+  let bytesRead = 0;
+  try {
+    fd = fs.openSync(abs, 'r');
+    bytesRead = bytesToRead > 0 ? fs.readSync(fd, buf, 0, bytesToRead, 0) : 0;
+  } finally {
+    if (fd !== undefined) fs.closeSync(fd);
+  }
+  const slice = buf.subarray(0, bytesRead);
+  if (slice.includes(0)) {
     return { id, path: relativePath, previewable: false, truncated: false, size: stat.size, reason: 'binary content' };
   }
 
-  let content = buf.toString('utf8');
-  let truncated = false;
-  if (content.length > TEXT_PREVIEW_LIMIT) {
-    content = content.slice(0, TEXT_PREVIEW_LIMIT);
-    truncated = true;
-  }
-  return { id, path: relativePath, previewable: true, truncated, size: stat.size, content };
+  return {
+    id,
+    path: relativePath,
+    previewable: true,
+    truncated: stat.size > bytesRead,
+    size: stat.size,
+    content: slice.toString('utf8'),
+  };
 }
