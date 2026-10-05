@@ -33,6 +33,7 @@ export class AssetService {
   private watcher: AssetWatcher | null = null;
   private listeners = new Set<(e: ServerEvent) => void>();
   private lastScannedAt: string | undefined;
+  private recoveredRoot: string | null = null;
 
   async ensureScanned(): Promise<void> {
     if (!this.cache.has('')) this.loadDirectory('');
@@ -55,8 +56,12 @@ export class AssetService {
   }
 
   private loadDirectory(parentRel: string): DirectoryScanResult {
-    recoverDurableTransactions(getProjectRoot(), MANAGED_ROOTS);
-    const result = scanDirectory(getProjectRoot(), parentRel);
+    const root = getProjectRoot();
+    if (this.recoveredRoot !== root) {
+      recoverDurableTransactions(root, MANAGED_ROOTS);
+      this.recoveredRoot = root;
+    }
+    const result = scanDirectory(root, parentRel);
     this.touch(parentRel, result);
     this.lastScannedAt = result.parent.modifiedAt;
     this.watcher?.watchDirectory(parentRel);
@@ -191,6 +196,7 @@ export class AssetService {
     persistRoot(rootPath);
     this.cache.clear();
     this.lastScannedAt = undefined;
+    this.recoveredRoot = null;
     this.restartWatcher();
   }
 
