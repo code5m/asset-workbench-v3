@@ -351,7 +351,7 @@ export async function createConversation(input: CreateConversationInput): Promis
   const id = newId('conv');
   const dirRel = `04-conversations/${SOURCE_DIR[source]}/${dateStamp()}-${slugifyTitle(title)}`;
   const contentRel = `${dirRel}/conversation.md`;
-  const absDir = relToAbs(root, dirRel);
+  const absDir = assertManagedWritable(root, dirRel);
   if (fs.existsSync(absDir)) {
     throw new ConflictError(`conversation directory already exists: ${dirRel}`);
   }
@@ -416,7 +416,7 @@ export async function createTranscript(input: CreateTranscriptInput): Promise<Ma
     input.captureMode === 'imported-transcript' ? IMPORTED_TRANSCRIPT_SEGMENT : SOURCE_DIR[source] ?? 'other';
   const dirRel = `04-conversations/transcripts/${segment}/${dateStamp()}-${slugifyTitle(title)}`;
   const contentRel = `${dirRel}/transcript.md`;
-  const absDir = relToAbs(root, dirRel);
+  const absDir = assertManagedWritable(root, dirRel);
   if (fs.existsSync(absDir)) {
     throw new ConflictError(`transcript directory already exists: ${dirRel}`);
   }
@@ -491,7 +491,7 @@ export async function createDesign(input: CreateDesignInput): Promise<ManagedAss
   };
   try {
     writeFileAtomic(abs, renderDesignMarkdown(title, createdAt, id, content, sourceConversations, related));
-    writeFileAtomic(relToAbs(root, metadataRelForContent(contentRel)), JSON.stringify(meta, null, 2));
+    writeFileAtomic(assertManagedWritable(root, metadataRelForContent(contentRel)), JSON.stringify(meta, null, 2));
   } catch (e) {
     throw new WriteError(`failed to write design: ${(e as Error).message}`);
   }
@@ -546,8 +546,8 @@ export async function createDecision(input: CreateDecisionInput): Promise<Manage
     relatedAssetPaths: related,
   };
   try {
-    writeFileAtomic(relToAbs(root, contentRel), renderDecisionMarkdown(title, status, createdAt, id, content, sourceConversations, sourceDesigns, related));
-    writeFileAtomic(relToAbs(root, metadataRelForContent(contentRel)), JSON.stringify(meta, null, 2));
+    writeFileAtomic(assertManagedWritable(root, contentRel), renderDecisionMarkdown(title, status, createdAt, id, content, sourceConversations, sourceDesigns, related));
+    writeFileAtomic(assertManagedWritable(root, metadataRelForContent(contentRel)), JSON.stringify(meta, null, 2));
   } catch (e) {
     throw new WriteError(`failed to write decision: ${(e as Error).message}`);
   }
@@ -606,7 +606,7 @@ export function findAssetById(id: string): LocatedAsset | null {
 
 function updateMetadata(root: string, contentRel: string, patch: (m: ManagedAssetMetadata) => void): void {
   const metaRel = metadataRelForContent(contentRel);
-  const abs = relToAbs(root, metaRel);
+  const abs = assertManagedWritable(root, metaRel);
   let meta: ManagedAssetMetadata;
   try {
     meta = JSON.parse(fs.readFileSync(abs, 'utf8')) as ManagedAssetMetadata;
@@ -708,10 +708,10 @@ export async function updateDesign(input: UpdateDesignInput): Promise<ManagedAss
   };
   try {
     writeFileAtomic(
-      relToAbs(root, contentRel),
+      assertManagedWritable(root, contentRel),
       renderDesignMarkdown(title, m.createdAt, m.id, input.content, m.sourceConversations ?? [], newMeta.relatedAssetPaths ?? []),
     );
-    writeFileAtomic(relToAbs(root, metadataRelForContent(contentRel)), JSON.stringify(newMeta, null, 2));
+    writeFileAtomic(assertManagedWritable(root, metadataRelForContent(contentRel)), JSON.stringify(newMeta, null, 2));
   } catch (e) {
     throw new WriteError(`failed to update design: ${(e as Error).message}`);
   }
@@ -743,10 +743,10 @@ export async function updateDecision(input: UpdateDecisionInput): Promise<Manage
   };
   try {
     writeFileAtomic(
-      relToAbs(root, contentRel),
+      assertManagedWritable(root, contentRel),
       renderDecisionMarkdown(title, status, m.createdAt, m.id, input.content, m.sourceConversations ?? [], m.sourceDesigns ?? [], newMeta.relatedAssetPaths ?? []),
     );
-    writeFileAtomic(relToAbs(root, metadataRelForContent(contentRel)), JSON.stringify(newMeta, null, 2));
+    writeFileAtomic(assertManagedWritable(root, metadataRelForContent(contentRel)), JSON.stringify(newMeta, null, 2));
   } catch (e) {
     throw new WriteError(`failed to update decision: ${(e as Error).message}`);
   }
