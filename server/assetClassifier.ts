@@ -129,6 +129,12 @@ export function resolveManagedType(root: string, rel: string): ManagedAssetType 
 
 
 export function detectCodeLanguage(rel: string): CodeLanguage | undefined {
+  const base = path.basename(rel).toLowerCase();
+  if (base === 'pom.xml' || base === 'build.gradle' || base === 'settings.gradle' || base === 'gradle.properties') return 'java';
+  if (base === 'package.json' || base === 'package-lock.json' || base === 'yarn.lock' || base === 'pnpm-lock.yaml') return 'javascript';
+  if (base === 'tsconfig.json') return 'typescript';
+  if (base === 'pyproject.toml' || base === 'requirements.txt' || base === 'poetry.lock') return 'python';
+  if (base === 'cargo.toml' || base === 'cargo.lock') return 'rust';
   const ext = extOf(rel);
   if (ext === 'java') return 'java';
   if (['js', 'jsx', 'mjs', 'cjs'].includes(ext)) return 'javascript';
