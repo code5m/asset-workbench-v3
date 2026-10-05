@@ -160,6 +160,8 @@ export interface ManagedAssetMetadata {
   agentSessionId?: string;
   /** agent-work-record: id of the associated original transcript, if one exists */
   sourceTranscriptId?: string;
+  /** agent-work-record: explicit truth about whether an original transcript was obtained */
+  transcriptCaptureStatus?: TranscriptCaptureStatus;
   /** agent-work-record: id of the associated work record, if one exists (transcript side) */
   workRecordId?: string;
   /** platform-specific, non-core fields (provider, conversationId, ...). Never core model dependencies. */
