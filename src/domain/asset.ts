@@ -58,7 +58,7 @@ export type TranscriptCaptureStatus = 'available' | 'partial' | 'imported' | 'un
 export type TranscriptCompleteness = 'full' | 'partial' | 'unknown';
 
 /** Stable source enum for conversations. Never free-form strings. */
-export type ConversationSource = 'chatgpt' | 'codex' | 'codebuddy' | 'manual' | 'other';
+export type ConversationSource = 'chatgpt' | 'codex' | 'codebuddy' | 'opencode' | 'trae' | 'codearts' | 'workbuddy' | 'manual' | 'other';
 
 export type DecisionStatus = 'Accepted' | 'Proposed' | 'Superseded' | 'Deprecated';
 
@@ -126,7 +126,7 @@ export interface CaptureSession {
 }
 
 /** Agent identity. Kept in sync with ConversationSource so Session and Conversation align. */
-export type AgentType = 'chatgpt' | 'codex' | 'codebuddy' | 'manual' | 'other';
+export type AgentType = 'chatgpt' | 'codex' | 'codebuddy' | 'opencode' | 'trae' | 'codearts' | 'workbuddy' | 'manual' | 'other';
 
 /**
  * Single machine-readable relation record. Markdown shows human links; this is
