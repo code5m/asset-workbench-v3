@@ -23,6 +23,10 @@ const SOURCES: { value: string; key: string }[] = [
   { value: 'chatgpt', key: 'srcChatgpt' },
   { value: 'codex', key: 'srcCodex' },
   { value: 'codebuddy', key: 'srcCodebuddy' },
+  { value: 'opencode', key: 'srcOpencode' },
+  { value: 'trae', key: 'srcTrae' },
+  { value: 'codearts', key: 'srcCodearts' },
+  { value: 'workbuddy', key: 'srcWorkbuddy' },
   { value: 'manual', key: 'srcManual' },
   { value: 'other', key: 'srcOther' },
 ];
