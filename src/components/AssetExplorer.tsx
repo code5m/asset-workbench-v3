@@ -431,6 +431,7 @@ interface TreeNodeProps {
 }
 
 function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, onSelect }: TreeNodeProps) {
+  const { t } = useI18n();
   const isDir = node.kind === 'directory';
   const isOpen = expanded.has(node.relativePath);
   const kids = isOpen ? childrenCache[node.relativePath] : undefined;
@@ -441,7 +442,7 @@ function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, 
       <div className={`tree-row ${selectedId === node.id ? 'selected' : ''}`}>
         <button
           className="tree-toggle"
-          aria-label={isOpen ? 'collapse' : 'expand'}
+          aria-label={isOpen ? t('collapseDetail') : t('expandDetail')}
           onClick={() => onToggle(node)}
           style={{ visibility: isDir ? 'visible' : 'hidden' }}
         >
@@ -507,8 +508,8 @@ function DetailPanel({ node, content, contentLoading, contentError, managedMeta,
         <Field label={t('updatedAt')} value={formatDate(node.modifiedAt)} />
         {node.kind === 'directory' ? (
           <>
-            <Field label={t('childCount')} value={String(node.childCount ?? 0)} />
-            <Field label={t('fileCount')} value={String(node.fileCount ?? 0)} />
+            <Field label={t('childCount')} value={node.childCount == null ? t('countNotLoaded') : String(node.childCount)} />
+            <Field label={t('fileCount')} value={node.fileCount == null ? t('countNotLoaded') : String(node.fileCount)} />
           </>
         ) : null}
         <Field label={t('assetSource')} value={t('sourceDiscovered')} wide />
