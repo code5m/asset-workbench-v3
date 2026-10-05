@@ -62,6 +62,7 @@ export interface ClosureInput {
    */
   transcript?: {
     content: string;
+    source?: ConversationSource;
     sourceSessionId?: string;
     completeness?: 'full' | 'partial';
     sourceType?: string;
