@@ -45,25 +45,12 @@ function shallowNode(projectRoot: string, rel: string, name: string, isDir: bool
   return node;
 }
 
-function countDirectChildren(abs: string, parentRel: string): { childCount: number; fileCount: number } {
-  let entries: fs.Dirent[];
-  try { entries = fs.readdirSync(abs, { withFileTypes: true }); } catch { return { childCount: 0, fileCount: 0 }; }
-  let childCount = 0;
-  let fileCount = 0;
-  for (const entry of entries) {
-    if (entry.name === '.git') continue;
-    if (entry.isSymbolicLink()) continue;
-    const isDir = entry.isDirectory();
-    if (shouldIgnoreEntry(parentRel, entry.name, isDir)) continue;
-    childCount += 1;
-    if (!isDir) fileCount += 1;
-  }
-  return { childCount, fileCount };
-}
-
 /**
- * Read exactly one filesystem level. Descendants are never materialized here.
- * This is the authoritative primitive behind /workspace/tree.
+ * Read exactly one filesystem level.
+ *
+ * Important performance invariant: a parent directory is read once. We do not
+ * readdir every child directory just to precompute grandchildren counts. Those
+ * counts are populated when that child is explicitly opened.
  */
 export function scanDirectory(root: string, parentRel = ''): DirectoryScanResult {
   const abs = resolveWithinRoot(root, parentRel);
@@ -71,7 +58,19 @@ export function scanDirectory(root: string, parentRel = ''): DirectoryScanResult
   const parentStat = statSafe(abs);
   if (!parentStat?.isDirectory()) throw new Error(`directory not found: ${parentRel || '/'}`);
 
-  const parentCounts = countDirectChildren(abs, parentRel);
+  let entries: fs.Dirent[];
+  try { entries = fs.readdirSync(abs, { withFileTypes: true }); } catch { entries = []; }
+  entries.sort((a, b) => {
+    if (a.isDirectory() !== b.isDirectory()) return a.isDirectory() ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  const visible = entries.filter((entry) => {
+    if (entry.name === '.git' || entry.isSymbolicLink()) return false;
+    return !shouldIgnoreEntry(parentRel, entry.name, entry.isDirectory());
+  });
+
+  const parentFileCount = visible.filter((entry) => !entry.isDirectory()).length;
   const parent: AssetNode = {
     id: parentRel,
     name: parentRel ? path.basename(parentRel) : path.basename(root),
@@ -84,8 +83,8 @@ export function scanDirectory(root: string, parentRel = ''): DirectoryScanResult
     extension: '',
     sourceKind: 'discovered',
     exists: true,
-    childCount: parentCounts.childCount,
-    fileCount: parentCounts.fileCount,
+    childCount: visible.length,
+    fileCount: parentFileCount,
   };
 
   const repositories: RepositoryRevision[] = [];
@@ -97,28 +96,18 @@ export function scanDirectory(root: string, parentRel = ''): DirectoryScanResult
     }
   }
 
-  let entries: fs.Dirent[];
-  try { entries = fs.readdirSync(abs, { withFileTypes: true }); } catch { entries = []; }
-  entries.sort((a, b) => {
-    if (a.isDirectory() !== b.isDirectory()) return a.isDirectory() ? -1 : 1;
-    return a.name.localeCompare(b.name);
-  });
-
   const children: AssetNode[] = [];
   let fileCount = 0;
   let directoryCount = 0;
-  for (const entry of entries) {
-    if (entry.name === '.git' || entry.isSymbolicLink()) continue;
+  for (const entry of visible) {
     const isDir = entry.isDirectory();
-    if (shouldIgnoreEntry(parentRel, entry.name, isDir)) continue;
     const rel = parentRel ? `${parentRel}/${entry.name}` : entry.name;
     const childAbs = path.join(abs, entry.name);
     const st = statSafe(childAbs);
     const node = shallowNode(root, rel, entry.name, isDir, st);
     if (isDir) {
-      const counts = countDirectChildren(childAbs, rel);
-      node.childCount = counts.childCount;
-      node.fileCount = counts.fileCount;
+      // Unknown until this directory is opened. Zero here would falsely mean
+      // "known empty", so omit both optional counts.
       if (fs.existsSync(path.join(childAbs, '.git'))) {
         const rev = probeRepository(childAbs, rel);
         if (rev) {
