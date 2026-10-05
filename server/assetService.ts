@@ -3,6 +3,8 @@ import { scanProject, type ScanResult } from './assetScanner.ts';
 import { readAssetContent } from './fileReader.ts';
 import { AssetWatcher } from './assetWatcher.ts';
 import { isIgnoredPath } from './ignorePolicy.ts';
+import { MANAGED_ROOTS } from './managedPathPolicy.ts';
+import { recoverDurableTransactions } from './durableWrite.ts';
 import type {
   AssetNode,
   AssetContent,
@@ -47,6 +49,7 @@ export class AssetService {
   }
 
   private async doScan(): Promise<ScanResult> {
+    recoverDurableTransactions(getProjectRoot(), MANAGED_ROOTS);
     const result = scanProject(getProjectRoot());
     this.lastResult = result;
     this.emit({
