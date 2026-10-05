@@ -169,8 +169,8 @@ async function main() {
     assert.equal(meta.source, 'chatgpt');
     assert.equal(meta.completeness, 'full');
     assert.equal(meta.agentSessionId, sid);
-    // imported transcripts live under transcripts/imported/
-    assert.ok(t.path.includes('/transcripts/imported/'), `expected imported path, got ${t.path}`);
+    // Provider identity owns the directory; import vs realtime lives in metadata.
+    assert.ok(t.path.includes('/transcripts/chatgpt/'), `expected provider path, got ${t.path}`);
     assert.ok(fs.existsSync(relToAbs(t.path)), 'imported transcript on disk');
     // Wire the session and verify the gate accepts the imported transcript.
     updateSession(sid, {
