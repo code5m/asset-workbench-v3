@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_29322c6d-c1db-4a0e-9ace-3d83c5494384",
+  "type": "agent-work-record",
+  "title": "Provider Manager Secure Credential Closure",
+  "source": "codex",
+  "createdAt": "2026-10-05T03:38:51.644Z",
+  "updatedAt": "2026-10-05T03:38:51.644Z",
+  "captureMode": "agent-work-record",
+  "relatedAssetPaths": [],
+  "promotedTo": [],
+  "agentSessionId": "session_45d24eb5-49b3-45bc-9fa8-1688d2ce4228"
+}

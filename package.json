@@ -15,6 +15,7 @@
     "test:transcript": "node --experimental-strip-types scripts/test-transcript-model.ts",
     "test:capture": "node --experimental-strip-types scripts/test-capture-kernel.ts",
     "test:providers": "node --experimental-strip-types scripts/test-provider-adapters.ts",
+    "test:provider-platform": "node --experimental-strip-types scripts/test-provider-platform.ts",
     "test:codebuddy-capture": "node --experimental-strip-types scripts/test-codebuddy-capture.ts",
     "capture:import:codex": "node --experimental-strip-types scripts/import-codex-history.ts",
     "capture:import:codebuddy": "node --experimental-strip-types scripts/import-codebuddy-history.ts",

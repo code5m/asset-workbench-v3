@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_86ad734a-70c4-47ff-9f32-001d17936f70",
+  "type": "agent-work-record",
+  "title": "Git repository boundary and Provider Platform v1 baseline",
+  "source": "codex",
+  "createdAt": "2026-10-05T04:14:20.224Z",
+  "updatedAt": "2026-10-05T04:14:20.321Z",
+  "captureMode": "agent-work-record",
+  "relatedAssetPaths": [
+    ".gitignore",
+    "AGENTS.md",
+    "README.md",
+    "docs/git-history-boundary.md"
+  ],
+  "promotedTo": [
+    {
+      "type": "design",
+      "id": "design_c53f5b0c-eec3-4e92-bf7e-6b754524228e"
+    }
+  ],
+  "agentSessionId": "session_a86a6d43-263a-4fb9-93a3-a54ca5b00892"
+}

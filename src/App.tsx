@@ -7,6 +7,7 @@ import { GuidePage } from './components/GuidePage';
 import { StepRail } from './components/StepRail';
 import { WelcomePage } from './components/WelcomePage';
 import { WorkspaceConsole } from './components/WorkspaceConsole';
+import { ProviderManager } from './components/ProviderManager';
 import './styles.css';
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
           <WorkspaceConsole activeStep={activeStep} />
         </div>
       ) : null}
+      {activeSection === 'providers' ? <ProviderManager /> : null}
     </div>
   );
 }

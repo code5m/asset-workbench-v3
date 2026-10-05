@@ -18,7 +18,14 @@ export interface ProviderStatusView {
   historicalImport: boolean;
   runtimeVerified: boolean;
   detail: string;
+  installed?: boolean;
+  version?: string;
+  configured?: boolean;
+  lastVerifiedAt?: string;
+  capabilities?: string[];
+  limitations?: string[];
 }
+export interface ProviderDetailView { definition: any; status: ProviderStatusView & { platformStatus: string; authStatus: string; enabled: boolean }; verification: Array<{ step: string; status: string; detail: string }>; recentEvents: string[]; }
 
 /**
  * Asset Client — the only boundary the React layer uses to reach the real
@@ -70,6 +77,10 @@ export const assetClient = {
   providers(): Promise<ProviderStatusView[]> {
     return getJson<{ providers: ProviderStatusView[] }>(`${BASE}/providers`).then((result) => result.providers);
   },
+  providerDetail(id: string): Promise<ProviderDetailView> { return getJson(`${BASE}/provider-manager/providers/${encodeURIComponent(id)}`); },
+  async providerAction(id: string, action: string, body: Record<string, unknown> = {}): Promise<any> { const res = await fetch(`${BASE}/provider-manager/providers/${encodeURIComponent(id)}/${action}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); const value = await res.json(); if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText); return value; },
+  async saveCustomProvider(input: Record<string, unknown>): Promise<any> { const res = await fetch(`${BASE}/provider-manager/custom`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) }); const value = await res.json(); if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText); return value; },
+  async deleteCustomProvider(id: string): Promise<void> { const res = await fetch(`${BASE}/provider-manager/custom/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!res.ok) { const value = await res.json(); throw new ApiError(res.status, value.error ?? res.statusText); } },
   scan(): Promise<{ scannedAt: string; nodeCount: number; fileCount: number; directoryCount: number }> {
     return fetch(`${BASE}/workspace/scan`, { method: 'POST' }).then((r) => r.json());
   },

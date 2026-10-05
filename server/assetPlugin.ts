@@ -27,6 +27,7 @@ import {
   getCaptureSession,
 } from './captureService.ts';
 import { detectProviders } from './providerAdapterService.ts';
+import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
 
 /**
  * Vite plugin that mounts the Local Asset API under /api.
@@ -123,6 +124,15 @@ function createHandler() {
         sendJson(res, 200, { providers: detectProviders(getProjectRoot()) });
         return;
       }
+      if (req.method === 'GET' && pathPart === '/provider-manager/definitions') { sendJson(res, 200, { definitions: listProviderDefinitions() }); return; }
+      const providerDetail = pathPart.match(/^\/provider-manager\/providers\/([^/]+)$/);
+      if (req.method === 'GET' && providerDetail) { try { sendJson(res, 200, getProviderDetail(decodeURIComponent(providerDetail[1]))); } catch (e) { sendJson(res, 404, { error: (e as Error).message }); } return; }
+      const providerAction = pathPart.match(/^\/provider-manager\/providers\/([^/]+)\/(credentials|delete-credentials|verify-auth|enable|disable)$/);
+      if (req.method === 'POST' && providerAction) {
+        try { const [, id, action] = providerAction; const body = await readBody(req); if (action === 'credentials') sendJson(res, 200, saveCredentials(id, body)); else if (action === 'delete-credentials') sendJson(res, 200, deleteCredentials(id)); else if (action === 'verify-auth') sendJson(res, 200, verifyProviderAuth(id)); else sendJson(res, 200, setProviderEnabled(id, action === 'enable')); } catch (e) { sendJson(res, 400, { error: (e as Error).message }); } return;
+      }
+      if (req.method === 'POST' && pathPart === '/provider-manager/custom') { try { sendJson(res, 201, saveCustomDefinition((await readBody(req)) as never)); } catch (e) { sendJson(res, 400, { error: (e as Error).message }); } return; }
+      if (req.method === 'DELETE' && pathPart.startsWith('/provider-manager/custom/')) { try { deleteCustomDefinition(decodeURIComponent(pathPart.slice('/provider-manager/custom/'.length))); sendJson(res, 204, {}); } catch (e) { sendJson(res, 400, { error: (e as Error).message }); } return; }
       if (req.method === 'GET' && pathPart === '/workspace/events') {
         res.writeHead(200, {
           'content-type': 'text/event-stream',

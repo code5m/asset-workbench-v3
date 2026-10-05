@@ -61,6 +61,10 @@ chat.
 
 ## Git Safety
 
+Before any Git write in this project, confirm that `git rev-parse --show-toplevel`
+returns `/home/ainfinit/Documents/Knowledge-Base/secondBrain/asset-workbench-v3`.
+Never commit Asset Workbench V3 source from the parent `secondBrain` repository.
+
 The workbench must not mutate a user's development checkout.
 
 Do not implement or run these actions against the source workspace:
@@ -344,6 +348,10 @@ no product realtime hook, and an OpenAI API Agent webhook is a different thing
 that must never be reported as ChatGPT realtime capture).
 
 Two permanent anti-regression facts:
+
+- Provider secrets use the OS secure credential store only. They must never be
+  persisted in definitions, project/runtime JSON, logs, events, transcripts, or
+  API responses; callers receive only configured/not-configured status.
 
 - Trae is an IDE product. **"No CLI" is not "no hooks"** — hooks are configured in
   `.trae/hooks.json` and must be judged by the installed build's real capability.

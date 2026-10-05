@@ -9,7 +9,7 @@ export type ImportStatus = 'verified' | 'pending' | 'blocked';
 
 export type ReleaseObservationStatus = 'matched' | 'drift' | 'missing';
 
-export type AppSection = 'welcome' | 'guide' | 'assets' | 'console';
+export type AppSection = 'welcome' | 'guide' | 'assets' | 'console' | 'providers';
 
 export type AssetKind = 'code' | 'design' | 'document' | 'conversation' | 'derived';
 

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "decision_e93904f4-9ce6-459c-9449-0e721d3100ff",
+  "type": "decision",
+  "title": "Adopt Asset Workbench V3 standalone Git boundary",
+  "status": "Accepted",
+  "createdAt": "2026-10-05T04:14:20.362Z",
+  "updatedAt": "2026-10-05T04:14:20.362Z",
+  "sourceConversations": [
+    "conv_86ad734a-70c4-47ff-9f32-001d17936f70"
+  ],
+  "sourceDesigns": [
+    "design_c53f5b0c-eec3-4e92-bf7e-6b754524228e"
+  ],
+  "relatedAssetPaths": [
+    ".gitignore",
+    "AGENTS.md",
+    "README.md",
+    "docs/git-history-boundary.md"
+  ]
+}

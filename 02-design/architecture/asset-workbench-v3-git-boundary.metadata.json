@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "design_c53f5b0c-eec3-4e92-bf7e-6b754524228e",
+  "type": "design",
+  "title": "Asset Workbench V3 Git Boundary",
+  "designArea": "architecture",
+  "createdAt": "2026-10-05T04:14:20.279Z",
+  "updatedAt": "2026-10-05T04:14:20.401Z",
+  "sourceConversations": [
+    "conv_86ad734a-70c4-47ff-9f32-001d17936f70"
+  ],
+  "relatedAssetPaths": [
+    ".gitignore",
+    "AGENTS.md",
+    "README.md",
+    "docs/git-history-boundary.md"
+  ],
+  "promotedToDecisions": [
+    "decision_e93904f4-9ce6-459c-9449-0e721d3100ff"
+  ]
+}

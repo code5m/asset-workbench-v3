@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_9963b3fb-8826-456d-adf2-4f8fd7620ff3",
+  "type": "agent-work-record",
+  "title": "Untitled Agent Task",
+  "source": "codex",
+  "createdAt": "2026-10-05T04:13:59.061Z",
+  "updatedAt": "2026-10-05T04:13:59.061Z",
+  "captureMode": "agent-work-record",
+  "relatedAssetPaths": [],
+  "promotedTo": [],
+  "agentSessionId": "session_a86a6d43-263a-4fb9-93a3-a54ca5b00892"
+}

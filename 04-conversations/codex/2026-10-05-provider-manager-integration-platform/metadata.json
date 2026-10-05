@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_2e8ebbd1-5a08-4fdb-b16b-f75a6f6eab63",
+  "type": "agent-work-record",
+  "title": "Provider Manager Integration Platform",
+  "source": "codex",
+  "createdAt": "2026-10-05T03:14:39.347Z",
+  "updatedAt": "2026-10-05T03:14:39.451Z",
+  "captureMode": "agent-work-record",
+  "relatedAssetPaths": [
+    "server/providerPlatformService.ts",
+    "server/assetPlugin.ts",
+    "src/components/ProviderManager.tsx",
+    "src/services/assetClient.ts",
+    "src/domain/workspace.ts",
+    "src/data/navigation.ts",
+    "src/App.tsx",
+    "src/styles.css",
+    "scripts/test-provider-platform.ts",
+    "docs/provider-integration-platform.md",
+    "README.md",
+    "package.json"
+  ],
+  "promotedTo": [
+    {
+      "type": "design",
+      "id": "design_dd1decff-0330-4805-b6be-d6d4eaaec2dd"
+    }
+  ],
+  "agentSessionId": "session_d4369372-ae33-4f47-9733-9dd9bc68e2f3"
+}

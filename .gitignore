@@ -5,3 +5,6 @@ dist
 .asset-workbench-data
 .bevel/
 *.local
+.codeartsdoer/
+.opencode/AGENTS.md
+.opencode/mem-exp-config.json

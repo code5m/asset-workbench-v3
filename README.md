@@ -191,6 +191,10 @@ it never accepts a filesystem output path.
 See [provider adapter guide](03-docs/guides/provider-adapters.md) for the
 capability matrix, real Codex setup, limits, and safe history import.
 
+Provider Manager is the control plane for installation detection, authentication,
+event-source configuration, verification evidence, and enable/disable state.
+See [Provider Integration Platform](docs/provider-integration-platform.md).
+
 ### Managed Knowledge Asset Persistence
 
 Conversation / Design / Decision are real, persisted project assets — not UI
@@ -293,3 +297,10 @@ full rules and the Definition of Done.
 Agent sessions live under `.asset-workbench-data/agent-sessions/` (Scanner-
 ignored, git-ignored) and survive a dev-server restart. External Git checkouts
 remain READ ONLY.
+
+## Git history boundary
+
+Asset Workbench V3 uses its own Git repository. Its standalone history begins
+from the Provider Platform v1 baseline; earlier development occurred under an
+unmanaged parent-repository boundary. Runtime data, local Agent configuration,
+and operating-system credentials are deliberately excluded from Git.

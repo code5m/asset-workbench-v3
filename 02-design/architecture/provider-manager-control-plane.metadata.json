@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "design_dd1decff-0330-4805-b6be-d6d4eaaec2dd",
+  "type": "design",
+  "title": "Provider Manager Control Plane",
+  "designArea": "architecture",
+  "createdAt": "2026-10-05T03:14:39.405Z",
+  "updatedAt": "2026-10-05T03:14:39.405Z",
+  "sourceConversations": [
+    "conv_2e8ebbd1-5a08-4fdb-b16b-f75a6f6eab63"
+  ],
+  "relatedAssetPaths": [
+    "server/providerPlatformService.ts",
+    "server/assetPlugin.ts",
+    "src/components/ProviderManager.tsx",
+    "src/services/assetClient.ts",
+    "src/domain/workspace.ts",
+    "src/data/navigation.ts",
+    "src/App.tsx",
+    "src/styles.css",
+    "scripts/test-provider-platform.ts",
+    "docs/provider-integration-platform.md",
+    "README.md",
+    "package.json"
+  ],
+  "promotedToDecisions": []
+}
