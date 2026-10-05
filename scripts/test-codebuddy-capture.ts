@@ -106,7 +106,7 @@ await check('official transcript import: dedupe + idempotency', async () => {
   store('m2', 'assistant', [{ type: 'reasoning', text: 'internal reasoning must not be transcribed' }, { type: 'text', text: 'real assistant answer from transcript' }]);
   store('m3', 'assistant', [{ type: 'tool-call', toolName: 'Bash', toolCallId: 'call_1', args: { command: 'pwd' } }]);
   store('m4', 'tool', [{ type: 'tool-result', toolName: 'Bash', toolCallId: 'call_1', result: { stdout: '/' } }]);
-  // provider re-emission of the SAME user text under a new message id
+  // legitimate repeated user text under a different provider message id
   store('m5', 'user', [{ type: 'text', text: 'real user question from transcript' }]);
 
   fs.writeFileSync(path.join(sessionDir, 'index.json'), JSON.stringify({
@@ -119,7 +119,7 @@ await check('official transcript import: dedupe + idempotency', async () => {
     assert.equal(first.imported > 0, true);
     const events = eventsOf(first.captureSessionId);
     const users = events.filter((e) => e.eventType === 'user.message');
-    assert.equal(users.length, 1, 're-emitted identical user text collapses to one message');
+    assert.equal(users.length, 2, 'identical text from distinct provider message ids must be preserved');
     assert.equal(users[0].content, 'real user question from transcript');
     const assistants = events.filter((e) => e.eventType === 'assistant.message');
     assert.equal(assistants.length, 1, 'one assistant message');
