@@ -56,7 +56,7 @@ await check('explicit import creates an imported-transcript asset', async () => 
   assert.equal(meta.captureMode, 'imported-transcript');
   assert.equal(meta.type, 'conversation-transcript');
   assert.equal(meta.source, 'chatgpt');
-  assert.ok(t.path.includes('04-conversations/transcripts/imported/'), t.path);
+  assert.ok(t.path.includes('04-conversations/transcripts/chatgpt/'), t.path);
   // raw content preserved verbatim (no destructive cleaning)
   assert.equal(fs.readFileSync(path.join(workspace, t.path), 'utf8'), exported);
 });
