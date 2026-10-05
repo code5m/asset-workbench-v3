@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   BookOpen,
   CircleHelp,
@@ -361,7 +361,7 @@ function ProviderConsole() {
   </>;
 }
 
-function CapabilityCard({ icon, title, value, help }: { icon: React.ReactNode; title: string; value: string; help: string }) {
+function CapabilityCard({ icon, title, value, help }: { icon: ReactNode; title: string; value: string; help: string }) {
   return <article className="provider-capability-card">
     <div className="provider-capability-icon">{icon}</div>
     <div><small>{title}</small><strong>{value}</strong><p>{help}</p></div>
