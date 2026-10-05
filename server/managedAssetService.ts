@@ -13,6 +13,7 @@ import type {
   ManagedAssetResult,
   ManagedAssetType,
   TranscriptCompleteness,
+  TranscriptCaptureStatus,
 } from '../src/domain/asset';
 
 /**
@@ -68,6 +69,8 @@ export interface CreateConversationInput {
   agentSessionId?: string;
   /** id of the associated original Transcript, if one exists */
   sourceTranscriptId?: string;
+  /** explicit status of original Transcript acquisition */
+  transcriptCaptureStatus?: TranscriptCaptureStatus;
 }
 export interface CreateDesignInput {
   title: string;
@@ -342,6 +345,7 @@ export async function createConversation(input: CreateConversationInput): Promis
     promotedTo: [],
     agentSessionId: input.agentSessionId,
     sourceTranscriptId: input.sourceTranscriptId,
+    transcriptCaptureStatus: input.transcriptCaptureStatus,
   };
   try {
     writeDirAtomic(absDir, {
