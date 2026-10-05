@@ -565,7 +565,11 @@ function walkMetadata(root: string, dir: string, out: LocatedAsset[]): void {
       try {
         const meta = JSON.parse(fs.readFileSync(abs, 'utf8')) as ManagedAssetMetadata;
         if (meta && meta.id) {
-          const contentRel = `${path.relative(root, dir).split(path.sep).join('/')}/${e.name === 'metadata.json' ? 'conversation.md' : e.name.replace(/\.metadata\.json$/, '.md')}`;
+          const contentName =
+            e.name === 'metadata.json'
+              ? (meta.type === 'conversation-transcript' ? 'transcript.md' : 'conversation.md')
+              : e.name.replace(/\.metadata\.json$/, '.md');
+          const contentRel = `${path.relative(root, dir).split(path.sep).join('/')}/${contentName}`;
           out.push({ contentRel, metadata: meta });
         }
       } catch {
