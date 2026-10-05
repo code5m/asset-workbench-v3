@@ -199,6 +199,7 @@ export async function runClosure(sessionId: string, input: ClosureInput): Promis
     captureMode: working.captureMode,
     agentSessionId: working.id,
     sourceTranscriptId: transcript?.id,
+    transcriptCaptureStatus,
   });
 
   // --- 3. Wire the bidirectional Transcript <-> Work Record link (if both exist) ---
