@@ -63,6 +63,11 @@ async function getJson<T>(url: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+async function errorMessage(res: Response): Promise<string> {
+  const value = await res.json().catch(() => ({})) as { error?: string };
+  return value.error ?? res.statusText;
+}
+
 function encode(rel: string): string {
   return encodeURIComponent(rel);
 }
@@ -112,25 +117,27 @@ export const assetClient = {
   },
   async providerAction(id: string, action: string, body: Record<string, unknown> = {}): Promise<any> {
     const res = await fetch(`${BASE}/provider-manager/providers/${encodeURIComponent(id)}/${action}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    const value = await res.json();
-    if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    const value = await res.json() as any;
+    if (!res.ok) throw new ApiError(res.status, value?.error ?? res.statusText);
     clearProviderClientCache();
     return value;
   },
   async saveCustomProvider(input: Record<string, unknown>): Promise<any> {
     const res = await fetch(`${BASE}/provider-manager/custom`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) });
-    const value = await res.json();
-    if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    const value = await res.json() as any;
+    if (!res.ok) throw new ApiError(res.status, value?.error ?? res.statusText);
     clearProviderClientCache();
     return value;
   },
   async deleteCustomProvider(id: string): Promise<void> {
     const res = await fetch(`${BASE}/provider-manager/custom/${encodeURIComponent(id)}`, { method: 'DELETE' });
-    if (!res.ok) { const value = await res.json(); throw new ApiError(res.status, value.error ?? res.statusText); }
+    if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
     clearProviderClientCache();
   },
-  scan(): Promise<{ scannedAt: string; nodeCount: number; fileCount: number; directoryCount: number }> {
-    return fetch(`${BASE}/workspace/scan`, { method: 'POST' }).then((r) => r.json());
+  async scan(): Promise<{ scannedAt: string; nodeCount: number; fileCount: number; directoryCount: number }> {
+    const res = await fetch(`${BASE}/workspace/scan`, { method: 'POST' });
+    if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
+    return await res.json() as { scannedAt: string; nodeCount: number; fileCount: number; directoryCount: number };
   },
   async setRoot(rootPath: string): Promise<{ projectRoot: string; scannedAt: string; nodeCount: number; fileCount: number; directoryCount: number }> {
     const res = await fetch(`${BASE}/workspace/root`, {
@@ -138,7 +145,7 @@ export const assetClient = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ rootPath }),
     });
-    const value = await res.json();
+    const value = await res.json() as { projectRoot: string; scannedAt: string; nodeCount: number; fileCount: number; directoryCount: number; error?: string };
     if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
     clearProviderClientCache();
     return value;
@@ -154,7 +161,7 @@ export const assetClient = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     });
-    if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).error ?? res.statusText);
+    if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
     return (await res.json()) as ManagedAssetResult;
   },
   async createDesign(input: Record<string, unknown>): Promise<ManagedAssetResult> {
@@ -163,7 +170,7 @@ export const assetClient = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     });
-    if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).error ?? res.statusText);
+    if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
     return (await res.json()) as ManagedAssetResult;
   },
   async createDecision(input: Record<string, unknown>): Promise<ManagedAssetResult> {
@@ -172,7 +179,7 @@ export const assetClient = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     });
-    if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).error ?? res.statusText);
+    if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
     return (await res.json()) as ManagedAssetResult;
   },
   async createTranscript(input: Record<string, unknown>): Promise<ManagedAssetResult> {
@@ -181,7 +188,7 @@ export const assetClient = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     });
-    if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).error ?? res.statusText);
+    if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
     return (await res.json()) as ManagedAssetResult;
   },
   async promoteConversationToDesign(id: string, input: Record<string, unknown>): Promise<ManagedAssetResult> {
@@ -190,7 +197,7 @@ export const assetClient = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     });
-    if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).error ?? res.statusText);
+    if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
     return (await res.json()) as ManagedAssetResult;
   },
   async promoteDesignToDecision(id: string, input: Record<string, unknown>): Promise<ManagedAssetResult> {
@@ -199,13 +206,13 @@ export const assetClient = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
     });
-    if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).error ?? res.statusText);
+    if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
     return (await res.json()) as ManagedAssetResult;
   },
   async getManagedAsset(rel: string): Promise<ManagedAssetMetadata | null> {
     const res = await fetch(`${BASE}/managed/asset?path=${encodeURIComponent(rel)}`);
     if (res.status === 404) return null;
-    if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).error ?? res.statusText);
+    if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
     const data = (await res.json()) as { metadata: ManagedAssetMetadata };
     return data.metadata;
   },
