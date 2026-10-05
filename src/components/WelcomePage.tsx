@@ -25,6 +25,26 @@ type DocStatus = 'FOUND' | 'MISSING' | 'PENDING';
 
 const DEFAULT_DOC_COUNT = 3;
 
+const welcomeProviderStatusKey = (value: string): string => ({
+  ENABLED: 'providerStatusEnabled',
+  DISABLED: 'providerStatusDisabled',
+  AVAILABLE: 'providerAvailable',
+  NOT_INSTALLED: 'providerStatusNotInstalled',
+  NEEDS_AUTH: 'providerStatusBlockedAuth',
+  BLOCKED: 'providerStatusBlockedAuth',
+  LIMITED: 'providerStatusLimited',
+  ERROR: 'providerStatusError',
+}[value] ?? 'providerStatusLimited');
+
+const welcomeProviderSourceKey = (provider: string): string => ({
+  codex: 'providerSourceHooks',
+  codebuddy: 'providerSourceHooks',
+  trae: 'providerSourceHooks',
+  opencode: 'providerSourcePlugin',
+  codearts: 'providerSourceExport',
+  chatgpt: 'providerSourceManual',
+}[provider] ?? 'providerSourceCustom');
+
 export function WelcomePage({ onNavigate, onOpenAsset }: WelcomePageProps) {
   const { t, loc } = useI18n();
   const [skeleton, setSkeleton] = useState<ExpectedSkeletonEntry[]>([]);
@@ -162,16 +182,16 @@ export function WelcomePage({ onNavigate, onOpenAsset }: WelcomePageProps) {
       <section>
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Conversation capture</p>
-            <h2>Provider connection status</h2>
+            <p className="eyebrow">{t('welcomeProviderEyebrow')}</p>
+            <h2>{t('welcomeProviderTitle')}</h2>
           </div>
         </div>
         <div className="skeleton-rows">
           {providers.map((provider) => (
-            <article className="skeleton-row" key={provider.provider} title={provider.detail}>
+            <article className="skeleton-row" key={provider.provider}>
               <code>{provider.provider}</code>
-              <span className="skeleton-row-kind">{provider.captureMethod}</span>
-              <span className={`status-badge ${provider.status.toLowerCase().replace(/_/g, '-')}`}>{provider.status}</span>
+              <span className="skeleton-row-kind">{t(welcomeProviderSourceKey(provider.provider))}</span>
+              <span className={`status-badge ${provider.status.toLowerCase().replace(/_/g, '-')}`}>{t(welcomeProviderStatusKey(provider.status))}</span>
             </article>
           ))}
         </div>
