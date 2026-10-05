@@ -54,6 +54,16 @@ Provider Adapter → Asset Workbench Capture API → Capture Event Kernel
   capture source of truth.
 - A Transcript is original interaction evidence. An Agent Work Record remains
   a separate structured task summary; capture never replaces it.
+- Provider Capture sessions are linked to the active AgentSession when provider
+  identity and project root match. Whether provider SessionEnd happens before or
+  after `agent:close`, the final Transcript and Work Record are back-linked.
+- Work Record metadata stores `transcriptCaptureStatus` explicitly
+  (`available | partial | imported | unavailable`), so the UI never presents a
+  short Agent summary as if it were a full conversation.
+- `verify:knowledge` fails on inconsistent claimed Transcript state and prints
+  an explicit warning when a transcript-capable provider finishes with only a
+  Work Record. ChatGPT remains explicit-import only; private API/DOM scraping is
+  deliberately not used.
 
 ## Architecture Decisions
 
@@ -221,7 +231,7 @@ format):
     + `metadata.json`. Always produced for substantive tasks.
   - **Transcript** (`conversation-transcript`) = the *original* raw chat when
     genuinely obtainable. Lives under `04-conversations/transcripts/{source|imported}/<date>-<slug>/transcript.md`
-    + `metadata.json`. Sources: chatgpt / codex / codebuddy / manual / other;
+    + `metadata.json`. Sources: chatgpt / codex / codebuddy / opencode / trae / codearts / workbuddy / manual / other;
     imports go under `transcripts/imported/`.
   The Classifier (`server/assetClassifier.ts` `resolveManagedType`) decides the
   concrete type from each asset's `metadata.json` — path alone is insufficient.
@@ -284,11 +294,12 @@ npm run verify:knowledge
 
 `agent:close` accepts a structured `closure.json` (task title, investigation,
 findings, changes, verification, outcome, optional `transcript` content, and
-optional `design` / `decision` blocks). It first attempts to capture a real
-**Transcript** (`captureMode: full-transcript`); if the runtime cannot export a
-genuine one, the session is marked `transcriptCaptureStatus: unavailable` and
-only an **Agent Work Record** (`captureMode: agent-work-record`) is produced. It
-never fabricates a full chat transcript. Trivial changes pass
+optional `design` / `decision` blocks). It first reuses any real Transcript
+already materialized by the Provider Capture Kernel; otherwise it may consume an
+explicit imported transcript. If no genuine original conversation is available,
+the session is marked `transcriptCaptureStatus: unavailable` and only an **Agent
+Work Record** (`captureMode: agent-work-record`) is produced. It never fabricates
+a full chat transcript. Trivial changes pass
 `captureConversation: false` with an explicit `skipReason`.
 
 If `verify:knowledge` exits non-zero, the task is not done — fix the capture,

@@ -12,6 +12,7 @@ import {
   updateDesign,
   updateDecision,
   findAssetById,
+  metadataRelForContent,
 } from './managedAssetService.ts';
 import { captureTranscript } from './transcript/transcriptSource.ts';
 import { currentSessionId, readSession, updateSession, SessionError } from './agentSessionService.ts';
@@ -137,40 +138,56 @@ export async function runClosure(sessionId: string, input: ClosureInput): Promis
     return { session: closed, skipped: true };
   }
 
-  // --- 1. Attempt to capture the original Transcript (if the platform allows it) ---
-  // Honest: when no programmatic transcript exists, this returns `unavailable`
-  // and no transcript asset is written. A Work Record is still produced below.
-  const capture = await captureTranscript({
-    agentType: working.agentType,
-    agentSessionId: working.id,
-    override: input.transcript
-      ? {
-          content: input.transcript.content,
-          sourceSessionId: input.transcript.sourceSessionId,
-          completeness: input.transcript.completeness,
-          sourceType: input.transcript.sourceType,
-        }
-      : undefined,
-  });
-
+  // --- 1. Reuse an already materialized provider Transcript when SessionEnd
+  // happened before agent:close; otherwise consult the explicit/platform source.
   let transcript: ManagedAssetResult | undefined;
-  let transcriptCaptureStatus: AgentSession['transcriptCaptureStatus'] = 'unavailable';
-  if (capture.status !== 'unavailable' && capture.content) {
-    const isImported = capture.sourceType === 'imported';
-    const transcriptSource: ConversationSource = isImported
-      ? ((input.transcript?.source as ConversationSource) ?? 'other')
-      : (working.agentType as ConversationSource);
-    transcript = await createTranscript({
-      title: working.taskTitle,
-      source: transcriptSource,
-      content: capture.content,
-      captureMode: isImported ? 'imported-transcript' : 'full-transcript',
-      completeness: capture.completeness,
-      sourceSessionId: capture.sourceSessionId,
+  let transcriptCaptureStatus: AgentSession['transcriptCaptureStatus'] = working.transcriptCaptureStatus ?? 'unavailable';
+
+  if (working.transcriptAssetId) {
+    const existing = findAssetById(working.transcriptAssetId);
+    if (existing?.metadata.type === 'conversation-transcript') {
+      transcript = {
+        id: existing.metadata.id,
+        type: 'conversation-transcript',
+        path: existing.contentRel,
+        metadataPath: metadataRelForContent(existing.contentRel),
+      };
+    }
+  }
+
+  if (!transcript) {
+    const capture = await captureTranscript({
+      agentType: working.agentType,
       agentSessionId: working.id,
-      sourceMetadata: { provider: working.agentType, transcriptSource: capture.sourceType },
+      override: input.transcript
+        ? {
+            content: input.transcript.content,
+            sourceSessionId: input.transcript.sourceSessionId,
+            completeness: input.transcript.completeness,
+            sourceType: input.transcript.sourceType,
+          }
+        : undefined,
     });
-    transcriptCaptureStatus = capture.status === 'partial' ? 'partial' : isImported ? 'imported' : 'available';
+
+    if (capture.status !== 'unavailable' && capture.content) {
+      const isImported = capture.sourceType === 'imported';
+      const transcriptSource: ConversationSource = isImported
+        ? ((input.transcript?.source as ConversationSource) ?? 'other')
+        : (working.agentType as ConversationSource);
+      transcript = await createTranscript({
+        title: working.taskTitle,
+        source: transcriptSource,
+        content: capture.content,
+        captureMode: isImported ? 'imported-transcript' : 'full-transcript',
+        completeness: capture.completeness,
+        sourceSessionId: capture.sourceSessionId,
+        agentSessionId: working.id,
+        sourceMetadata: { provider: working.agentType, transcriptSource: capture.sourceType },
+      });
+      transcriptCaptureStatus = capture.status === 'partial' ? 'partial' : isImported ? 'imported' : 'available';
+    } else {
+      transcriptCaptureStatus = 'unavailable';
+    }
   }
 
   // --- 2. Always produce the Agent Work Record (structured evidence) ---
@@ -182,6 +199,7 @@ export async function runClosure(sessionId: string, input: ClosureInput): Promis
     captureMode: working.captureMode,
     agentSessionId: working.id,
     sourceTranscriptId: transcript?.id,
+    transcriptCaptureStatus,
   });
 
   // --- 3. Wire the bidirectional Transcript <-> Work Record link (if both exist) ---
@@ -277,6 +295,16 @@ export function checkRelationConsistency(ids: string[]): RelationIssue[] {
   }
   for (const [id, { meta, contentRel }] of map) {
     if (meta.type === 'conversation' || meta.type === 'agent-work-record') {
+      if (meta.sourceTranscriptId) {
+        const transcript = map.get(meta.sourceTranscriptId);
+        if (!transcript) {
+          issues.push({ assetId: id, path: contentRel, message: `sourceTranscript ${meta.sourceTranscriptId} missing` });
+        } else if (transcript.meta.type !== 'conversation-transcript') {
+          issues.push({ assetId: id, path: contentRel, message: `sourceTranscript ${meta.sourceTranscriptId} is not a transcript` });
+        } else if (transcript.meta.workRecordId !== id) {
+          issues.push({ assetId: id, path: contentRel, message: `transcript ${meta.sourceTranscriptId} missing workRecord back-link` });
+        }
+      }
       for (const p of meta.promotedTo ?? []) {
         const d = map.get(p.id);
         if (!d) {
@@ -308,6 +336,14 @@ export function checkRelationConsistency(ids: string[]): RelationIssue[] {
         if (!(c.meta.promotedTo ?? []).some((p) => p.type === 'design' && p.id === id)) {
           issues.push({ assetId: id, path: contentRel, message: `sourceConversation ${cid} missing promotedTo back-link` });
         }
+      }
+    }
+    if (meta.type === 'conversation-transcript' && meta.workRecordId) {
+      const workRecord = map.get(meta.workRecordId);
+      if (!workRecord) {
+        issues.push({ assetId: id, path: contentRel, message: `workRecord ${meta.workRecordId} missing` });
+      } else if (workRecord.meta.sourceTranscriptId !== id) {
+        issues.push({ assetId: id, path: contentRel, message: `workRecord ${meta.workRecordId} missing sourceTranscript back-link` });
       }
     }
     if (meta.type === 'decision') {
@@ -353,6 +389,7 @@ function scanTempResidue(root: string): string[] {
 export interface VerifyResult {
   ok: boolean;
   issues: string[];
+  warnings: string[];
 }
 
 /**
@@ -360,12 +397,13 @@ export interface VerifyResult {
  */
 export function verifyKnowledgeCapture(sessionId?: string): VerifyResult {
   const issues: string[] = [];
+  const warnings: string[] = [];
   const id = sessionId ?? currentSessionId();
   if (!id) {
-    return { ok: false, issues: ['no active AgentSession (run agent:preflight first)'] };
+    return { ok: false, issues: ['no active AgentSession (run agent:preflight first)'], warnings };
   }
   const session = readSession(id);
-  if (!session) return { ok: false, issues: [`AgentSession not found: ${id}`] };
+  if (!session) return { ok: false, issues: [`AgentSession not found: ${id}`], warnings };
 
   if (session.closureStatus !== 'closed') {
     issues.push(`closureStatus is '${session.closureStatus}', expected 'closed' (run agent:close first)`);
@@ -401,7 +439,16 @@ export function verifyKnowledgeCapture(sessionId?: string): VerifyResult {
       }
     }
 
-    // Transcript checks: required only when a transcript was reported available.
+    // Transcript checks: required when a transcript was reported available.
+    // Providers with a real transcript-capable integration must never silently
+    // look "complete" when no original conversation was obtained.
+    const transcriptCapable = session.agentType === 'codex' || session.agentType === 'codebuddy' || session.agentType === 'opencode';
+    if (tcs === 'unavailable' && transcriptCapable) {
+      warnings.push(`${session.agentType}: original transcript was not obtained; only the Agent Work Record is available`);
+    }
+    if (tcs === 'partial') {
+      warnings.push(`${session.agentType}: only a partial original transcript was obtained`);
+    }
     if (tcs !== 'unavailable') {
       if (!transcriptId) {
         issues.push(`transcriptCaptureStatus is '${tcs}' but no transcriptAssetId present`);
@@ -438,5 +485,5 @@ export function verifyKnowledgeCapture(sessionId?: string): VerifyResult {
     if (residue.length > 0) issues.push(`temp write residue found: ${residue.map((r) => path.relative(getProjectRoot(), r)).join(', ')}`);
   }
 
-  return { ok: issues.length === 0, issues };
+  return { ok: issues.length === 0, issues, warnings };
 }

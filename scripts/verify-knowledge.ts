@@ -46,8 +46,15 @@ if (id) {
 if (result.issues.length > 0) {
   console.log('ISSUES:');
   for (const issue of result.issues) console.log(`  - ${issue}`);
-} else if (result.ok) {
+}
+if (result.warnings.length > 0) {
+  console.log('WARNINGS:');
+  for (const warning of result.warnings) console.log(`  - ${warning}`);
+}
+if (result.ok && result.warnings.length === 0) {
   console.log('All knowledge-capture checks passed.');
+} else if (result.ok) {
+  console.log('Knowledge-capture integrity passed with explicit transcript limitations above.');
 }
 
 process.exit(result.ok ? 0 : 1);

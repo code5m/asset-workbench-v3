@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { getDataDir } from './config.ts';
-import { createTranscript } from './managedAssetService.ts';
+import { createTranscript, findAssetById, patchAssetMetadataById } from './managedAssetService.ts';
 import { readSession, updateSession } from './agentSessionService.ts';
 import type {
   CanonicalCaptureEvent,
@@ -97,7 +97,8 @@ function readJsonl<T>(target: string): T[] {
 }
 function persistState(state: CaptureSession): void { writeJsonAtomic(statePath(state.captureSessionId), state); }
 function sourceFor(provider: CaptureProvider): ConversationSource {
-  return provider === 'chatgpt' || provider === 'codex' || provider === 'codebuddy' ? provider : 'other';
+  const supported: ConversationSource[] = ['chatgpt', 'codex', 'codebuddy', 'opencode', 'trae', 'codearts', 'workbuddy', 'manual', 'other'];
+  return supported.includes(provider as ConversationSource) ? (provider as ConversationSource) : 'other';
 }
 
 export function createCaptureSession(input: CreateCaptureSessionInput): CaptureSession {
@@ -189,8 +190,19 @@ export async function endCaptureSession(captureSessionId: string): Promise<EndCa
     sourceMetadata: { provider: state.provider, captureSource: state.captureSource, captureSessionId, eventCount: events.length },
   });
   state.status = 'ended'; state.endedAt = now(); state.transcriptAssetId = transcript.id; persistState(state);
-  if (state.agentSessionId && readSession(state.agentSessionId)) {
-    updateSession(state.agentSessionId, { transcriptAssetId: transcript.id, transcriptCaptureStatus: completeness === 'full' ? 'available' : 'partial' });
+  if (state.agentSessionId) {
+    const agent = readSession(state.agentSessionId);
+    if (agent) {
+      const workRecordId = agent.workRecordAssetId ?? agent.conversationAssetId;
+      if (workRecordId && findAssetById(workRecordId)) {
+        await patchAssetMetadataById(workRecordId, { sourceTranscriptId: transcript.id, transcriptCaptureStatus: completeness === 'full' ? 'available' : 'partial' });
+        await patchAssetMetadataById(transcript.id, { workRecordId });
+      }
+      updateSession(state.agentSessionId, {
+        transcriptAssetId: transcript.id,
+        transcriptCaptureStatus: completeness === 'full' ? 'available' : 'partial',
+      });
+    }
   }
   return { session: state, transcript, completeness };
 }

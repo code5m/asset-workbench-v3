@@ -139,6 +139,11 @@ test('slugifyTitle produces safe ascii slugs', async () => {
   assert.equal(slugifyTitle('Asset Workbench Persistence'), 'asset-workbench-persistence');
   assert.equal(slugifyTitle('../../etc/passwd'), 'etc-passwd');
   assert.equal(slugifyTitle('中文标题 Test'), 'test');
+  const zhA = slugifyTitle('纯中文标题甲');
+  const zhB = slugifyTitle('纯中文标题乙');
+  assert.match(zhA, /^asset-[a-f0-9]{10}$/);
+  assert.match(zhB, /^asset-[a-f0-9]{10}$/);
+  assert.notEqual(zhA, zhB, 'different pure-Chinese titles must not collide');
   // A path-injection design area is neutralized into a single safe segment and
   // still lands under 02-design (no escape, no '..').
   const neutral = await createDesign({ title: 't', designArea: 'a/b', content: 'x' });

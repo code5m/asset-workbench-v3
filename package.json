@@ -24,8 +24,9 @@
     "capture:import:opencode": "node --experimental-strip-types scripts/import-opencode-session.ts",
     "test:chatgpt-import": "node --experimental-strip-types scripts/test-chatgpt-import.ts",
     "test:security": "node --experimental-strip-types scripts/test-security-boundaries.ts",
-    "check": "npm run build && npm run test:security && npm run test:managed && npm run test:agent && npm run test:transcript && npm run test:capture && npm run test:providers && npm run test:provider-platform && npm run test:codebuddy-capture && npm run test:opencode-capture && npm run test:trae-capture && npm run test:chatgpt-import",
-    "typecheck": "tsc -b"
+    "check": "npm run build && npm run test:security && npm run test:managed && npm run test:agent && npm run test:transcript && npm run test:transcript-linkage && npm run test:capture && npm run test:providers && npm run test:provider-platform && npm run test:codebuddy-capture && npm run test:opencode-capture && npm run test:trae-capture && npm run test:chatgpt-import",
+    "typecheck": "tsc -b",
+    "test:transcript-linkage": "node --experimental-strip-types scripts/test-transcript-linkage.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.4",

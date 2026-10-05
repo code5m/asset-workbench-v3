@@ -13,6 +13,7 @@ import type {
   ManagedAssetResult,
   ManagedAssetType,
   TranscriptCompleteness,
+  TranscriptCaptureStatus,
 } from '../src/domain/asset';
 
 /**
@@ -68,6 +69,8 @@ export interface CreateConversationInput {
   agentSessionId?: string;
   /** id of the associated original Transcript, if one exists */
   sourceTranscriptId?: string;
+  /** explicit status of original Transcript acquisition */
+  transcriptCaptureStatus?: TranscriptCaptureStatus;
 }
 export interface CreateDesignInput {
   title: string;
@@ -88,6 +91,10 @@ const SOURCE_DIR: Record<ConversationSource, string> = {
   chatgpt: 'chatgpt',
   codex: 'codex',
   codebuddy: 'codebuddy',
+  opencode: 'opencode',
+  trae: 'trae',
+  codearts: 'codearts',
+  workbuddy: 'workbuddy',
   manual: 'manual',
   other: 'other',
 };
@@ -125,7 +132,9 @@ export function slugifyTitle(title: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60);
-  return ascii || 'asset';
+  if (ascii) return ascii;
+  const fingerprint = crypto.createHash('sha256').update(title.normalize('NFC')).digest('hex').slice(0, 10);
+  return `asset-${fingerprint}`;
 }
 
 function relToAbs(root: string, rel: string): string {
@@ -338,6 +347,7 @@ export async function createConversation(input: CreateConversationInput): Promis
     promotedTo: [],
     agentSessionId: input.agentSessionId,
     sourceTranscriptId: input.sourceTranscriptId,
+    transcriptCaptureStatus: input.transcriptCaptureStatus,
   };
   try {
     writeDirAtomic(absDir, {
@@ -557,7 +567,11 @@ function walkMetadata(root: string, dir: string, out: LocatedAsset[]): void {
       try {
         const meta = JSON.parse(fs.readFileSync(abs, 'utf8')) as ManagedAssetMetadata;
         if (meta && meta.id) {
-          const contentRel = `${path.relative(root, dir).split(path.sep).join('/')}/${e.name === 'metadata.json' ? 'conversation.md' : e.name.replace(/\.metadata\.json$/, '.md')}`;
+          const contentName =
+            e.name === 'metadata.json'
+              ? (meta.type === 'conversation-transcript' ? 'transcript.md' : 'conversation.md')
+              : e.name.replace(/\.metadata\.json$/, '.md');
+          const contentRel = `${path.relative(root, dir).split(path.sep).join('/')}/${contentName}`;
           out.push({ contentRel, metadata: meta });
         }
       } catch {

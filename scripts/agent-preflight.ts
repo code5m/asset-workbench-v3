@@ -35,7 +35,7 @@ function parseArgs(argv: string[]): Record<string, string> {
   return out;
 }
 
-const VALID_AGENTS: AgentType[] = ['chatgpt', 'codex', 'codebuddy', 'manual', 'other'];
+const VALID_AGENTS: AgentType[] = ['chatgpt', 'codex', 'codebuddy', 'opencode', 'trae', 'codearts', 'workbuddy', 'manual', 'other'];
 
 const args = parseArgs(process.argv.slice(2));
 

@@ -102,12 +102,12 @@ await check('official transcript import: dedupe + idempotency', async () => {
       message: JSON.stringify({ role, content: parts }),
     }), 'utf8');
   };
-  store('m1', 'user', [{ type: 'text', text: 'real user question from transcript' }]);
-  store('m2', 'assistant', [{ type: 'reasoning', text: 'internal reasoning must not be transcribed' }, { type: 'text', text: 'real assistant answer from transcript' }]);
+  store('m1', 'user', [{ type: 'text', text: '这是一条重复的中文问题' }]);
+  store('m2', 'assistant', [{ type: 'reasoning', text: 'internal reasoning must not be transcribed' }, { type: 'text', text: '这是中文回答，必须原样保留' }]);
   store('m3', 'assistant', [{ type: 'tool-call', toolName: 'Bash', toolCallId: 'call_1', args: { command: 'pwd' } }]);
   store('m4', 'tool', [{ type: 'tool-result', toolName: 'Bash', toolCallId: 'call_1', result: { stdout: '/' } }]);
   // legitimate repeated user text under a different provider message id
-  store('m5', 'user', [{ type: 'text', text: 'real user question from transcript' }]);
+  store('m5', 'user', [{ type: 'text', text: '这是一条重复的中文问题' }]);
 
   fs.writeFileSync(path.join(sessionDir, 'index.json'), JSON.stringify({
     requests: [{ id: 'r1', type: 'craft', messages: ['m1', 'm2', 'm3', 'm4', 'm5'] }],
@@ -120,10 +120,10 @@ await check('official transcript import: dedupe + idempotency', async () => {
     const events = eventsOf(first.captureSessionId);
     const users = events.filter((e) => e.eventType === 'user.message');
     assert.equal(users.length, 2, 'identical text from distinct provider message ids must be preserved');
-    assert.equal(users[0].content, 'real user question from transcript');
+    assert.equal(users[0].content, '这是一条重复的中文问题');
     const assistants = events.filter((e) => e.eventType === 'assistant.message');
     assert.equal(assistants.length, 1, 'one assistant message');
-    assert.equal(assistants[0].content, 'real assistant answer from transcript', 'reasoning is excluded from chat text');
+    assert.equal(assistants[0].content, '这是中文回答，必须原样保留', 'reasoning is excluded from chat text');
     assert.equal(events.filter((e) => e.eventType === 'tool.started').length, 1);
     assert.equal(events.filter((e) => e.eventType === 'tool.completed').length, 1);
 

@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { getDataDir } from './config.ts';
+import { getDataDir, getProjectRoot } from './config.ts';
+import { currentSession } from './agentSessionService.ts';
 import { appendCaptureEvents, createCaptureSession, endCaptureSession, getCaptureSession, getCaptureStorePaths } from './captureService.ts';
 import type { AppendCaptureEventInput } from './captureService.ts';
 import type { CaptureProvider } from '../src/domain/asset.ts';
@@ -340,10 +341,19 @@ export function ingestProviderEvent(input: AdapterEventInput): { captureSessionI
   return withProviderLock(input.provider, input.providerSessionId, () => {
     let state = readState(input.provider, input.providerSessionId);
     if (!state) {
+      const activeAgent = currentSession();
+      const linkedAgentSessionId =
+        activeAgent &&
+        activeAgent.closureStatus === 'active' &&
+        activeAgent.projectRoot === getProjectRoot() &&
+        activeAgent.agentType === input.provider
+          ? activeAgent.id
+          : undefined;
       const session = createCaptureSession({
         provider: input.provider,
         providerSessionId: input.providerSessionId,
         captureSource: HOOK_PROVIDERS.has(input.provider) ? 'native-hook' : 'other',
+        agentSessionId: linkedAgentSessionId,
       });
       state = { captureSessionId: session.captureSessionId, providerSessionId: input.providerSessionId, updatedAt: now() };
       saveState(input.provider, state);
