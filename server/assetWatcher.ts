@@ -88,7 +88,7 @@ export class AssetWatcher {
 
   private isSymlink(p: string): boolean {
     try {
-      return fs.statSync(p).isSymbolicLink();
+      return fs.lstatSync(p).isSymbolicLink();
     } catch {
       return false;
     }
