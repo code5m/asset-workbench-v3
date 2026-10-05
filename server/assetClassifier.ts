@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { AssetKind, ManagedAssetType } from '../src/domain/asset.ts';
+import type { AssetKind, CodeLanguage, ManagedAssetType } from '../src/domain/asset.ts';
 import { metadataRelForContent } from './managedAssetService.ts';
 
 /**
@@ -125,4 +125,15 @@ export function resolveManagedType(root: string, rel: string): ManagedAssetType 
     // metadata missing / unreadable: fall back to coarse detection
   }
   return coarse;
+}
+
+
+export function detectCodeLanguage(rel: string): CodeLanguage | undefined {
+  const ext = extOf(rel);
+  if (ext === 'java') return 'java';
+  if (['js', 'jsx', 'mjs', 'cjs'].includes(ext)) return 'javascript';
+  if (['ts', 'tsx'].includes(ext)) return 'typescript';
+  if (['py', 'pyi'].includes(ext)) return 'python';
+  if (ext === 'rs') return 'rust';
+  return CODE_EXT.has(ext) ? 'other' : undefined;
 }
