@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { getDataDir, getProjectRoot } from './config.ts';
+import { APP_ROOT, getDataDir } from './config.ts';
 
 function binary(): string { return path.join(getDataDir(), 'secure-bin', 'awb-secret-store'); }
-function source(): string { return path.join(getProjectRoot(), 'scripts', 'awb-secret-store.c'); }
+function source(): string { return path.join(APP_ROOT, 'scripts', 'awb-secret-store.c'); }
 function ensureBinary(): string {
   const target = binary(); if (fs.existsSync(target) && fs.statSync(target).mtimeMs >= fs.statSync(source()).mtimeMs) return target;
   fs.mkdirSync(path.dirname(target), { recursive: true });

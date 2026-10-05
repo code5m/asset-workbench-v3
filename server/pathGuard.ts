@@ -55,3 +55,28 @@ function safeRealpath(p: string): string {
     return p;
   }
 }
+
+
+/**
+ * Verify a write target without requiring the final file/directory to exist.
+ * The nearest existing ancestor is realpath-resolved so a managed-path symlink
+ * cannot redirect a write outside the project root.
+ */
+export function assertWriteTargetWithinRoot(root: string, absolutePath: string): void {
+  const rootResolved = safeRealpath(path.resolve(root));
+  const targetResolved = path.resolve(absolutePath);
+  if (targetResolved !== path.resolve(root) && !targetResolved.startsWith(path.resolve(root) + path.sep)) {
+    throw new PathEscapeError(absolutePath);
+  }
+
+  let probe = targetResolved;
+  while (!fs.existsSync(probe)) {
+    const parent = path.dirname(probe);
+    if (parent === probe) break;
+    probe = parent;
+  }
+  const realAncestor = safeRealpath(probe);
+  if (realAncestor !== rootResolved && !realAncestor.startsWith(rootResolved + path.sep)) {
+    throw new PathEscapeError(absolutePath);
+  }
+}

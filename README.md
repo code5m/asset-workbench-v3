@@ -126,6 +126,8 @@ npm run dev
 npm run build
 ```
 
+`npm run build` includes the full TypeScript gate for `src/**`, `server/**`, `scripts/**`, and `vite.config.ts`. `npm run check` runs that build plus the complete regression suite used by GitHub Actions.
+
 ## Current Scope
 
 The `03 资产空间` (Asset Space) is a **Real Asset Engine**, not a prototype
@@ -244,8 +246,7 @@ include human-readable `Sources` links; metadata carries the machine relations:
 `package.json`, `.git/**`, `node_modules/**`, any `..` escape, and any absolute
 path are rejected. External Git checkouts remain READ ONLY.
 
-**Atomicity:** each asset is written via temp file → `fsync`/close → `rename`,
-so a half-written `conversation.md` + `metadata.json` never lands on disk. After
+**Atomicity:** single files use temp file → `fsync`/close → `rename` → directory `fsync`. Conversation/Transcript directories are staged and renamed as a unit. Design/Decision Markdown + metadata use a crash-recoverable two-file transaction: both staged files and the transaction marker are fsynced before commit, and any interrupted commit is rolled forward before the next filesystem scan. After
 a write the service re-scans so the Watcher / tree reflects it immediately
 (filesystem remains the single source of truth — no second copy in React state).
 

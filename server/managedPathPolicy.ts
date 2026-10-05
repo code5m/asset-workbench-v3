@@ -1,4 +1,4 @@
-import { normalizeRelative, resolveWithinRoot, PathEscapeError } from './pathGuard.ts';
+import { normalizeRelative, resolveWithinRoot, assertWriteTargetWithinRoot } from './pathGuard.ts';
 
 /**
  * Write policy for Managed Knowledge Assets.
@@ -71,6 +71,7 @@ export function assertManagedWritable(root: string, rel: string): string {
   if (FORBIDDEN_EXACT.has(norm)) {
     throw new WritePolicyError(rel, 'protected file');
   }
-  // resolveWithinRoot re-validates symlink-free containment under the root.
-  return resolveWithinRoot(root, norm);
+  const target = resolveWithinRoot(root, norm);
+  assertWriteTargetWithinRoot(root, target);
+  return target;
 }

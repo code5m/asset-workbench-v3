@@ -104,6 +104,23 @@ await check('official export: full multi-turn session with tool event', () => {
 await check('official export re-import is idempotent', () => {
   assert.equal(importOpencodeSession(exportPath).imported, 0);
 });
+await check('official cumulative export appends new events without false sequence gaps', () => {
+  const parsed = JSON.parse(fs.readFileSync(exportPath, 'utf8'));
+  parsed.messages.push(
+    { info: { id: 'm6', role: 'user', time: { created: 1_700_000_005_000 } }, parts: [{ id: 'p8', messageID: 'm6', type: 'text', text: 'one more turn' }] },
+    { info: { id: 'm7', role: 'assistant', time: { created: 1_700_000_006_000 } }, parts: [{ id: 'p9', messageID: 'm7', type: 'text', text: 'one more answer' }] },
+  );
+  fs.writeFileSync(exportPath, JSON.stringify(parsed), 'utf8');
+
+  const appended = importOpencodeSession(exportPath);
+  assert.equal(appended.imported, 2, 'only the two new message events are appended');
+  const state = getCaptureSession(appended.captureSessionId);
+  assert.deepEqual(state.sequenceGaps, [], 'cumulative import must not create a false sequence gap');
+  const events = eventsOf(appended.captureSessionId).sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
+  const seqs = events.map((e) => e.sequence);
+  assert.deepEqual(seqs, seqs.map((_, index) => index), 'stored sequences remain contiguous');
+});
+
 
 await check('session identity is the real provider session id', () => {
   const r = importOpencodeSession(exportPath);
