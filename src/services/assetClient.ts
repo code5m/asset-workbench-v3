@@ -42,6 +42,11 @@ const PROVIDER_CACHE_TTL_MS = 5 * 60 * 1000;
 let providerOverviewCache: { value: { providers: ProviderStatusView[]; detectedAt: string }; expiresAt: number } | null = null;
 const providerDetailCache = new Map<string, { value: ProviderDetailView; expiresAt: number }>();
 
+function clearProviderClientCache(): void {
+  providerOverviewCache = null;
+  providerDetailCache.clear();
+}
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -109,21 +114,34 @@ export const assetClient = {
     const res = await fetch(`${BASE}/provider-manager/providers/${encodeURIComponent(id)}/${action}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const value = await res.json();
     if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
-    providerDetailCache.delete(id);
-    if (action === 'enable' || action === 'disable' || action === 'run-verification') providerOverviewCache = null;
+    clearProviderClientCache();
     return value;
   },
-  async saveCustomProvider(input: Record<string, unknown>): Promise<any> { const res = await fetch(`${BASE}/provider-manager/custom`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) }); const value = await res.json(); if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText); return value; },
-  async deleteCustomProvider(id: string): Promise<void> { const res = await fetch(`${BASE}/provider-manager/custom/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!res.ok) { const value = await res.json(); throw new ApiError(res.status, value.error ?? res.statusText); } },
+  async saveCustomProvider(input: Record<string, unknown>): Promise<any> {
+    const res = await fetch(`${BASE}/provider-manager/custom`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) });
+    const value = await res.json();
+    if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    clearProviderClientCache();
+    return value;
+  },
+  async deleteCustomProvider(id: string): Promise<void> {
+    const res = await fetch(`${BASE}/provider-manager/custom/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) { const value = await res.json(); throw new ApiError(res.status, value.error ?? res.statusText); }
+    clearProviderClientCache();
+  },
   scan(): Promise<{ scannedAt: string; nodeCount: number; fileCount: number; directoryCount: number }> {
     return fetch(`${BASE}/workspace/scan`, { method: 'POST' }).then((r) => r.json());
   },
-  setRoot(rootPath: string): Promise<{ projectRoot: string; scannedAt: string; nodeCount: number; fileCount: number; directoryCount: number }> {
-    return fetch(`${BASE}/workspace/root`, {
+  async setRoot(rootPath: string): Promise<{ projectRoot: string; scannedAt: string; nodeCount: number; fileCount: number; directoryCount: number }> {
+    const res = await fetch(`${BASE}/workspace/root`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ rootPath }),
-    }).then((r) => r.json());
+    });
+    const value = await res.json();
+    if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    clearProviderClientCache();
+    return value;
   },
   events(): EventSource {
     return new EventSource(`${BASE}/workspace/events`);
