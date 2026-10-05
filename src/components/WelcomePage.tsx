@@ -187,13 +187,16 @@ export function WelcomePage({ onNavigate, onOpenAsset }: WelcomePageProps) {
           </div>
         </div>
         <div className="skeleton-rows">
-          {providers.map((provider) => (
-            <article className="skeleton-row" key={provider.provider}>
-              <code>{provider.provider}</code>
-              <span className="skeleton-row-kind">{t(welcomeProviderSourceKey(provider.provider))}</span>
-              <span className={`status-badge ${provider.status.toLowerCase().replace(/_/g, '-')}`}>{t(welcomeProviderStatusKey(provider.status))}</span>
-            </article>
-          ))}
+          {providers.map((provider) => {
+            const visibleStatus = provider.platformStatus ?? provider.status;
+            return (
+              <article className="skeleton-row" key={provider.provider}>
+                <code>{provider.provider}</code>
+                <span className="skeleton-row-kind">{t(welcomeProviderSourceKey(provider.provider))}</span>
+                <span className={`status-badge ${visibleStatus.toLowerCase().replace(/_/g, '-')}`}>{t(welcomeProviderStatusKey(visibleStatus))}</span>
+              </article>
+            );
+          })}
         </div>
       </section>
 
