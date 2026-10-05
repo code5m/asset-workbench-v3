@@ -72,7 +72,7 @@ async function check(name: string, fn: () => Promise<void> | void) {
 }
 
 function openSession(agentType: string): string {
-  return createSession({ agentType, title: 'transcript-test' }).session.id;
+  return createSession({ agentType: agentType as any, taskTitle: 'transcript-test' }).session.id;
 }
 
 async function closeSession(sessionId: string, input: any): Promise<any> {
