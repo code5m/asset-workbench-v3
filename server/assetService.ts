@@ -41,6 +41,7 @@ export class AssetService {
 
   async scan(): Promise<TreeResponse> {
     this.cache.clear();
+    this.watcher?.resetToRoot();
     const result = this.loadDirectory('');
     return this.toTreeResponse(result);
   }
@@ -52,6 +53,7 @@ export class AssetService {
       const oldest = this.cache.keys().next().value as string | undefined;
       if (oldest === undefined) break;
       this.cache.delete(oldest);
+      this.watcher?.unwatchDirectory(oldest);
     }
   }
 
@@ -72,6 +74,7 @@ export class AssetService {
     const cached = this.cache.get(parentRel);
     if (cached) {
       this.touch(parentRel, cached);
+      this.watcher?.watchDirectory(parentRel);
       return cached;
     }
     return this.loadDirectory(parentRel);
@@ -168,7 +171,10 @@ export class AssetService {
     for (const raw of paths) {
       let current = raw;
       while (true) {
-        if (this.cache.delete(current)) invalidated.add(current);
+        if (this.cache.delete(current)) {
+          invalidated.add(current);
+          this.watcher?.unwatchDirectory(current);
+        }
         if (!current) break;
         const parent = path.posix.dirname(current);
         current = parent === '.' ? '' : parent;
