@@ -46,7 +46,7 @@ function makeWorkspace(): string {
   for (const d of [
     '04-conversations/chatgpt',
     '04-conversations/codex',
-    '04-conversations/codex/manual', // ensure manual dir not auto-created by us
+    '04-conversations/work-records/codex/manual', // ensure manual dir not auto-created by us
     '02-design/architecture',
     '02-design/product',
     '02-design/technical',
@@ -84,7 +84,7 @@ test.after(() => {
 // Path policy
 // ---------------------------------------------------------------------------
 test('managed path policy allows managed areas and rejects escapes', () => {
-  assert.equal(isManagedWritableRelative('04-conversations/manual/x/conversation.md'), true);
+  assert.equal(isManagedWritableRelative('04-conversations/work-records/manual/x/conversation.md'), true);
   assert.equal(isManagedWritableRelative('02-design/architecture/x.md'), true);
   assert.equal(isManagedWritableRelative('02-design/decisions/x.md'), true);
   assert.equal(isManagedWritableRelative('03-docs/x.md'), true);
@@ -102,7 +102,7 @@ test('assertManagedWritable rejects src/ and escapes with proper error', () => {
   assert.throws(() => assertManagedWritable(workspace, '../../foo'), WritePolicyError);
   assert.throws(() => assertManagedWritable(workspace, 'package.json'), WritePolicyError);
   // valid path resolves inside root
-  const abs = assertManagedWritable(workspace, '04-conversations/manual/a/conversation.md');
+  const abs = assertManagedWritable(workspace, '04-conversations/work-records/manual/a/conversation.md');
   assert.ok(abs.startsWith(workspace));
 });
 test('assertManagedWritable rejects symlink escapes from managed roots', () => {
@@ -128,7 +128,7 @@ test('assertManagedWritable rejects symlink escapes from managed roots', () => {
 test('classifier prioritizes decision over design', () => {
   assert.equal(detectManagedType('02-design/decisions/0002-x.md'), 'decision');
   assert.equal(detectManagedType('02-design/architecture/x.md'), 'design');
-  assert.equal(detectManagedType('04-conversations/manual/x/conversation.md'), 'conversation');
+  assert.equal(detectManagedType('04-conversations/work-records/manual/x/conversation.md'), 'conversation');
   assert.equal(detectManagedType('01-code/main.ts'), undefined);
 });
 
