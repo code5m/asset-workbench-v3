@@ -1,10 +1,12 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { getProjectRoot, setProjectRoot as persistRoot } from './config.ts';
-import { scanProject, type ScanResult } from './assetScanner.ts';
+import { scanDirectory, type DirectoryScanResult } from './assetScanner.ts';
 import { readAssetContent } from './fileReader.ts';
 import { AssetWatcher } from './assetWatcher.ts';
-import { isIgnoredPath } from './ignorePolicy.ts';
 import { MANAGED_ROOTS } from './managedPathPolicy.ts';
 import { recoverDurableTransactions } from './durableWrite.ts';
+import { probeRepository } from './gitProbe.ts';
 import type {
   AssetNode,
   AssetContent,
@@ -15,14 +17,6 @@ import type {
   TreeResponse,
 } from '../src/domain/asset';
 
-/**
- * AssetService is the single in-memory owner of the discovered asset state.
- *
- * Scanner and watcher both funnel through here. The frontend only ever reads
- * this state (via the API). There is no second "watcher state" — a filesystem
- * change triggers a re-scan that rebuilds the exact same structure.
- */
-
 const EXPECTED_SKELETON: { path: string; assetType: ExpectedSkeletonEntry['assetType'] }[] = [
   { path: '00-introduction', assetType: 'introduction' },
   { path: '01-code', assetType: 'code' },
@@ -32,108 +26,171 @@ const EXPECTED_SKELETON: { path: string; assetType: ExpectedSkeletonEntry['asset
   { path: '05-derived', assetType: 'derived' },
 ];
 
+const MAX_DIRECTORY_CACHE = 96;
+
 export class AssetService {
-  private scanPromise: Promise<ScanResult> | null = null;
-  private lastResult: ScanResult | null = null;
+  private cache = new Map<string, DirectoryScanResult>();
   private watcher: AssetWatcher | null = null;
   private listeners = new Set<(e: ServerEvent) => void>();
+  private lastScannedAt: string | undefined;
 
-  ensureScanned(): Promise<ScanResult> {
-    if (!this.scanPromise) this.scanPromise = this.doScan();
-    return this.scanPromise;
+  async ensureScanned(): Promise<void> {
+    if (!this.cache.has('')) this.loadDirectory('');
   }
 
-  async scan(): Promise<ScanResult> {
-    this.scanPromise = this.doScan();
-    return this.scanPromise;
+  async scan(): Promise<TreeResponse> {
+    this.cache.clear();
+    const result = this.loadDirectory('');
+    return this.toTreeResponse(result);
   }
 
-  private async doScan(): Promise<ScanResult> {
+  private touch(key: string, value: DirectoryScanResult): void {
+    this.cache.delete(key);
+    this.cache.set(key, value);
+    while (this.cache.size > MAX_DIRECTORY_CACHE) {
+      const oldest = this.cache.keys().next().value as string | undefined;
+      if (oldest === undefined) break;
+      this.cache.delete(oldest);
+    }
+  }
+
+  private loadDirectory(parentRel: string): DirectoryScanResult {
     recoverDurableTransactions(getProjectRoot(), MANAGED_ROOTS);
-    const result = scanProject(getProjectRoot());
-    this.lastResult = result;
-    this.emit({
-      type: 'scan',
-      scannedAt: result.root.modifiedAt,
-      nodeCount: result.nodeCount,
-      fileCount: result.fileCount,
-      directoryCount: result.directoryCount,
-    });
+    const result = scanDirectory(getProjectRoot(), parentRel);
+    this.touch(parentRel, result);
+    this.lastScannedAt = result.parent.modifiedAt;
+    this.watcher?.watchDirectory(parentRel);
     return result;
   }
 
-  private requireResult(): ScanResult {
-    if (!this.lastResult) throw new Error('asset scan not ready');
-    return this.lastResult;
+  private getDirectory(parentRel: string): DirectoryScanResult {
+    const cached = this.cache.get(parentRel);
+    if (cached) {
+      this.touch(parentRel, cached);
+      return cached;
+    }
+    return this.loadDirectory(parentRel);
   }
 
-  getTree(parentRel = ''): TreeResponse {
-    const result = this.requireResult();
-    const parent = parentRel === '' ? result.root : result.nodeMap.get(parentRel);
-    if (!parent) throw new Error(`node not found: ${parentRel}`);
+  private loadedCounts(): { nodeCount: number; fileCount: number; directoryCount: number } {
+    const seen = new Set<string>();
+    let fileCount = 0;
+    let directoryCount = 0;
+    for (const result of this.cache.values()) {
+      for (const node of result.children) {
+        if (seen.has(node.relativePath)) continue;
+        seen.add(node.relativePath);
+        if (node.kind === 'file') fileCount += 1;
+        else directoryCount += 1;
+      }
+    }
+    return { nodeCount: seen.size, fileCount, directoryCount };
+  }
+
+  private toTreeResponse(result: DirectoryScanResult): TreeResponse {
+    const counts = this.loadedCounts();
+    const parent: AssetNode = { ...result.parent };
+    delete parent.children;
+    const children = result.children.map((node) => {
+      const shallow = { ...node };
+      delete shallow.children;
+      return shallow;
+    });
     return {
       parent,
-      children: parent.children ?? [],
-      nodeCount: result.nodeCount,
-      fileCount: result.fileCount,
-      directoryCount: result.directoryCount,
+      children,
+      ...counts,
+      statsScope: 'loaded',
+      cachedDirectoryCount: this.cache.size,
     };
   }
 
+  getTree(parentRel = ''): TreeResponse {
+    return this.toTreeResponse(this.getDirectory(parentRel));
+  }
+
   getNode(rel: string): AssetNode {
-    return this.requireResult().nodeMap.get(rel) ?? this.requireResult().root;
+    if (!rel) return this.getDirectory('').parent;
+    const parent = path.posix.dirname(rel);
+    const parentRel = parent === '.' ? '' : parent;
+    const found = this.getDirectory(parentRel).children.find((node) => node.relativePath === rel);
+    if (!found) throw new Error(`node not found: ${rel}`);
+    return found;
   }
 
   getContent(rel: string): AssetContent {
-    const root = getProjectRoot();
-    return readAssetContent(root, rel);
+    return readAssetContent(getProjectRoot(), rel);
   }
 
   getRepositories(): RepositoryRevision[] {
-    return this.requireResult().repositories;
+    const byId = new Map<string, RepositoryRevision>();
+    const root = getProjectRoot();
+    if (fs.existsSync(path.join(root, '.git'))) {
+      const rev = probeRepository(root, '');
+      if (rev) byId.set(rev.repositoryId, rev);
+    }
+    for (const result of this.cache.values()) {
+      for (const rev of result.repositories) byId.set(rev.repositoryId, rev);
+    }
+    return [...byId.values()];
   }
 
   getExpectedSkeleton(): ExpectedSkeletonEntry[] {
-    const result = this.requireResult();
+    const root = getProjectRoot();
     return EXPECTED_SKELETON.map((entry) => {
-      const node = result.nodeMap.get(entry.path);
-      let status: ExpectedSkeletonEntry['status'] = 'MISSING';
-      if (node) {
-        status = (node.children?.length ?? 0) === 0 ? 'PARTIAL' : 'FOUND';
-      }
-      return { path: entry.path, assetType: entry.assetType, status };
+      const abs = path.join(root, entry.path);
+      if (!fs.existsSync(abs)) return { ...entry, status: 'MISSING' as const };
+      let status: ExpectedSkeletonEntry['status'] = 'PARTIAL';
+      try {
+        status = fs.readdirSync(abs).length > 0 ? 'FOUND' : 'PARTIAL';
+      } catch { status = 'PARTIAL'; }
+      return { ...entry, status };
     });
   }
 
   getWorkspace(): ProjectWorkspace {
-    const result = this.lastResult;
     return {
       id: 'asset-workbench',
-      name: result ? result.root.name : 'asset-workbench',
+      name: path.basename(getProjectRoot()),
       rootPath: getProjectRoot(),
-      lastScannedAt: result?.root.modifiedAt,
-      status: result ? 'ready' : 'scanning',
+      lastScannedAt: this.lastScannedAt,
+      status: this.cache.size > 0 ? 'ready' : 'scanning',
     };
+  }
+
+  invalidate(paths: string[]): void {
+    const invalidated = new Set<string>();
+    for (const raw of paths) {
+      let current = raw;
+      while (true) {
+        if (this.cache.delete(current)) invalidated.add(current);
+        if (!current) break;
+        const parent = path.posix.dirname(current);
+        current = parent === '.' ? '' : parent;
+      }
+    }
+    const scannedAt = new Date().toISOString();
+    this.lastScannedAt = scannedAt;
+    this.emit({ type: 'refresh', scannedAt, invalidatedPaths: [...invalidated] });
   }
 
   startWatcher(): void {
     if (this.watcher) return;
-    this.watcher = new AssetWatcher(getProjectRoot(), () => {
-      this.scan().catch((e) => this.emit({ type: 'error', message: String((e as Error)?.message ?? e) }));
-    });
+    this.watcher = new AssetWatcher(getProjectRoot(), (paths) => this.invalidate(paths));
     this.watcher.start();
+    for (const rel of this.cache.keys()) this.watcher.watchDirectory(rel);
   }
 
   restartWatcher(): void {
-    if (this.watcher) {
-      this.watcher.stop();
-      this.watcher = null;
-    }
+    this.watcher?.stop();
+    this.watcher = null;
     this.startWatcher();
   }
 
   changeRoot(rootPath: string): void {
     persistRoot(rootPath);
+    this.cache.clear();
+    this.lastScannedAt = undefined;
     this.restartWatcher();
   }
 
@@ -144,11 +201,7 @@ export class AssetService {
 
   private emit(event: ServerEvent): void {
     for (const listener of this.listeners) {
-      try {
-        listener(event);
-      } catch {
-        // listener errors must not break the broadcast
-      }
+      try { listener(event); } catch { /* listener errors do not break broadcast */ }
     }
   }
 }
