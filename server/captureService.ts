@@ -195,7 +195,7 @@ export async function endCaptureSession(captureSessionId: string): Promise<EndCa
     if (agent) {
       const workRecordId = agent.workRecordAssetId ?? agent.conversationAssetId;
       if (workRecordId && findAssetById(workRecordId)) {
-        await patchAssetMetadataById(workRecordId, { sourceTranscriptId: transcript.id });
+        await patchAssetMetadataById(workRecordId, { sourceTranscriptId: transcript.id, transcriptCaptureStatus: completeness === 'full' ? 'available' : 'partial' });
         await patchAssetMetadataById(transcript.id, { workRecordId });
       }
       updateSession(state.agentSessionId, {
