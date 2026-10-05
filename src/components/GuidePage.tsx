@@ -31,7 +31,7 @@ export function GuidePage({ onNavigate }: GuidePageProps) {
       .setRoot(rootPath)
       .then((res) => {
         setCurrentRoot(res.projectRoot);
-        setMessage(`${t('rootUpdated')} · ${res.fileCount} ${t('statFiles')} · ${res.directoryCount} ${t('statDirs')}`);
+        setMessage(`${t('rootUpdated')} · ${res.fileCount} ${t('statFiles')} · ${res.directoryCount} ${t('statDirs')} · ${t('statsLoadedScope')}`);
       })
       .catch((e) => setMessage(`${t('rootUpdateFailed')}: ${e instanceof Error ? e.message : String(e)}`));
   };
