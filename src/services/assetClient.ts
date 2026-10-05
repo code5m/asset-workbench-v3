@@ -28,7 +28,7 @@ export interface ProviderStatusView {
   authStatus?: string;
   enabled?: boolean;
 }
-export interface ProviderDetailView { definition: any; status: ProviderStatusView & { platformStatus: string; authStatus: string; enabled: boolean }; verification: Array<{ step: string; status: string; detail: string }>; recentEvents: string[]; }
+export interface ProviderDetailView { definition: any; status: ProviderStatusView & { platformStatus: string; authStatus: string; enabled: boolean }; verification: Array<{ step: string; status: string; detail: string }>; recentEvents: string[]; detectedAt?: string; verificationRunAt?: string; }
 
 /**
  * Asset Client — the only boundary the React layer uses to reach the real
@@ -37,6 +37,10 @@ export interface ProviderDetailView { definition: any; status: ProviderStatusVie
  */
 
 const BASE = '/api';
+
+const PROVIDER_CACHE_TTL_MS = 5 * 60 * 1000;
+let providerOverviewCache: { value: { providers: ProviderStatusView[]; detectedAt: string }; expiresAt: number } | null = null;
+const providerDetailCache = new Map<string, { value: ProviderDetailView; expiresAt: number }>();
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -77,11 +81,38 @@ export const assetClient = {
   config(): Promise<{ projectRoot: string; configurable: boolean }> {
     return getJson(`${BASE}/config`);
   },
-  providers(): Promise<ProviderStatusView[]> {
-    return getJson<{ providers: ProviderStatusView[] }>(`${BASE}/providers`).then((result) => result.providers);
+  async providerOverview(force = false): Promise<{ providers: ProviderStatusView[]; detectedAt: string }> {
+    const now = Date.now();
+    if (!force && providerOverviewCache && providerOverviewCache.expiresAt > now) return providerOverviewCache.value;
+    const endpoint = force ? `${BASE}/provider-manager/redetect` : `${BASE}/providers`;
+    const res = force
+      ? await fetch(endpoint, { method: 'POST' })
+      : await fetch(endpoint);
+    if (!res.ok) throw new ApiError(res.status, (await res.text().catch(() => '')) || res.statusText);
+    const value = await res.json() as { providers: ProviderStatusView[]; detectedAt: string };
+    providerOverviewCache = { value, expiresAt: now + PROVIDER_CACHE_TTL_MS };
+    if (force) providerDetailCache.clear();
+    return value;
   },
-  providerDetail(id: string): Promise<ProviderDetailView> { return getJson(`${BASE}/provider-manager/providers/${encodeURIComponent(id)}`); },
-  async providerAction(id: string, action: string, body: Record<string, unknown> = {}): Promise<any> { const res = await fetch(`${BASE}/provider-manager/providers/${encodeURIComponent(id)}/${action}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); const value = await res.json(); if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText); return value; },
+  providers(): Promise<ProviderStatusView[]> {
+    return this.providerOverview(false).then((result) => result.providers);
+  },
+  async providerDetail(id: string, force = false): Promise<ProviderDetailView> {
+    const now = Date.now();
+    const cached = providerDetailCache.get(id);
+    if (!force && cached && cached.expiresAt > now) return cached.value;
+    const value = await getJson<ProviderDetailView>(`${BASE}/provider-manager/providers/${encodeURIComponent(id)}`);
+    providerDetailCache.set(id, { value, expiresAt: now + PROVIDER_CACHE_TTL_MS });
+    return value;
+  },
+  async providerAction(id: string, action: string, body: Record<string, unknown> = {}): Promise<any> {
+    const res = await fetch(`${BASE}/provider-manager/providers/${encodeURIComponent(id)}/${action}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const value = await res.json();
+    if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    providerDetailCache.delete(id);
+    if (action === 'enable' || action === 'disable' || action === 'run-verification') providerOverviewCache = null;
+    return value;
+  },
   async saveCustomProvider(input: Record<string, unknown>): Promise<any> { const res = await fetch(`${BASE}/provider-manager/custom`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) }); const value = await res.json(); if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText); return value; },
   async deleteCustomProvider(id: string): Promise<void> { const res = await fetch(`${BASE}/provider-manager/custom/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!res.ok) { const value = await res.json(); throw new ApiError(res.status, value.error ?? res.statusText); } },
   scan(): Promise<{ scannedAt: string; nodeCount: number; fileCount: number; directoryCount: number }> {
