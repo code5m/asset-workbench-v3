@@ -122,14 +122,14 @@ export const manualTranscriptSource: TranscriptSource = {
 };
 
 /**
- * Platform adapters. These reflect the REAL capability of each environment as of
- * implementation time. If a platform later exposes a transcript API, only this
- * adapter changes — the core model stays stable.
+ * Closure-time transcript adapters.
  *
- * CodeBuddy / Codex / ChatGPT: in the current runtime there is NO programmatic
- * transcript API available to the Agent. We therefore return `unavailable`
- * honestly. This is a supported, first-class state: the closure still produces a
- * Work Record and the Knowledge Gate does NOT fail.
+ * Live Codex / CodeBuddy / OpenCode transcript capture is owned by the provider
+ * Capture Kernel and is linked into AgentSession before or after agent:close.
+ * This layer therefore does not duplicate provider event capture. Without an
+ * already-linked Transcript or an explicit import/override, it returns
+ * `unavailable` honestly. ChatGPT remains explicit-import only; no DOM/private
+ * API scraping is used.
  */
 export const codebuddyTranscriptSource: TranscriptSource = {
   sourceType: 'codebuddy',
