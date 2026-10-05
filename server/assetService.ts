@@ -50,7 +50,7 @@ export class AssetService {
     this.cache.delete(key);
     this.cache.set(key, value);
     while (this.cache.size > MAX_DIRECTORY_CACHE) {
-      const oldest = this.cache.keys().next().value as string | undefined;
+      const oldest = [...this.cache.keys()].find((candidate) => candidate !== '');
       if (oldest === undefined) break;
       this.cache.delete(oldest);
       this.watcher?.unwatchDirectory(oldest);
