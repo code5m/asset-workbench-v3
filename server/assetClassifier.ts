@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { AssetKind, CodeLanguage, ManagedAssetType } from '../src/domain/asset.ts';
+import type { AssetKind, ManagedAssetType } from '../src/domain/asset.ts';
+import { detectCodeLanguage, isRecognizedCodeExtension } from '../packages/language-core/src/index.ts';
 import { metadataRelForContent } from './managedAssetService.ts';
 
 /**
@@ -10,15 +11,6 @@ import { metadataRelForContent } from './managedAssetService.ts';
  * classifier derives a logical AssetKind from the expected-skeleton top-level
  * directory and from file extension. It NEVER fabricates a physical path.
  */
-
-const CODE_EXT = new Set([
-  'java', 'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'py', 'rs', 'go', 'c', 'h',
-  'cpp', 'hpp', 'cc', 'cs', 'rb', 'php', 'kt', 'kts', 'swift', 'scala', 'sh',
-  'bash', 'zsh', 'sql', 'xml', 'yaml', 'yml', 'toml', 'json', 'jsonc',
-  'properties', 'ini', 'cfg', 'conf', 'html', 'htm', 'css', 'scss', 'less',
-  'vue', 'svelte', 'gradle', 'pl', 'pm', 'r', 'm', 'mm', 'dart', 'zig', 'lua',
-  'ex', 'exs', 'erl', 'hs', 'clj', 'groovy', 'tf', 'bzl', 'mk',
-]);
 
 const DOC_EXT = new Set(['md', 'markdown', 'txt', 'rst', 'adoc', 'org']);
 
@@ -48,7 +40,7 @@ export function classify(rel: string, isDir: boolean): AssetKind {
   if (!isDir) {
     const ext = extOf(rel);
     if (DOC_EXT.has(ext)) return 'document';
-    if (CODE_EXT.has(ext)) return 'code';
+    if (isRecognizedCodeExtension(ext)) return 'code';
   }
   return 'other';
 }
@@ -128,18 +120,4 @@ export function resolveManagedType(root: string, rel: string): ManagedAssetType 
 }
 
 
-export function detectCodeLanguage(rel: string): CodeLanguage | undefined {
-  const base = path.basename(rel).toLowerCase();
-  if (base === 'pom.xml' || base === 'build.gradle' || base === 'settings.gradle' || base === 'gradle.properties') return 'java';
-  if (base === 'package.json' || base === 'package-lock.json' || base === 'yarn.lock' || base === 'pnpm-lock.yaml') return 'javascript';
-  if (base === 'tsconfig.json') return 'typescript';
-  if (base === 'pyproject.toml' || base === 'requirements.txt' || base === 'poetry.lock') return 'python';
-  if (base === 'cargo.toml' || base === 'cargo.lock') return 'rust';
-  const ext = extOf(rel);
-  if (ext === 'java') return 'java';
-  if (['js', 'jsx', 'mjs', 'cjs'].includes(ext)) return 'javascript';
-  if (['ts', 'tsx'].includes(ext)) return 'typescript';
-  if (['py', 'pyi'].includes(ext)) return 'python';
-  if (ext === 'rs') return 'rust';
-  return CODE_EXT.has(ext) ? 'other' : undefined;
-}
+export { detectCodeLanguage } from '../packages/language-core/src/index.ts';
