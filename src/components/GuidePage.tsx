@@ -4,6 +4,7 @@ import type { AppSection } from '../domain/workspace';
 import { guideSteps, sourceLayers } from '../data/productCopy';
 import { assetClient } from '../services/assetClient';
 import { useI18n } from '../i18n/I18nProvider';
+import { StarterCreator } from './StarterCreator';
 
 interface GuidePageProps {
   onNavigate: (section: AppSection) => void;
@@ -62,6 +63,27 @@ export function GuidePage({ onNavigate }: GuidePageProps) {
         ))}
       </section>
 
+      <section>
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">{t('guideStartModeEyebrow')}</p>
+            <h2>{t('guideStartModeTitle')}</h2>
+          </div>
+        </div>
+        <div className="guide-start-grid">
+          <article className="panel guide-start-card selected">
+            <strong>{t('guideExistingTitle')}</strong>
+            <p>{t('guideExistingBody')}</p>
+            <small>{t('guideExistingHint')}</small>
+          </article>
+          <article className="panel guide-start-card">
+            <strong>{t('guideStarterTitle')}</strong>
+            <p>{t('guideStarterBody')}</p>
+            <small>{t('guideStarterHint')}</small>
+          </article>
+        </div>
+      </section>
+
       <section className="panel root-config">
         <div className="section-heading">
           <div>
@@ -86,6 +108,8 @@ export function GuidePage({ onNavigate }: GuidePageProps) {
         {currentRoot ? <p className="detail-summary">{t('currentRoot')}: <code>{currentRoot}</code></p> : null}
         {message ? <p className="detail-summary">{message}</p> : null}
       </section>
+
+      <StarterCreator onActivated={() => onNavigate('assets')} compact />
 
       <section className="pipeline-band">
         <div className="section-heading">
