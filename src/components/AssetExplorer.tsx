@@ -479,20 +479,16 @@ function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, 
             <strong>{node.name}</strong>
             <small>{node.relativePath || '/'}</small>
             {depth === 0 && purposeKey ? <em className="tree-purpose">{t(purposeKey)}</em> : null}
-            {depth === 0 && learnMoreFocus && onLearnMore ? (
-              <button
-                className="tree-learn-more"
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onLearnMore(learnMoreFocus);
-                }}
-              >
-                {t('rootLearnMore')}
-              </button>
-            ) : null}
           </div>
         </button>
+        {depth === 0 && learnMoreFocus && onLearnMore ? (
+          <button
+            className="tree-learn-more"
+            onClick={() => onLearnMore(learnMoreFocus)}
+          >
+            {t('rootLearnMore')}
+          </button>
+        ) : null}
       </div>
       {isDir && isOpen && kids ? (
         <div className="tree-children">
