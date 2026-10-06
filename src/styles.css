@@ -2257,3 +2257,104 @@ code {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ---- Beginner progressive disclosure ----------------------------------- */
+.tree-row {
+  align-items: flex-start;
+}
+
+.tree-label {
+  min-width: 0;
+}
+
+.tree-purpose {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  white-space: normal;
+}
+
+.tree-learn-more {
+  flex: 0 0 auto;
+  align-self: center;
+  margin-left: auto;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #176b87;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.tree-learn-more:hover,
+.tree-learn-more:focus-visible {
+  background: #eef6f8;
+  text-decoration: underline;
+  outline: none;
+}
+
+.framework-beginner-map {
+  display: grid;
+  gap: 14px;
+  scroll-margin-top: 18px;
+}
+
+.framework-beginner-map h2,
+.framework-beginner-map p {
+  margin: 0;
+}
+
+.framework-beginner-map > div:first-child > p:last-child {
+  margin-top: 6px;
+  color: #607086;
+  line-height: 1.6;
+}
+
+.framework-beginner-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.framework-beginner-grid article {
+  display: grid;
+  gap: 6px;
+  min-height: 116px;
+  align-content: start;
+  padding: 14px;
+  border: 1px solid #d7dee8;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.framework-beginner-grid article strong {
+  color: #17202a;
+}
+
+.framework-beginner-grid article p {
+  color: #607086;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.framework-page > section,
+.framework-page > div {
+  scroll-margin-top: 18px;
+}
+
+@media (max-width: 780px) {
+  .framework-beginner-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tree-row {
+    flex-wrap: wrap;
+  }
+
+  .tree-learn-more {
+    margin-left: 34px;
+  }
+}
