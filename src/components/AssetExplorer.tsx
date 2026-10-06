@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen, RefreshCw, AlertTriangle, Plus } from 'lucide-react';
 import { assetClient } from '../services/assetClient';
+import type { FrameworkFocus } from '../domain/workspace';
 import type {
   AssetContent,
   AssetNode,
@@ -27,7 +28,7 @@ function formatDate(iso: string): string {
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
-export function AssetExplorer({ deepLink }: { deepLink: { path: string; token: number } | null }) {
+export function AssetExplorer({ deepLink, onOpenFramework }: { deepLink: { path: string; token: number } | null; onOpenFramework: (focus: FrameworkFocus) => void }) {
   const { t } = useI18n();
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [errorMsg, setErrorMsg] = useState('');
@@ -390,6 +391,8 @@ export function AssetExplorer({ deepLink }: { deepLink: { path: string; token: n
                             onToggle={toggleExpand}
                             onSelect={selectNode}
                             purposeKey={presentation.purposeKey}
+                            learnMoreFocus={presentation.learnMoreFocus}
+                            onLearnMore={onOpenFramework}
                           />
                         );
                       })}
@@ -448,9 +451,11 @@ interface TreeNodeProps {
   onToggle: (node: AssetNode) => void;
   onSelect: (node: AssetNode) => void;
   purposeKey?: string;
+  learnMoreFocus?: FrameworkFocus;
+  onLearnMore?: (focus: FrameworkFocus) => void;
 }
 
-function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, onSelect, purposeKey }: TreeNodeProps) {
+function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, onSelect, purposeKey, learnMoreFocus, onLearnMore }: TreeNodeProps) {
   const { t } = useI18n();
   const isDir = node.kind === 'directory';
   const isOpen = expanded.has(node.relativePath);
@@ -474,6 +479,18 @@ function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, 
             <strong>{node.name}</strong>
             <small>{node.relativePath || '/'}</small>
             {depth === 0 && purposeKey ? <em className="tree-purpose">{t(purposeKey)}</em> : null}
+            {depth === 0 && learnMoreFocus && onLearnMore ? (
+              <button
+                className="tree-learn-more"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onLearnMore(learnMoreFocus);
+                }}
+              >
+                {t('rootLearnMore')}
+              </button>
+            ) : null}
           </div>
         </button>
       </div>
@@ -493,6 +510,8 @@ function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, 
                 onToggle={onToggle}
                 onSelect={onSelect}
                 purposeKey={undefined}
+                learnMoreFocus={undefined}
+                onLearnMore={onLearnMore}
               />
             ))
           )}
