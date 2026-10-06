@@ -8,6 +8,7 @@ import { StepRail } from './components/StepRail';
 import { WelcomePage } from './components/WelcomePage';
 import { WorkspaceConsole } from './components/WorkspaceConsole';
 import { ProviderManager } from './components/ProviderManager';
+import { FrameworkPage } from './components/FrameworkPage';
 import './styles.css';
 
 export default function App() {
@@ -32,7 +33,8 @@ export default function App() {
           <WorkspaceConsole activeStep={activeStep} />
         </div>
       ) : null}
-      {activeSection === 'providers' ? <ProviderManager /> : null}
+      {activeSection === 'providers' ? <ProviderManager onNavigate={setActiveSection} /> : null}
+      {activeSection === 'framework' ? <FrameworkPage onNavigate={setActiveSection} /> : null}
     </div>
   );
 }

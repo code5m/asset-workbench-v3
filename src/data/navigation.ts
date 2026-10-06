@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Plug,
   Sparkles,
+  Blocks,
 } from 'lucide-react';
 import type { NavigationItem, WizardStep } from '../domain/workspace';
 
@@ -20,6 +21,7 @@ export const navigationItems: NavigationItem[] = [
   { id: 'assets', title: { 'zh-CN': '资产空间', en: 'Assets' }, eyebrow: { 'zh-CN': '目录与文件', en: 'Folders and files' }, icon: FolderTree },
   { id: 'console', title: { 'zh-CN': '工作台', en: 'Console' }, eyebrow: { 'zh-CN': '版本冻结', en: 'Version freeze' }, icon: LayoutDashboard },
   { id: 'providers', title: { 'zh-CN': 'AI 接入', en: 'AI Connect' }, eyebrow: { 'zh-CN': '入门与采集', en: 'Learn and capture' }, icon: Plug },
+  { id: 'framework', title: { 'zh-CN': '框架与脚手架', en: 'Framework' }, eyebrow: { 'zh-CN': 'SDK 与 Starter', en: 'SDK & Starter' }, icon: Blocks },
 ];
 
 export const wizardSteps: WizardStep[] = [

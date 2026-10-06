@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { assetClient, type ProviderDetailView, type ProviderStatusView } from '../services/assetClient';
 import { useI18n } from '../i18n/I18nProvider';
+import type { AppSection } from '../domain/workspace';
 
 type Tab = 'intro' | 'manage';
 
@@ -95,7 +96,7 @@ function verificationDetail(status: string, t: (key: string) => string): string 
   return t('providerVerificationWaiting');
 }
 
-export function ProviderManager() {
+export function ProviderManager({ onNavigate }: { onNavigate: (section: AppSection) => void }) {
   const { t } = useI18n();
   const [tab, setTab] = useState<Tab>(initialTab);
 
@@ -123,12 +124,12 @@ export function ProviderManager() {
         </button>
       </div>
 
-      {tab === 'intro' ? <ProviderIntro onManage={openManage} /> : <ProviderConsole />}
+      {tab === 'intro' ? <ProviderIntro onManage={openManage} onFramework={() => onNavigate('framework')} /> : <ProviderConsole />}
     </main>
   );
 }
 
-function ProviderIntro({ onManage }: { onManage: () => void }) {
+function ProviderIntro({ onManage, onFramework }: { onManage: () => void; onFramework: () => void }) {
   const { t } = useI18n();
   const flow = ['providerFlowChat', 'providerFlowSource', 'providerFlowAdapter', 'providerFlowKernel', 'providerFlowTranscript', 'providerFlowAsset'];
   const concepts = [
@@ -164,6 +165,17 @@ function ProviderIntro({ onManage }: { onManage: () => void }) {
 
       <section className="provider-concept-grid">
         {concepts.map(([title, body]) => <Concept key={title} title={t(title)} body={t(body)} />)}
+      </section>
+
+      <section className="panel provider-sdk-cta">
+        <div>
+          <p className="eyebrow">{t('providerDeveloperEyebrow')}</p>
+          <h2>{t('providerDeveloperTitle')}</h2>
+          <p>{t('providerDeveloperLead')}</p>
+        </div>
+        <button className="secondary-button" onClick={onFramework}>
+          <Plug size={16}/>{t('providerDeveloperAction')}
+        </button>
       </section>
 
       <section className="panel">

@@ -94,6 +94,16 @@ export const assetClient = {
   config(): Promise<{ projectRoot: string; configurable: boolean }> {
     return getJson(`${BASE}/config`);
   },
+  async createStarter(target: string, name?: string): Promise<{ target: string; created: string[] }> {
+    const res = await fetch(`${BASE}/starter/create`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ target, name }),
+    });
+    const value = await res.json() as { target?: string; created?: string[]; error?: string };
+    if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    return { target: value.target ?? target, created: value.created ?? [] };
+  },
   async providerOverview(force = false): Promise<{ providers: ProviderStatusView[]; detectedAt: string }> {
     const now = Date.now();
     if (!force && providerOverviewCache && providerOverviewCache.expiresAt > now) return providerOverviewCache.value;

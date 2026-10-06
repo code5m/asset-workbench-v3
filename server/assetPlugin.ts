@@ -29,6 +29,7 @@ import {
 import { detectProviders } from './providerAdapterService.ts';
 import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, listProviderStatuses, redetectProviderStatuses, runProviderVerification, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
+import { createStarter } from '../packages/starter/src/index.ts';
 
 /**
  * Vite plugin that mounts the Local Asset API under /api.
@@ -134,6 +135,23 @@ function createHandler() {
       }
       if (req.method === 'GET' && pathPart === '/providers') {
         sendJson(res, 200, listProviderStatuses());
+        return;
+      }
+
+      if (req.method === 'POST' && pathPart === '/starter/create') {
+        try {
+          const body = await readBody(req);
+          const target = typeof body.target === 'string' ? body.target.trim() : '';
+          const name = typeof body.name === 'string' ? body.name.trim() : undefined;
+          if (!target) {
+            sendJson(res, 400, { error: 'target is required' });
+            return;
+          }
+          const result = createStarter({ target, name });
+          sendJson(res, 201, result);
+        } catch (e) {
+          sendJson(res, 400, { error: (e as Error).message });
+        }
         return;
       }
       if (req.method === 'POST' && pathPart === '/provider-manager/redetect') {

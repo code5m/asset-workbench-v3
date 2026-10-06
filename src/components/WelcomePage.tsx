@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, ChevronDown, CircleAlert, Play } from 'lucide-react';
+import { ArrowRight, Blocks, ChevronDown, CircleAlert, Play } from 'lucide-react';
 import type { AppSection } from '../domain/workspace';
 import { assetCategoryCards, keyDocuments, welcomeSteps } from '../data/productCopy';
 import { assetClient } from '../services/assetClient';
@@ -198,6 +198,23 @@ export function WelcomePage({ onNavigate, onOpenAsset }: WelcomePageProps) {
             );
           })}
         </div>
+      </section>
+
+      <section className="panel welcome-framework-card">
+        <div>
+          <p className="eyebrow">{t('welcomeFrameworkEyebrow')}</p>
+          <h2>{t('welcomeFrameworkTitle')}</h2>
+          <p>{t('welcomeFrameworkLead')}</p>
+          <div className="framework-mini-facts">
+            <span>{t('welcomeFrameworkProviderSdk')}</span>
+            <span>{t('welcomeFrameworkStarter')}</span>
+            <span>{t('welcomeFrameworkLanguages')}</span>
+          </div>
+        </div>
+        <button className="secondary-button" onClick={() => onNavigate('framework')}>
+          <Blocks size={17} />
+          {t('welcomeFrameworkAction')}
+        </button>
       </section>
 
       {/* Layers 4 & 5 — Workspace Health (left) + Key Project Documents (right). */}
