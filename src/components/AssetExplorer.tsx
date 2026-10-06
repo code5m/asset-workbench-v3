@@ -10,6 +10,7 @@ import type {
   RepositoryRevision,
 } from '../domain/asset';
 import { useI18n } from '../i18n/I18nProvider';
+import { ROOT_TREE_GROUP_ORDER, rootTreeGroupHintKey, rootTreeGroupKey, rootTreePresentation } from '../domain/rootTreePresentation';
 import { CreateAssetDialog, type CreateMode, type PromoteFrom } from './CreateAssetDialog';
 
 function formatSize(bytes: number): string {
@@ -366,18 +367,36 @@ export function AssetExplorer({ deepLink }: { deepLink: { path: string; token: n
             {rootChildren.length === 0 && status === 'ready' ? (
               <p className="detail-summary">{t('emptyDirectory')}</p>
             ) : (
-              rootChildren.map((node) => (
-                <TreeNode
-                  key={node.id}
-                  node={node}
-                  depth={0}
-                  expanded={expanded}
-                  childrenCache={childrenCache}
-                  selectedId={selected?.id ?? null}
-                  onToggle={toggleExpand}
-                  onSelect={selectNode}
-                />
-              ))
+              ROOT_TREE_GROUP_ORDER.map((group) => {
+                const nodes = rootChildren.filter((node) => rootTreePresentation(node.name).group === group);
+                if (nodes.length === 0) return null;
+                return (
+                  <section className="root-tree-group" key={group}>
+                    <div className="root-tree-group-heading">
+                      <strong>{t(rootTreeGroupKey(group))}</strong>
+                      <span>{t(rootTreeGroupHintKey(group))}</span>
+                    </div>
+                    <div className="root-tree-group-items">
+                      {nodes.map((node) => {
+                        const presentation = rootTreePresentation(node.name);
+                        return (
+                          <TreeNode
+                            key={node.id}
+                            node={node}
+                            depth={0}
+                            expanded={expanded}
+                            childrenCache={childrenCache}
+                            selectedId={selected?.id ?? null}
+                            onToggle={toggleExpand}
+                            onSelect={selectNode}
+                            purposeKey={presentation.purposeKey}
+                          />
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })
             )}
           </div>
         </article>
@@ -428,9 +447,10 @@ interface TreeNodeProps {
   selectedId: string | null;
   onToggle: (node: AssetNode) => void;
   onSelect: (node: AssetNode) => void;
+  purposeKey?: string;
 }
 
-function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, onSelect }: TreeNodeProps) {
+function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, onSelect, purposeKey }: TreeNodeProps) {
   const { t } = useI18n();
   const isDir = node.kind === 'directory';
   const isOpen = expanded.has(node.relativePath);
@@ -453,6 +473,7 @@ function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, 
           <div>
             <strong>{node.name}</strong>
             <small>{node.relativePath || '/'}</small>
+            {depth === 0 && purposeKey ? <em className="tree-purpose">{t(purposeKey)}</em> : null}
           </div>
         </button>
       </div>
@@ -471,6 +492,7 @@ function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, 
                 selectedId={selectedId}
                 onToggle={onToggle}
                 onSelect={onSelect}
+                purposeKey={undefined}
               />
             ))
           )}
