@@ -7,8 +7,14 @@ import {
   rootTreePresentation,
 } from '../src/domain/rootTreePresentation.ts';
 
-test('root visual IA preserves real filesystem names and classifies only presentation', () => {
-  assert.deepEqual(ROOT_TREE_GROUP_ORDER, ['tooling', 'skeleton', 'project']);
+test('root visual IA mirrors architecture roles without inventing filesystem hierarchy', () => {
+  assert.deepEqual(ROOT_TREE_GROUP_ORDER, [
+    'tooling',
+    'skeleton',
+    'framework',
+    'application',
+    'project',
+  ]);
 
   assert.deepEqual(rootTreePresentation('.codex'), {
     group: 'tooling',
@@ -32,21 +38,73 @@ test('root visual IA preserves real filesystem names and classifies only present
     purposeKey: 'rootPurposeConversations',
   });
 
-  assert.deepEqual(rootTreePresentation('package.json'), { group: 'project' });
-  assert.deepEqual(rootTreePresentation('src'), { group: 'project' });
+  assert.deepEqual(rootTreePresentation('packages'), {
+    group: 'framework',
+    purposeKey: 'rootPurposeFrameworkPackages',
+  });
+  assert.deepEqual(rootTreePresentation('providers'), {
+    group: 'framework',
+    purposeKey: 'rootPurposeFrameworkProviders',
+  });
+
+  assert.deepEqual(rootTreePresentation('src'), {
+    group: 'application',
+    purposeKey: 'rootPurposeAppSource',
+  });
+  assert.deepEqual(rootTreePresentation('server'), {
+    group: 'application',
+    purposeKey: 'rootPurposeAppServer',
+  });
+  assert.deepEqual(rootTreePresentation('scripts'), {
+    group: 'application',
+    purposeKey: 'rootPurposeAppScripts',
+  });
+
+  assert.deepEqual(rootTreePresentation('docs'), {
+    group: 'project',
+    purposeKey: 'rootPurposeProjectDocs',
+  });
+  assert.deepEqual(rootTreePresentation('package.json'), {
+    group: 'project',
+    purposeKey: 'rootPurposePackageManifest',
+  });
+  assert.deepEqual(rootTreePresentation('some-other-root'), { group: 'project', purposeKey: undefined });
 
   assert.equal(rootTreeGroupKey('tooling'), 'rootGroupTooling');
   assert.equal(rootTreeGroupKey('skeleton'), 'rootGroupSkeleton');
+  assert.equal(rootTreeGroupKey('framework'), 'rootGroupFramework');
+  assert.equal(rootTreeGroupKey('application'), 'rootGroupApplication');
   assert.equal(rootTreeGroupKey('project'), 'rootGroupProject');
+
   assert.equal(rootTreeGroupHintKey('tooling'), 'rootGroupToolingHint');
+  assert.equal(rootTreeGroupHintKey('framework'), 'rootGroupFrameworkHint');
+  assert.equal(rootTreeGroupHintKey('application'), 'rootGroupApplicationHint');
 });
 
-test('presentation never invents a virtual path', () => {
-  const names = ['.codex', '.codebuddy', '.opencode', '.trae', '.github', '00-introduction', '01-code', 'src'];
+test('presentation metadata never invents a virtual path or virtual children', () => {
+  const names = [
+    '.codex',
+    '.codebuddy',
+    '.opencode',
+    '.trae',
+    '.github',
+    '00-introduction',
+    '01-code',
+    'packages',
+    'providers',
+    'src',
+    'server',
+    'scripts',
+    'docs',
+    'README.md',
+  ];
+  const allowedGroups = ['tooling', 'skeleton', 'framework', 'application', 'project'];
+
   for (const name of names) {
     const presentation = rootTreePresentation(name);
-    assert.ok(['tooling', 'skeleton', 'project'].includes(presentation.group));
+    assert.ok(allowedGroups.includes(presentation.group));
     assert.equal('path' in presentation, false);
     assert.equal('children' in presentation, false);
+    assert.equal('virtualParent' in presentation, false);
   }
 });
