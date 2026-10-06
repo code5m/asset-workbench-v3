@@ -1,3 +1,5 @@
+import { LANGUAGE_GENERATED_DIRS } from '../packages/language-core/src/index.ts';
+
 /**
  * Central, explicit ignore policy.
  *
@@ -8,33 +10,13 @@
  */
 
 const IGNORED_DIRS = new Set([
-  'node_modules',
   '.git',
-  'dist',
   'build',
-  'coverage',
-  'target',
   '.cache',
   '.asset-workbench-data',
   '.idea',
   '.vscode',
-  '.next',
-  '.nuxt',
-  '.svelte-kit',
-  'out',
-  '.turbo',
-  '.output',
-  '.parcel-cache',
-  '__pycache__',
-  '.venv',
-  'venv',
-  '.pytest_cache',
-  '.mypy_cache',
-  '.ruff_cache',
-  '.tox',
-  '.nox',
-  '.gradle',
-  '.settings',
+  ...LANGUAGE_GENERATED_DIRS,
 ]);
 
 const IGNORED_FILES = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini', 'ehthumbs.db']);
