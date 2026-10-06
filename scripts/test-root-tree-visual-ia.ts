@@ -41,23 +41,28 @@ test('root visual IA mirrors architecture roles without inventing filesystem hie
   assert.deepEqual(rootTreePresentation('packages'), {
     group: 'framework',
     purposeKey: 'rootPurposeFrameworkPackages',
+    learnMoreFocus: 'packages',
   });
   assert.deepEqual(rootTreePresentation('providers'), {
     group: 'framework',
     purposeKey: 'rootPurposeFrameworkProviders',
+    learnMoreFocus: 'providers',
   });
 
   assert.deepEqual(rootTreePresentation('src'), {
     group: 'application',
     purposeKey: 'rootPurposeAppSource',
+    learnMoreFocus: 'architecture',
   });
   assert.deepEqual(rootTreePresentation('server'), {
     group: 'application',
     purposeKey: 'rootPurposeAppServer',
+    learnMoreFocus: 'architecture',
   });
   assert.deepEqual(rootTreePresentation('scripts'), {
     group: 'application',
     purposeKey: 'rootPurposeAppScripts',
+    learnMoreFocus: 'architecture',
   });
 
   assert.deepEqual(rootTreePresentation('docs'), {
