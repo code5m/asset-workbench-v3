@@ -8,6 +8,7 @@ export type RootTreeGroup =
 export interface RootTreePresentation {
   group: RootTreeGroup;
   purposeKey?: string;
+  learnMoreFocus?: 'architecture' | 'packages' | 'providers';
 }
 
 const SKELETON_PURPOSE: Record<string, string> = {
@@ -60,10 +61,18 @@ export function rootTreePresentation(name: string): RootTreePresentation {
     return { group: 'skeleton', purposeKey: SKELETON_PURPOSE[name] };
   }
   if (name in FRAMEWORK_PURPOSE) {
-    return { group: 'framework', purposeKey: FRAMEWORK_PURPOSE[name] };
+    return {
+      group: 'framework',
+      purposeKey: FRAMEWORK_PURPOSE[name],
+      learnMoreFocus: name === 'providers' ? 'providers' : 'packages',
+    };
   }
   if (name in APPLICATION_PURPOSE) {
-    return { group: 'application', purposeKey: APPLICATION_PURPOSE[name] };
+    return {
+      group: 'application',
+      purposeKey: APPLICATION_PURPOSE[name],
+      learnMoreFocus: 'architecture',
+    };
   }
   if (name.startsWith('.')) {
     return { group: 'tooling', purposeKey: TOOLING_PURPOSE[name] ?? 'rootPurposeHiddenTool' };
