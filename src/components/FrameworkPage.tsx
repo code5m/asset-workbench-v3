@@ -1,5 +1,6 @@
+import { useEffect, useRef } from 'react';
 import { ArrowRight, Box, Code2, FolderPlus, Plug } from 'lucide-react';
-import type { AppSection } from '../domain/workspace';
+import type { AppSection, FrameworkFocus } from '../domain/workspace';
 import { useI18n } from '../i18n/I18nProvider';
 import { StarterCreator } from './StarterCreator';
 import { DEFAULT_ASSET_SKELETON } from '../../packages/asset-core/src/index.ts';
@@ -8,6 +9,7 @@ import { BUILTIN_PROVIDER_DEFINITIONS } from '../../packages/provider-sdk/src/in
 
 interface FrameworkPageProps {
   onNavigate: (section: AppSection) => void;
+  focusRequest: { focus: FrameworkFocus; token: number } | null;
 }
 
 const SKELETON_DESCRIPTION_KEYS: Record<string, string> = {
@@ -27,8 +29,28 @@ const PACKAGE_CARDS = [
   ['starter', 'frameworkPackageStarterTitle', 'frameworkPackageStarterBody'],
 ] as const;
 
-export function FrameworkPage({ onNavigate }: FrameworkPageProps) {
+export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) {
   const { t } = useI18n();
+  const architectureRef = useRef<HTMLElement | null>(null);
+  const packagesRef = useRef<HTMLElement | null>(null);
+  const providersRef = useRef<HTMLElement | null>(null);
+  const starterRef = useRef<HTMLDivElement | null>(null);
+  const skeletonRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!focusRequest) return;
+    const target =
+      focusRequest.focus === 'packages'
+        ? packagesRef.current
+        : focusRequest.focus === 'providers'
+          ? providersRef.current
+          : focusRequest.focus === 'starter'
+            ? starterRef.current
+            : focusRequest.focus === 'skeleton'
+              ? skeletonRef.current
+              : architectureRef.current;
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [focusRequest?.token]);
 
   return (
     <main className="page framework-page">
@@ -55,7 +77,20 @@ export function FrameworkPage({ onNavigate }: FrameworkPageProps) {
         </div>
       </section>
 
-      <section className="panel">
+      <section className="panel framework-beginner-map">
+        <div>
+          <p className="eyebrow">{t('frameworkBeginnerEyebrow')}</p>
+          <h2>{t('frameworkBeginnerTitle')}</h2>
+          <p>{t('frameworkBeginnerLead')}</p>
+        </div>
+        <div className="framework-beginner-grid">
+          <article><strong>{t('frameworkBeginnerAssetsTitle')}</strong><p>{t('frameworkBeginnerAssetsBody')}</p></article>
+          <article><strong>{t('frameworkBeginnerAiTitle')}</strong><p>{t('frameworkBeginnerAiBody')}</p></article>
+          <article><strong>{t('frameworkBeginnerBaseTitle')}</strong><p>{t('frameworkBeginnerBaseBody')}</p></article>
+        </div>
+      </section>
+
+      <section className="panel" ref={architectureRef}>
         <div className="section-heading">
           <div>
             <p className="eyebrow">{t('frameworkArchitectureEyebrow')}</p>
@@ -76,7 +111,7 @@ export function FrameworkPage({ onNavigate }: FrameworkPageProps) {
         <p className="framework-language-neutral">{t('frameworkLanguageNeutral')}</p>
       </section>
 
-      <section>
+      <section ref={packagesRef}>
         <div className="section-heading">
           <div>
             <p className="eyebrow">{t('frameworkPackagesEyebrow')}</p>
@@ -119,7 +154,7 @@ export function FrameworkPage({ onNavigate }: FrameworkPageProps) {
         </div>
       </section>
 
-      <section className="framework-provider-section">
+      <section className="framework-provider-section" ref={providersRef}>
         <div className="section-heading">
           <div>
             <p className="eyebrow">{t('frameworkProviderEyebrow')}</p>
@@ -141,9 +176,9 @@ export function FrameworkPage({ onNavigate }: FrameworkPageProps) {
         <p className="detail-summary">{t('frameworkProviderSdkLead')}</p>
       </section>
 
-      <StarterCreator onActivated={() => onNavigate('assets')} />
+      <div ref={starterRef}><StarterCreator onActivated={() => onNavigate('assets')} /></div>
 
-      <section className="panel framework-skeleton">
+      <section className="panel framework-skeleton" ref={skeletonRef}>
         <div className="section-heading">
           <div>
             <p className="eyebrow">{t('frameworkSkeletonEyebrow')}</p>

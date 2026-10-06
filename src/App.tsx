@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { AppSection } from './domain/workspace';
+import type { AppSection, FrameworkFocus } from './domain/workspace';
 import { navigationItems, wizardSteps } from './data/navigation';
 import { AppNavigation } from './components/AppNavigation';
 import { AssetExplorer } from './components/AssetExplorer';
@@ -15,10 +15,16 @@ export default function App() {
   const [activeSection, setActiveSection] = useState<AppSection>('welcome');
   const [activeStep, setActiveStep] = useState('repositories');
   const [assetDeepLink, setAssetDeepLink] = useState<{ path: string; token: number } | null>(null);
+  const [frameworkFocus, setFrameworkFocus] = useState<{ focus: FrameworkFocus; token: number } | null>(null);
 
   const openAsset = (path: string) => {
     setAssetDeepLink({ path, token: Date.now() });
     setActiveSection('assets');
+  };
+
+  const openFramework = (focus: FrameworkFocus = 'architecture') => {
+    setFrameworkFocus({ focus, token: Date.now() });
+    setActiveSection('framework');
   };
 
   return (
@@ -26,7 +32,7 @@ export default function App() {
       <AppNavigation items={navigationItems} activeSection={activeSection} onSelect={setActiveSection} />
       {activeSection === 'welcome' ? <WelcomePage onNavigate={setActiveSection} onOpenAsset={openAsset} /> : null}
       {activeSection === 'guide' ? <GuidePage onNavigate={setActiveSection} /> : null}
-      {activeSection === 'assets' ? <AssetExplorer deepLink={assetDeepLink} /> : null}
+      {activeSection === 'assets' ? <AssetExplorer deepLink={assetDeepLink} onOpenFramework={openFramework} /> : null}
       {activeSection === 'console' ? (
         <div className="console-shell">
           <StepRail steps={wizardSteps} activeStep={activeStep} onSelect={setActiveStep} compact />
@@ -34,7 +40,7 @@ export default function App() {
         </div>
       ) : null}
       {activeSection === 'providers' ? <ProviderManager onNavigate={setActiveSection} /> : null}
-      {activeSection === 'framework' ? <FrameworkPage onNavigate={setActiveSection} /> : null}
+      {activeSection === 'framework' ? <FrameworkPage onNavigate={setActiveSection} focusRequest={frameworkFocus} /> : null}
     </div>
   );
 }

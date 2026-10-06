@@ -10,6 +10,7 @@ export type ImportStatus = 'verified' | 'pending' | 'blocked';
 export type ReleaseObservationStatus = 'matched' | 'drift' | 'missing';
 
 export type AppSection = 'welcome' | 'guide' | 'assets' | 'console' | 'providers' | 'framework';
+export type FrameworkFocus = 'architecture' | 'packages' | 'providers' | 'starter' | 'skeleton';
 
 export type AssetKind = 'code' | 'design' | 'document' | 'conversation' | 'derived';
 
