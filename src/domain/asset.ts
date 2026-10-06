@@ -1,3 +1,23 @@
+import type {
+  AssetKind,
+  CodeLanguage,
+  CaptureProvider,
+  CaptureSource,
+  CaptureEventType,
+  CanonicalCaptureEvent,
+  CaptureSession,
+} from '../../packages/protocol/src/index.ts';
+
+export type {
+  AssetKind,
+  CodeLanguage,
+  CaptureProvider,
+  CaptureSource,
+  CaptureEventType,
+  CanonicalCaptureEvent,
+  CaptureSession,
+} from '../../packages/protocol/src/index.ts';
+
 /**
  * Shared Asset Engine contract.
  *
@@ -9,15 +29,6 @@
  * remote is repository identity. A WorkspaceVersion is a future frozen project
  * version. Do not introduce parallel snapshot concepts here.
  */
-
-export type AssetKind =
-  | 'introduction'
-  | 'code'
-  | 'design'
-  | 'document'
-  | 'conversation'
-  | 'derived'
-  | 'other';
 
 /**
  * The three managed knowledge asset types. These are semantic layers, NOT three
@@ -68,62 +79,6 @@ export type DecisionStatus = 'Accepted' | 'Proposed' | 'Superseded' | 'Deprecate
  * transcript when the runtime cannot export one.
  */
 export type CaptureMode = 'full-transcript' | 'agent-work-record' | 'imported-transcript' | 'manual';
-
-/** Provider identity carried as data by the capture kernel, never a switch for provider-specific logic. */
-export type CaptureProvider = 'chatgpt' | 'codex' | 'codebuddy' | 'trae' | 'opencode' | 'codearts' | 'workbuddy' | 'other';
-export type CaptureSource = 'native-hook' | 'acp' | 'provider-api' | 'import' | 'manual' | 'test' | 'other';
-export type CaptureEventType =
-  | 'session.started'
-  | 'user.message'
-  | 'assistant.message'
-  | 'system.message'
-  | 'tool.started'
-  | 'tool.completed'
-  | 'file.changed'
-  | 'session.compacted'
-  | 'artifact.produced'
-  | 'session.ended';
-
-/** The provider-neutral record persisted in capture `events.jsonl`. */
-export interface CanonicalCaptureEvent {
-  schemaVersion: 1;
-  eventId: string;
-  provider: CaptureProvider;
-  providerSessionId: string;
-  captureSessionId: string;
-  workspaceId: string;
-  eventType: CaptureEventType;
-  sequence?: number;
-  timestamp: string;
-  actor?: string;
-  content?: string;
-  parentEventId?: string;
-  parentSessionId?: string;
-  toolCall?: Record<string, unknown>;
-  toolResult?: Record<string, unknown>;
-  affectedFiles?: string[];
-  attachments?: Array<Record<string, unknown>>;
-  captureSource: CaptureSource;
-}
-
-export interface CaptureSession {
-  schemaVersion: 1;
-  captureSessionId: string;
-  provider: CaptureProvider;
-  providerSessionId: string;
-  workspaceId: string;
-  captureSource: CaptureSource;
-  status: 'active' | 'ended' | 'interrupted' | 'failed';
-  firstSequence?: number;
-  lastSequence?: number;
-  sequenceGaps: Array<{ after: number; before: number }>;
-  orderingWarnings: string[];
-  startedAt: string;
-  lastEventAt?: string;
-  endedAt?: string;
-  agentSessionId?: string;
-  transcriptAssetId?: string;
-}
 
 /** Agent identity. Kept in sync with ConversationSource so Session and Conversation align. */
 export type AgentType = 'chatgpt' | 'codex' | 'codebuddy' | 'opencode' | 'trae' | 'codearts' | 'workbuddy' | 'manual' | 'other';
@@ -237,14 +192,6 @@ export interface ManagedAssetResult {
 }
 
 export type AssetSourceKind = 'discovered' | 'expected';
-
-export type CodeLanguage =
-  | 'java'
-  | 'javascript'
-  | 'typescript'
-  | 'python'
-  | 'rust'
-  | 'other';
 
 /** Read-only Git identity/version evidence for one discovered repository. */
 export interface RepositoryRevision {
