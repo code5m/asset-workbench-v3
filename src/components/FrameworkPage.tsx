@@ -10,6 +10,15 @@ interface FrameworkPageProps {
   onNavigate: (section: AppSection) => void;
 }
 
+const SKELETON_DESCRIPTION_KEYS: Record<string, string> = {
+  '00-introduction': 'frameworkSkeletonIntroduction',
+  '01-code': 'frameworkSkeletonCode',
+  '02-design': 'frameworkSkeletonDesign',
+  '03-docs': 'frameworkSkeletonDocs',
+  '04-conversations': 'frameworkSkeletonConversations',
+  '05-derived': 'frameworkSkeletonDerived',
+};
+
 const PACKAGE_CARDS = [
   ['protocol', 'frameworkPackageProtocolTitle', 'frameworkPackageProtocolBody'],
   ['provider-sdk', 'frameworkPackageProviderTitle', 'frameworkPackageProviderBody'],
@@ -146,7 +155,7 @@ export function FrameworkPage({ onNavigate }: FrameworkPageProps) {
             <article className="skeleton-row" key={entry.path}>
               <code>{entry.path}/</code>
               <span className="skeleton-row-kind">{entry.assetType}</span>
-              <span>{entry.description}</span>
+              <span>{t(SKELETON_DESCRIPTION_KEYS[entry.path] ?? 'frameworkSkeletonOther')}</span>
             </article>
           ))}
         </div>
