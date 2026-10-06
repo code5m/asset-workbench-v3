@@ -21,6 +21,35 @@ The product rule is simple:
 > version fact, and every derived result must be traceable back to verified Raw
 > source artifacts.
 
+
+## Framework & Starter
+
+Asset Workbench V3 now exposes an explicit reusable framework boundary while the existing application remains the reference implementation.
+
+```text
+packages/
+├── protocol/        shared Asset / Capture / Provider contracts
+├── provider-sdk/    Provider Definition and adapter authoring helpers
+├── language-core/   Java / JS-Node / TypeScript / Python / Rust registry
+├── asset-core/      canonical 00–05 asset skeleton
+└── starter/         starter project generator
+
+providers/
+└── examples/        reference third-party Provider definitions
+```
+
+Create a fresh compatible project skeleton with:
+
+```bash
+npm run starter:create -- --target /path/to/project --name my-project
+```
+
+The framework remains **Provider-neutral**. The current runtime is implemented in TypeScript/Node.js, but a third-party Provider adapter may be implemented in Python, Rust, Java, Node.js, Go, or another language when it emits the canonical Capture API/event contract. Custom Provider definitions remain declarative and cannot embed arbitrary executable commands.
+
+The first-class project-language registry recognizes Java, JavaScript/Node.js, TypeScript, Python, and Rust source/manifests/generated directories. This is project ecosystem support; it does not duplicate the Workbench server into five backend implementations.
+
+See [Framework & Starter Architecture](docs/framework-and-starter.md) and [Example Provider](providers/examples/basic-hooks.ts).
+
 ## Conversation Capture Kernel
 
 The workbench has a provider-neutral Capture Kernel and verified provider
