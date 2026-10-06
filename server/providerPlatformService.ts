@@ -6,33 +6,13 @@ import type { ProviderStatus } from './providerAdapterService.ts';
 import { getProviderSnapshot, invalidateProviderSnapshot } from './providerSnapshot.ts';
 import { credentialStore } from './credentialStore.ts';
 import { isProviderEnabled, setProviderRuntimeEnabled } from './providerRuntimeState.ts';
+import { BUILTIN_PROVIDER_DEFINITIONS, validateProviderDefinition } from '../packages/provider-sdk/src/index.ts';
+import type { ProviderDefinition, ProviderPlatformStatus } from '../packages/protocol/src/provider.ts';
 
-export type ProviderAuthType = 'none' | 'existing-session' | 'env' | 'api-key' | 'ak-sk' | 'oauth' | 'manual' | 'external';
-export type EventSourceType = 'hooks' | 'plugin' | 'event-stream' | 'cli-json' | 'export-import' | 'manual-import' | 'custom';
-export type FinalizationStrategy = 'explicit-event' | 'session-idle' | 'stop-event' | 'next-session' | 'manual' | 'custom';
-export type ProviderPlatformStatus = 'ENABLED' | 'DISABLED' | 'LIMITED' | 'BLOCKED_AUTH' | 'NOT_INSTALLED' | 'UNSUPPORTED_VERSION' | 'WAITING_REAL_EVENT' | 'ERROR';
-export interface ProviderDefinition {
-  schemaVersion: 1; version: string; id: string; displayName: string; description: string; providerType: string; documentationUrl?: string;
-  discovery: { executables?: string[]; versionCommand?: string[]; configPaths?: string[]; pluginPaths?: string[]; minimumVersion?: string };
-  auth: { type: ProviderAuthType; fields?: string[]; verifyCommand?: string[] };
-  eventSource: { type: EventSourceType; projectConfigPath?: string };
-  events: Record<string, { canonical?: string; contentPath?: string; sessionIdPath?: string; messageIdPath?: string; timestampPath?: string }>;
-  transformer?: { type: 'builtin'; name: string };
-  finalization: { strategy: FinalizationStrategy; event?: string; limitation?: string };
-  verification: { required: string[]; optional?: string[]; requireTranscript: boolean };
-  installation?: { supported: boolean; source?: string; command?: string[] };
-}
+export type { ProviderAuthType, EventSourceType, FinalizationStrategy, ProviderPlatformStatus, ProviderDefinition } from '../packages/protocol/src/provider.ts';
 export interface ProviderDetail { definition: ProviderDefinition; status: ProviderStatus & { platformStatus: ProviderPlatformStatus; authStatus: string; enabled: boolean }; recentEvents: string[]; verification: Array<{ step: string; status: 'PASS' | 'FAIL' | 'BLOCKED' | 'WAITING'; detail: string }>; detectedAt?: string; }
 
-const builtins: ProviderDefinition[] = [
-  { schemaVersion: 1, version: '1.0.0', id: 'codex', displayName: 'Codex', description: 'Automatic project conversation capture.', providerType: 'coding-agent', documentationUrl: 'https://learn.chatgpt.com/docs/hooks', discovery: { executables: ['codex'], versionCommand: ['codex', '--version'], configPaths: ['.codex/hooks.json'] }, auth: { type: 'existing-session' }, eventSource: { type: 'hooks', projectConfigPath: '.codex/hooks.json' }, events: { SessionStart: { canonical: 'session.started' }, UserPromptSubmit: { canonical: 'user.message', contentPath: 'prompt' }, PostToolUse: { canonical: 'tool.completed' }, Stop: { canonical: 'assistant.message', contentPath: 'last_assistant_message' }, SessionEnd: { canonical: 'session.ended' } }, finalization: { strategy: 'explicit-event', event: 'SessionEnd' }, verification: { required: ['user.message', 'assistant.message'], optional: ['tool.completed'], requireTranscript: true } },
-  { schemaVersion: 1, version: '1.0.0', id: 'codebuddy', displayName: 'CodeBuddy', description: 'Lifecycle hook and official transcript import.', providerType: 'coding-agent', discovery: { executables: ['codebuddy'], configPaths: ['.codebuddy/settings.json'] }, auth: { type: 'existing-session' }, eventSource: { type: 'hooks', projectConfigPath: '.codebuddy/settings.json' }, events: { SessionStart: { canonical: 'session.started' }, UserPromptSubmit: { canonical: 'user.message', contentPath: 'prompt' }, PreToolUse: { canonical: 'tool.started' }, PostToolUse: { canonical: 'tool.completed' }, Stop: { canonical: 'assistant.message', contentPath: 'last_assistant_message' }, SessionEnd: { canonical: 'session.ended' } }, finalization: { strategy: 'explicit-event', event: 'SessionEnd' }, verification: { required: ['user.message', 'assistant.message'], optional: ['tool.completed'], requireTranscript: true } },
-  { schemaVersion: 1, version: '1.0.0', id: 'opencode', displayName: 'OpenCode', description: 'Plugin event stream with semantic merge.', providerType: 'coding-agent', discovery: { executables: ['opencode'], pluginPaths: ['.opencode/plugins/awb-capture.js'] }, auth: { type: 'none' }, eventSource: { type: 'plugin', projectConfigPath: '.opencode/plugins/awb-capture.js' }, events: {}, transformer: { type: 'builtin', name: 'opencode' }, finalization: { strategy: 'session-idle', limitation: 'Streaming events are merged by message ID.' }, verification: { required: ['user.message', 'assistant.message'], optional: ['tool.completed'], requireTranscript: true } },
-  { schemaVersion: 1, version: '1.0.0', id: 'trae', displayName: 'Trae', description: 'Workspace hooks awaiting a real IDE event.', providerType: 'ide-agent', discovery: { executables: ['trae-cn'], configPaths: ['.trae/hooks.json'] }, auth: { type: 'existing-session' }, eventSource: { type: 'hooks', projectConfigPath: '.trae/hooks.json' }, events: { SessionStart: { canonical: 'session.started' }, UserPromptSubmit: { canonical: 'user.message', contentPath: 'prompt' }, PostToolUse: { canonical: 'tool.completed' }, Stop: { canonical: 'assistant.message', contentPath: 'last_assistant_message' } }, finalization: { strategy: 'custom', limitation: 'This build has no SessionEnd event.' }, verification: { required: ['user.message', 'assistant.message'], optional: ['tool.completed'], requireTranscript: true } },
-  { schemaVersion: 1, version: '1.0.0', id: 'codearts', displayName: 'CodeArts', description: 'CLI export after access-key authentication.', providerType: 'coding-agent', discovery: { executables: ['codearts'] }, auth: { type: 'ak-sk', fields: ['CODEARTS_CLI_AK', 'CODEARTS_CLI_SK'], verifyCommand: ['codearts', 'session', 'list'] }, eventSource: { type: 'export-import' }, events: {}, finalization: { strategy: 'manual' }, verification: { required: ['user.message', 'assistant.message'], requireTranscript: true } },
-  { schemaVersion: 1, version: '1.0.0', id: 'chatgpt', displayName: 'ChatGPT', description: 'User-provided transcript import only.', providerType: 'chat-product', discovery: {}, auth: { type: 'manual' }, eventSource: { type: 'manual-import' }, events: {}, finalization: { strategy: 'manual' }, verification: { required: [], requireTranscript: false } },
-  { schemaVersion: 1, version: '1.0.0', id: 'workbuddy', displayName: 'WorkBuddy', description: 'Provider integration not installed on this machine.', providerType: 'coding-agent', discovery: {}, auth: { type: 'external' }, eventSource: { type: 'custom' }, events: {}, finalization: { strategy: 'custom', limitation: 'No verified local WorkBuddy adapter is installed.' }, verification: { required: ['user.message', 'assistant.message'], requireTranscript: true } },
-];
+const builtins: ProviderDefinition[] = [...BUILTIN_PROVIDER_DEFINITIONS];
 const customFile = () => path.join(getDataDir(), 'provider-definitions', 'custom.json');
 function json<T>(file: string, fallback: T): T { try { return JSON.parse(fs.readFileSync(file, 'utf8')) as T; } catch { return fallback; } }
 function save(file: string, value: unknown): void { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(value, null, 2), 'utf8'); }
@@ -164,14 +144,10 @@ export function verifyProviderAuth(id: string): { authStatus: 'VERIFIED' | 'INVA
 }
 export function setProviderEnabled(id: string, value: boolean): ProviderDetail { definition(id); setProviderRuntimeEnabled(id, value); return getProviderDetail(id); }
 export function saveCustomDefinition(input: ProviderDefinition): ProviderDefinition {
-  if (!/^[a-z][a-z0-9-]{1,63}$/.test(input.id)) throw new Error('provider id must use lowercase letters, numbers, and hyphens');
   if (builtins.some((item) => item.id === input.id)) throw new Error('built-in provider definitions cannot be replaced');
-  if (!input.displayName || !input.eventSource?.type || !input.finalization?.strategy) throw new Error('provider definition is incomplete');
-  if (input.auth?.verifyCommand?.length || input.discovery?.versionCommand?.length || input.installation?.command?.length) {
-    throw new Error('custom provider definitions cannot contain executable commands');
-  }
+  const normalized = { ...input, schemaVersion: 1 as const, version: input.version || '1.0.0' };
+  const safe = validateProviderDefinition(normalized, { allowExecutableCommands: false });
   const all = custom().filter((item) => item.id !== input.id);
-  const safe = { ...input, schemaVersion: 1 as const, version: input.version || '1.0.0' };
   all.push(safe);
   save(customFile(), all);
   return safe;
