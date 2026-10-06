@@ -24,6 +24,32 @@ The new Framework page is the developer/open-source entry. It does not replace t
 - **AI Connect**: adds a developer link to the Provider SDK but keeps Provider onboarding/management in place.
 - **Framework & Starter**: centralizes Protocol, Provider SDK, Language Core, Asset Core, built-in Provider references, language ecosystem support, and real Starter creation.
 
+
+## Asset Space root architecture
+
+Asset Space continues to show the real repository root. It does not introduce virtual folders or move files.
+
+The root presentation now explains five architectural roles:
+
+```text
+Tooling & Provider Configuration
+  .codex / .codebuddy / .opencode / .trae / .github / ...
+
+Project Asset Skeleton
+  00-introduction ... 05-derived
+
+Framework Skeleton
+  packages / providers
+
+Workbench Application
+  src / server / scripts
+
+Project & Engineering Files
+  docs / README.md / package.json / tsconfig* / vite.config.ts / ...
+```
+
+These are visual headings only. Every row keeps its original relative path, deep links continue to use real paths, and Provider hooks/configuration remain untouched.
+
 ## Starter UI contract
 
 The browser never writes the filesystem directly.
