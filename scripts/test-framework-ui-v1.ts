@@ -63,3 +63,47 @@ test('new framework UI keys exist in both locales', () => {
     assert.ok(ui.en[key], `missing en key: ${key}`);
   }
 });
+
+
+test('Asset Space uses beginner language and deep-links technical explanations', () => {
+  const app = read('src/App.tsx');
+  const explorer = read('src/components/AssetExplorer.tsx');
+  const presentation = read('src/domain/rootTreePresentation.ts');
+
+  assert.match(app, /openFramework/);
+  assert.match(app, /onOpenFramework=\{openFramework\}/);
+  assert.match(explorer, /rootLearnMore/);
+  assert.match(explorer, /onLearnMore\(learnMoreFocus\)/);
+  assert.match(presentation, /learnMoreFocus/);
+  assert.match(presentation, /name === 'providers' \? 'providers' : 'packages'/);
+});
+
+test('Framework page provides a plain-language map before technical details', () => {
+  const page = read('src/components/FrameworkPage.tsx');
+  assert.match(page, /frameworkBeginnerTitle/);
+  assert.match(page, /frameworkBeginnerAssetsTitle/);
+  assert.match(page, /frameworkBeginnerAiTitle/);
+  assert.match(page, /frameworkBeginnerBaseTitle/);
+  assert.match(page, /scrollIntoView/);
+  assert.match(page, /packagesRef/);
+  assert.match(page, /providersRef/);
+});
+
+test('beginner-facing copy exists in both locales', () => {
+  const keys = [
+    'rootLearnMore',
+    'frameworkBeginnerTitle',
+    'frameworkBeginnerAssetsBody',
+    'frameworkBeginnerAiBody',
+    'frameworkBeginnerBaseBody',
+  ];
+  for (const key of keys) {
+    assert.ok(ui['zh-CN'][key], `missing zh-CN beginner key: ${key}`);
+    assert.ok(ui.en[key], `missing en beginner key: ${key}`);
+  }
+
+  assert.match(ui['zh-CN'].rootPurposeFrameworkPackages, /底层能力/);
+  assert.match(ui['zh-CN'].rootPurposeFrameworkProviders, /AI 工具接入/);
+  assert.match(ui['zh-CN'].rootPurposeAppSource, /页面和客户端代码/);
+  assert.match(ui['zh-CN'].rootPurposeAppServer, /本地运行的后台服务/);
+});
