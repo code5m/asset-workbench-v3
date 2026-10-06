@@ -1913,3 +1913,59 @@ code {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ---- Root tree visual IA ---- */
+.root-tree-group {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.root-tree-group + .root-tree-group {
+  padding-top: 10px;
+  border-top: 1px solid #e4e7ec;
+}
+.root-tree-group-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+.root-tree-group-heading strong {
+  color: #344054;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.root-tree-group-heading span {
+  color: #98a2b3;
+  font-size: 11px;
+  text-align: right;
+}
+.root-tree-group-items {
+  display: grid;
+  gap: 8px;
+}
+.tree-purpose {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #eef6f8;
+  color: #176b87;
+  font-size: 10px;
+  font-style: normal;
+  line-height: 1.4;
+}
+@media (max-width: 780px) {
+  .root-tree-group-heading {
+    display: grid;
+    gap: 2px;
+  }
+  .root-tree-group-heading span {
+    text-align: left;
+  }
+}
