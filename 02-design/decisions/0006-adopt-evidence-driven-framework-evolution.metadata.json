@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "decision_evidence_driven_framework_evolution_20261007",
+  "type": "decision",
+  "title": "Adopt evidence-driven framework evolution",
+  "status": "Accepted",
+  "createdAt": "2026-10-07T06:58:00.000Z",
+  "updatedAt": "2026-10-07T06:58:00.000Z",
+  "sourceConversations": [
+    "transcript_chatgpt_20261007_framework_asset_core_ssot"
+  ],
+  "sourceDesigns": [
+    "02-design/framework-evolution/evidence-driven-framework-evolution-v1.md"
+  ],
+  "relatedAssetPaths": [
+    "AGENTS.md",
+    "src/components/FrameworkPage.tsx",
+    "02-design/framework-evolution/evidence-driven-framework-evolution-v1.md"
+  ]
+}
