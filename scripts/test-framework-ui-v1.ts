@@ -245,8 +245,8 @@ test('framework package cards use plain-language primary titles and technical na
   assert.equal(ui['zh-CN'].frameworkPackagesTitle, '这 5 块分别负责什么');
   assert.equal(ui['zh-CN'].frameworkPackageAssetTitle, '项目知识结构');
   assert.equal(ui['zh-CN'].frameworkPackageStarterTitle, '项目知识初始化器');
-  assert.equal(ui['zh-CN'].frameworkPackageLanguageTitle, '项目语言识别');
-  assert.equal(ui['zh-CN'].frameworkPackageProtocolTitle, '统一数据规则');
+  assert.equal(ui['zh-CN'].frameworkPackageLanguageTitle, '项目生态识别（内部能力）');
+  assert.equal(ui['zh-CN'].frameworkPackageProtocolTitle, '共享数据契约');
   assert.equal(ui['zh-CN'].frameworkPackageProviderTitle, 'AI 接入工具箱');
 
   const page = read('src/components/FrameworkPage.tsx');
