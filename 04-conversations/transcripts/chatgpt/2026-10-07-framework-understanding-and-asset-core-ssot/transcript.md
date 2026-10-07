@@ -203,3 +203,31 @@ project generator, or complete Workbench instance generator.
 - Rename the current Starter UI to Knowledge Init / 项目知识初始化器 while
   preserving the package name for compatibility.
 - Record the discussion and resulting Decision as durable project assets.
+
+
+## Visual-first management is a product requirement
+
+### User
+
+> 页面我没有看到变化，我的水平只能通过可视化进行管理
+
+### Resulting insight
+
+A correct implementation is still insufficient if the user cannot see the state
+change in the running product. Asset Workbench must make important framework and
+runtime identity visible without requiring the user to inspect Git, source code,
+logs, or configuration files.
+
+The persistent navigation should therefore show:
+
+- whether the app is in Framework Self Mode or Business Project Mode;
+- framework version;
+- framework revision;
+- currently bound business project, or an explicit unbound state.
+
+This became the formal **Visual-First Framework Management** rule.
+
+### Implemented response
+
+A persistent runtime identity card is added to the left navigation so the user can
+visually confirm the active mode and exact framework revision on every page.
