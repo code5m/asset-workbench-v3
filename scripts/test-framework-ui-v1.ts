@@ -107,3 +107,51 @@ test('beginner-facing copy exists in both locales', () => {
   assert.match(ui['zh-CN'].rootPurposeAppSource, /页面和客户端代码/);
   assert.match(ui['zh-CN'].rootPurposeAppServer, /本地运行的后台服务/);
 });
+
+
+test('Asset Space explains first-level src/packages/server entries without turning every deep file into tree prose', () => {
+  const explorer = read('src/components/AssetExplorer.tsx');
+  const presentation = read('src/domain/rootTreePresentation.ts');
+
+  assert.match(explorer, /nestedTreeEntryHelp/);
+  assert.match(explorer, /assetTreePurposeKey/);
+  assert.match(explorer, /asset-purpose-note/);
+  assert.match(explorer, /assetTreeHelpHint/);
+
+  assert.match(presentation, /packages\/asset-core/);
+  assert.match(presentation, /src\/components/);
+  assert.match(presentation, /server\/assetPlugin\.ts/);
+  assert.match(presentation, /server\/assetScanner\.ts/);
+  assert.match(presentation, /showInTree: false/);
+});
+
+test('first-level architecture explanations exist in zh-CN and en', () => {
+  const keys = [
+    'assetPurpose',
+    'assetTreeHelpHint',
+    'treeHelpPackageAssetCore',
+    'treeHelpPackageLanguageCore',
+    'treeHelpPackageProtocol',
+    'treeHelpPackageProviderSdk',
+    'treeHelpPackageStarter',
+    'treeHelpProviderExamples',
+    'treeHelpSrcComponents',
+    'treeHelpSrcData',
+    'treeHelpSrcDomain',
+    'treeHelpSrcI18n',
+    'treeHelpSrcServices',
+    'treeHelpServerAssetPlugin',
+    'treeHelpServerAssetService',
+    'treeHelpServerCaptureService',
+    'treeHelpServerProviderPlatform',
+    'treeHelpServerProviderAdapter',
+    'treeHelpServerManagedAsset',
+    'treeHelpServerCredentialStore',
+    'treeHelpServerPathGuard',
+  ];
+
+  for (const key of keys) {
+    assert.ok(ui['zh-CN'][key], `missing zh-CN architecture help key: ${key}`);
+    assert.ok(ui.en[key], `missing en architecture help key: ${key}`);
+  }
+});
