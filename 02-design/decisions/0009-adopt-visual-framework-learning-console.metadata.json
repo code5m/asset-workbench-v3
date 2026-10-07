@@ -7,7 +7,8 @@
   "createdAt": "2026-10-07T08:10:00.000Z",
   "updatedAt": "2026-10-07T08:10:00.000Z",
   "sourceConversations": [
-    "transcript_chatgpt_20261007_framework_asset_core_ssot"
+    "transcript_chatgpt_20261007_framework_asset_core_ssot",
+    "conv_chatgpt_20261007_visual_framework_console"
   ],
   "sourceDesigns": [
     "02-design/framework-learning/visual-framework-console-v1.md"
@@ -18,6 +19,7 @@
     "src/components/FrameworkPage.tsx",
     "src/i18n/translations.ts",
     "src/styles.css",
-    "scripts/test-framework-ui-v1.ts"
+    "scripts/test-framework-ui-v1.ts",
+    "04-conversations/work-records/chatgpt/2026-10-07-visual-framework-console/conversation.md"
   ]
 }
