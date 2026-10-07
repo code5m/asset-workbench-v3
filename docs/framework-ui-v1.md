@@ -195,3 +195,63 @@ full Workbench instance generator.
 
 A full Workbench Instance / CLI / scaffold is a future capability and must remain
 visibly marked as such until implemented.
+
+
+## Visual Framework Console
+
+Framework Learning now includes a visual console between the six-role mental model
+and deep technical package detail.
+
+It has four views:
+
+1. **Directory Map** — explains architecture-significant top-level areas and their
+   important children.
+2. **Key Files** — explains only architecture-bearing files through
+   responsibility / consumers / dependencies / impact / learning depth.
+3. **Instance / CLI** — shows current runtime identity, current available
+   capabilities, and planned full Instance Creator / CLI capabilities.
+4. **Versions & Upgrades** — keeps Central Framework, Workbench Instance, and
+   Business Project identities separate and shows the future upgrade lifecycle.
+
+### Honesty boundary
+
+The UI must not fabricate capabilities.
+
+Available now:
+
+- Framework Self mode;
+- one external business-project binding;
+- Knowledge Init.
+
+Planned:
+
+- full Workbench Instance Creator / CLI / Scaffold;
+- Instance Manifest / framework-version pin;
+- capability-aware upgrade checks;
+- migration and rollback.
+
+A sample CLI command may be shown only as a future target interface and must be
+visibly labeled as not implemented.
+
+### Learning metadata
+
+`src/data/frameworkLearning.ts` is the UI learning metadata source. It does not
+replace real runtime facts or precise docs.
+
+Directory guidance answers:
+
+- what;
+- why;
+- learning depth;
+- edit conditions.
+
+Key-file guidance is selective and answers:
+
+- responsibility;
+- users;
+- dependencies;
+- change impact;
+- learning recommendation.
+
+This progressive disclosure prevents the Framework page from becoming either a
+source-code browser or a shallow marketing diagram.
