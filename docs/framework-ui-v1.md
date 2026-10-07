@@ -124,3 +124,36 @@ packages/asset-core
 Starter is the creator; Asset Core is the definition. The server must not keep a
 second hard-coded copy of the 00–05 list.
 
+
+
+## Advanced: evidence-driven framework evolution
+
+The Framework page includes a collapsed advanced section for the long-term
+multi-project learning model:
+
+```text
+Real project practice
+-> Evidence
+-> Pattern
+-> Framework Candidate
+-> Design / Decision / Verification
+-> Versioned framework release
+-> Controlled project adoption
+-> Feedback
+```
+
+This is intentionally secondary to the beginner workflow.
+
+Hard product rule: a one-project special case stays project-local by default.
+Shared Core changes need reusable evidence, explicit abstraction, regression
+tests, and representative project verification.
+
+Long-term RSI is governed, not autonomous by default:
+
+```text
+Discover -> Propose -> Prove -> Promote -> Propagate -> Observe
+```
+
+The current implementation documents and governs the model; it does not yet claim
+automatic cross-project pattern mining, release distribution, migration
+orchestration, or RSI execution.
