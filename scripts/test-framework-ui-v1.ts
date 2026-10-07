@@ -166,21 +166,29 @@ test('Framework page closes the beginner mental-model loop', () => {
   assert.match(page, /frameworkVsProjectTitle/);
   assert.match(page, /frameworkSelfTitle/);
   assert.match(page, /frameworkManagedTitle/);
-  assert.match(page, /BEGINNER_LEARNING_ORDER/);
-  assert.match(page, /frameworkLearningTitle/);
+  assert.match(page, /framework-role-grid/);
+  assert.match(page, /frameworkRoleFrameworkTitle/);
+  assert.match(page, /frameworkRoleInstanceTitle/);
+  assert.match(page, /frameworkRoleBindingTitle/);
+  assert.match(page, /frameworkRoleKnowledgeTitle/);
+  assert.match(page, /frameworkRoleProviderTitle/);
+  assert.match(page, /frameworkRoleEvolutionTitle/);
   assert.match(page, /frameworkScopeKnowTitle/);
   assert.match(page, /frameworkScopeSkipTitle/);
 });
 
-test('beginner learning order starts with assets and leaves Provider SDK last', () => {
+test('beginner learning starts from six product roles, not package names', () => {
   const page = read('src/components/FrameworkPage.tsx');
-  const asset = page.indexOf("['asset-core', 'frameworkLearnAssetTitle'");
-  const starter = page.indexOf("['starter', 'frameworkLearnStarterTitle'");
-  const language = page.indexOf("['language-core', 'frameworkLearnLanguageTitle'");
-  const protocol = page.indexOf("['protocol', 'frameworkLearnProtocolTitle'");
-  const provider = page.indexOf("['provider-sdk', 'frameworkLearnProviderTitle'");
+  const framework = page.indexOf("frameworkRoleFrameworkTitle");
+  const instance = page.indexOf("frameworkRoleInstanceTitle");
+  const binding = page.indexOf("frameworkRoleBindingTitle");
+  const knowledge = page.indexOf("frameworkRoleKnowledgeTitle");
+  const provider = page.indexOf("frameworkRoleProviderTitle");
+  const evolution = page.indexOf("frameworkRoleEvolutionTitle");
 
-  assert.ok(asset >= 0 && starter > asset && language > starter && protocol > language && provider > protocol);
+  assert.ok(framework >= 0 && instance > framework && binding > instance && knowledge > binding && provider > knowledge && evolution > provider);
+  assert.match(page, /framework-technical-details/);
+  assert.doesNotMatch(page, /BEGINNER_LEARNING_ORDER/);
 });
 
 test('framework-vs-managed-project explanation explicitly prevents copying Workbench internals into business projects', () => {
@@ -236,7 +244,7 @@ test('framework package cards use plain-language primary titles and technical na
   assert.equal(ui['zh-CN'].frameworkPackagesEyebrow, '底层能力');
   assert.equal(ui['zh-CN'].frameworkPackagesTitle, '这 5 块分别负责什么');
   assert.equal(ui['zh-CN'].frameworkPackageAssetTitle, '项目知识结构');
-  assert.equal(ui['zh-CN'].frameworkPackageStarterTitle, '新项目生成器');
+  assert.equal(ui['zh-CN'].frameworkPackageStarterTitle, '项目知识初始化器');
   assert.equal(ui['zh-CN'].frameworkPackageLanguageTitle, '项目语言识别');
   assert.equal(ui['zh-CN'].frameworkPackageProtocolTitle, '统一数据规则');
   assert.equal(ui['zh-CN'].frameworkPackageProviderTitle, 'AI 接入工具箱');
@@ -265,9 +273,9 @@ test('framework package learning badges exist in both locales', () => {
 test('Asset Core copy says it is already in use and Starter consumes the standard', () => {
   assert.match(ui['zh-CN'].frameworkPackageAssetBody, /当前 Workbench 已经在使用/);
   assert.match(ui['zh-CN'].frameworkPackageAssetBody, /新项目也会复用/);
-  assert.match(ui['zh-CN'].starterLead, /Starter 按 Asset Core 定义/);
+  assert.match(ui['zh-CN'].starterLead, /只负责.*知识结构|不是 Spring Boot Starter/);
   assert.match(ui.en.frameworkPackageAssetBody, /current Workbench already uses/);
-  assert.match(ui.en.starterLead, /Starter creates a new project from the Asset Core standard/);
+  assert.match(ui.en.starterLead, /initializes only the 00–05 knowledge areas|not a Spring Boot Starter/);
 });
 
 
@@ -373,4 +381,57 @@ test('AGENTS governs evidence-driven framework evolution and controlled RSI', ()
   assert.match(agents, /Framework Candidate/);
   assert.match(agents, /not by copying the entire Workbench repository/i);
   assert.match(agents, /Discover -> Propose -> Prove -> Promote/);
+});
+
+
+test('Workbench separates framework self-study mode from a bound business project', () => {
+  const config = read('server/config.ts');
+  const plugin = read('server/assetPlugin.ts');
+  const consolePage = read('src/components/WorkspaceConsole.tsx');
+  const assets = read('src/components/AssetExplorer.tsx');
+  const guide = read('src/components/GuidePage.tsx');
+
+  assert.match(config, /'framework-self' \| 'business-project'/);
+  assert.match(config, /hasExternalProject/);
+  assert.match(plugin, /\.\.\.loadConfig\(\), configurable: true/);
+  assert.match(consolePage, /runtimeMode === 'framework-self'/);
+  assert.match(consolePage, /runtimeFrameworkNoticeTitle/);
+  assert.match(assets, /assetFrameworkModeTitle/);
+  assert.match(guide, /guideBindingTitle/);
+  assert.match(guide, /cfg\.mode === 'business-project'/);
+});
+
+test('Framework is primarily a visual learning page and technical packages are secondary', () => {
+  const page = read('src/components/FrameworkPage.tsx');
+
+  assert.match(page, /frameworkLearningPurposeTitle/);
+  assert.match(page, /frameworkModelTitle/);
+  assert.match(page, /framework-role-grid/);
+  assert.match(page, /<details className="panel framework-technical-details"/);
+
+  const keys = [
+    'frameworkLearningPurposeTitle',
+    'frameworkModelTitle',
+    'frameworkRoleFrameworkTitle',
+    'frameworkRoleInstanceTitle',
+    'frameworkRoleBindingTitle',
+    'frameworkRoleKnowledgeTitle',
+    'frameworkRoleProviderTitle',
+    'frameworkRoleEvolutionTitle',
+    'runtimeFrameworkNoticeTitle',
+    'runtimeBusinessNoticeTitle',
+    'assetFrameworkModeTitle',
+    'guideBindingTitle',
+  ];
+  for (const key of keys) {
+    assert.ok(ui['zh-CN'][key], `missing zh-CN key: ${key}`);
+    assert.ok(ui.en[key], `missing en key: ${key}`);
+  }
+});
+
+test('Starter is presented honestly as current knowledge initialization, not a full instance generator', () => {
+  assert.match(ui['zh-CN'].starterTitle, /初始化项目知识结构/);
+  assert.match(ui['zh-CN'].starterLead, /不是 Spring Boot Starter/);
+  assert.match(ui['zh-CN'].frameworkRoleInstanceBody, /还没有完整实例生成器/);
+  assert.match(ui.en.frameworkRoleInstanceBody, /full instance generator does not exist yet/);
 });
