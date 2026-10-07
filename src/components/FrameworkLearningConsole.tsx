@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ChevronRight, CircleDashed, FileCode2, FolderTree, GitBranch, PackageOpen, Route, Wrench } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
+import type { AppSection } from '../domain/workspace';
+import { assetClient } from '../services/assetClient';
 import {
   FRAMEWORK_DIRECTORY_GUIDES,
   FRAMEWORK_INSTANCE_CAPABILITIES,
@@ -24,9 +26,17 @@ function levelLabel(level: FrameworkDirectoryGuide['level'], t: (key: string) =>
   return t('frameworkLevelAdvanced');
 }
 
-export function FrameworkLearningConsole() {
+type RuntimeIdentity = {
+  projectRoot: string;
+  mode: 'framework-self' | 'business-project';
+  frameworkVersion: string;
+  frameworkRevision: string;
+};
+
+export function FrameworkLearningConsole({ onNavigate }: { onNavigate: (section: AppSection) => void }) {
   const { t, loc } = useI18n();
   const [tab, setTab] = useState<Tab>('directories');
+  const [runtime, setRuntime] = useState<RuntimeIdentity | null>(null);
   const [directoryId, setDirectoryId] = useState(FRAMEWORK_DIRECTORY_GUIDES[0]?.id ?? 'src');
   const [filePath, setFilePath] = useState(FRAMEWORK_KEY_FILE_GUIDES[0]?.path ?? 'src/App.tsx');
 
@@ -39,6 +49,17 @@ export function FrameworkLearningConsole() {
     () => FRAMEWORK_KEY_FILE_GUIDES.find((item) => item.path === filePath) ?? FRAMEWORK_KEY_FILE_GUIDES[0],
     [filePath],
   );
+
+  useEffect(() => {
+    assetClient.config()
+      .then((cfg) => setRuntime({
+        projectRoot: cfg.projectRoot,
+        mode: cfg.mode,
+        frameworkVersion: cfg.frameworkVersion,
+        frameworkRevision: cfg.frameworkRevision,
+      }))
+      .catch(() => undefined);
+  }, []);
 
   const openFile = (path: string) => {
     setFilePath(path);
@@ -112,8 +133,8 @@ export function FrameworkLearningConsole() {
         </div>
       ) : null}
 
-      {tab === 'instances' ? <InstanceManager /> : null}
-      {tab === 'versions' ? <VersionMap /> : null}
+      {tab === 'instances' ? <InstanceManager runtime={runtime} onNavigate={onNavigate} /> : null}
+      {tab === 'versions' ? <VersionMap runtime={runtime} /> : null}
     </section>
   );
 }
@@ -193,7 +214,7 @@ function FileDetail({ item }: { item: FrameworkKeyFileGuide }) {
   );
 }
 
-function InstanceManager() {
+function InstanceManager({ runtime, onNavigate }: { runtime: RuntimeIdentity | null; onNavigate: (section: AppSection) => void }) {
   const { t, loc } = useI18n();
   return (
     <div className="framework-instance-manager">
@@ -229,6 +250,22 @@ function InstanceManager() {
         ))}
       </section>
 
+      <section className="panel framework-instance-current">
+        <div>
+          <span>{t('frameworkInstanceCurrentMode')}</span>
+          <strong>{runtime?.mode === 'business-project' ? t('runtimeModeBusiness') : t('runtimeModeFramework')}</strong>
+        </div>
+        <div>
+          <span>{t('frameworkInstanceCurrentFramework')}</span>
+          <strong>{runtime ? `v${runtime.frameworkVersion} · ${runtime.frameworkRevision}` : '—'}</strong>
+        </div>
+        <div>
+          <span>{t('frameworkInstanceCurrentProject')}</span>
+          <strong>{runtime?.mode === 'business-project' ? runtime.projectRoot : t('navNoBusinessProject')}</strong>
+        </div>
+        <button className="primary-button" onClick={() => onNavigate('guide')}>{t('frameworkInstanceBindAction')}</button>
+      </section>
+
       <section className="panel framework-instance-actions">
         <div>
           <Wrench size={20} />
@@ -247,7 +284,7 @@ function InstanceManager() {
   );
 }
 
-function VersionMap() {
+function VersionMap({ runtime }: { runtime: RuntimeIdentity | null }) {
   const { t } = useI18n();
   return (
     <div className="framework-version-map">
@@ -260,9 +297,9 @@ function VersionMap() {
           </div>
         </div>
         <div className="framework-version-flow">
-          <div><span>{t('frameworkVersionCentral')}</span><strong>Framework vX.Y</strong><small>{t('frameworkVersionCentralNote')}</small></div>
+          <div><span>{t('frameworkVersionCentral')}</span><strong>{runtime ? `Framework v${runtime.frameworkVersion} · ${runtime.frameworkRevision}` : 'Framework —'}</strong><small>{t('frameworkVersionCentralNote')}</small></div>
           <i>→</i>
-          <div><span>{t('frameworkVersionInstance')}</span><strong>{t('frameworkVersionInstanceValue')}</strong><small>{t('frameworkVersionInstanceNote')}</small></div>
+          <div><span>{t('frameworkVersionInstance')}</span><strong>{runtime?.mode === 'business-project' ? t('frameworkVersionInstanceCurrentBound') : t('frameworkVersionInstanceUnbound')}</strong><small>{t('frameworkVersionInstanceNote')}</small></div>
           <i>→</i>
           <div><span>{t('frameworkVersionProject')}</span><strong>{t('frameworkVersionProjectValue')}</strong><small>{t('frameworkVersionProjectNote')}</small></div>
         </div>
