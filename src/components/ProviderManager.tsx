@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { assetClient, type ProviderDetailView, type ProviderStatusView } from '../services/assetClient';
 import { useI18n } from '../i18n/I18nProvider';
+import { KnowledgeLifecycle } from './KnowledgeLifecycle';
 import type { AppSection } from '../domain/workspace';
 
 type Tab = 'intro' | 'manage';
@@ -96,7 +97,7 @@ function verificationDetail(status: string, t: (key: string) => string): string 
   return t('providerVerificationWaiting');
 }
 
-export function ProviderManager({ onNavigate }: { onNavigate: (section: AppSection) => void }) {
+export function ProviderManager({ onNavigate, onOpenAsset }: { onNavigate: (section: AppSection) => void; onOpenAsset: (path: string) => void }) {
   const { t } = useI18n();
   const [tab, setTab] = useState<Tab>(initialTab);
 
@@ -124,12 +125,12 @@ export function ProviderManager({ onNavigate }: { onNavigate: (section: AppSecti
         </button>
       </div>
 
-      {tab === 'intro' ? <ProviderIntro onManage={openManage} onFramework={() => onNavigate('framework')} /> : <ProviderConsole />}
+      {tab === 'intro' ? <ProviderIntro onManage={openManage} onFramework={() => onNavigate('framework')} onOpenAsset={onOpenAsset} /> : <ProviderConsole />}
     </main>
   );
 }
 
-function ProviderIntro({ onManage, onFramework }: { onManage: () => void; onFramework: () => void }) {
+function ProviderIntro({ onManage, onFramework, onOpenAsset }: { onManage: () => void; onFramework: () => void; onOpenAsset: (path: string) => void }) {
   const { t } = useI18n();
   const flow = ['providerFlowChat', 'providerFlowSource', 'providerFlowAdapter', 'providerFlowKernel', 'providerFlowTranscript', 'providerFlowAsset'];
   const concepts = [
@@ -162,6 +163,14 @@ function ProviderIntro({ onManage, onFramework }: { onManage: () => void; onFram
           ))}
         </div>
       </section>
+
+      <KnowledgeLifecycle
+        compact
+        titleKey="providerKnowledgeTitle"
+        leadKey="providerKnowledgeLead"
+        onOpenConversations={() => onOpenAsset('04-conversations')}
+        onOpenDecisions={() => onOpenAsset('02-design/decisions')}
+      />
 
       <section className="provider-concept-grid">
         {concepts.map(([title, body]) => <Concept key={title} title={t(title)} body={t(body)} />)}

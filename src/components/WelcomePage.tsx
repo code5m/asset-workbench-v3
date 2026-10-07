@@ -6,6 +6,7 @@ import { assetClient } from '../services/assetClient';
 import type { ExpectedSkeletonEntry } from '../domain/asset';
 import type { ProviderStatusView } from '../services/assetClient';
 import { useI18n } from '../i18n/I18nProvider';
+import { KnowledgeLifecycle } from './KnowledgeLifecycle';
 
 interface WelcomePageProps {
   onNavigate: (section: AppSection) => void;
@@ -178,6 +179,12 @@ export function WelcomePage({ onNavigate, onOpenAsset }: WelcomePageProps) {
           })}
         </div>
       </section>
+
+      <KnowledgeLifecycle
+        onOpenAi={() => onNavigate('providers')}
+        onOpenConversations={() => onOpenAsset('04-conversations')}
+        onOpenDecisions={() => onOpenAsset('02-design/decisions')}
+      />
 
       <section>
         <div className="section-heading">

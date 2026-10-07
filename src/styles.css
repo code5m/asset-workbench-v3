@@ -2725,3 +2725,113 @@ code {
   color: #667085;
   line-height: 1.55;
 }
+
+
+/* ---- Knowledge lifecycle ------------------------------------------------ */
+.knowledge-lifecycle {
+  display: grid;
+  gap: 14px;
+}
+
+.knowledge-lifecycle.compact {
+  gap: 12px;
+}
+
+.knowledge-lifecycle-lead {
+  max-width: 900px;
+  margin: 6px 0 0;
+  color: #667085;
+  line-height: 1.6;
+}
+
+.knowledge-lifecycle-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.knowledge-lifecycle-stage {
+  display: grid;
+  gap: 7px;
+  min-height: 150px;
+  align-content: start;
+  padding: 13px;
+  border: 1px solid #dbe3ec;
+  border-radius: 9px;
+  background: #fbfcfd;
+}
+
+.knowledge-lifecycle-stage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #176b87;
+}
+
+.knowledge-lifecycle-stage-head > span {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: #176b87;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.knowledge-lifecycle-stage strong {
+  color: #17202a;
+  font-size: 14px;
+}
+
+.knowledge-lifecycle-stage p {
+  margin: 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.knowledge-lifecycle-rule {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-left: 3px solid #2878c7;
+  background: #f5faff;
+  color: #425466;
+}
+
+.knowledge-lifecycle-rule strong {
+  color: #1f3e56;
+  font-size: 12px;
+}
+
+.knowledge-lifecycle-rule span {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.knowledge-lifecycle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.knowledge-lifecycle-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 980px) {
+  .knowledge-lifecycle-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .knowledge-lifecycle-flow {
+    grid-template-columns: 1fr;
+  }
+}

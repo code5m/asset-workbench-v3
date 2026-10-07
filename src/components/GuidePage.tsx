@@ -5,12 +5,14 @@ import { guideSteps, sourceLayers } from '../data/productCopy';
 import { assetClient } from '../services/assetClient';
 import { useI18n } from '../i18n/I18nProvider';
 import { StarterCreator } from './StarterCreator';
+import { KnowledgeLifecycle } from './KnowledgeLifecycle';
 
 interface GuidePageProps {
   onNavigate: (section: AppSection) => void;
+  onOpenAsset: (path: string) => void;
 }
 
-export function GuidePage({ onNavigate }: GuidePageProps) {
+export function GuidePage({ onNavigate, onOpenAsset }: GuidePageProps) {
   const { t, loc } = useI18n();
   const [rootPath, setRootPath] = useState('');
   const [currentRoot, setCurrentRoot] = useState('');
@@ -110,6 +112,15 @@ export function GuidePage({ onNavigate }: GuidePageProps) {
       </section>
 
       <StarterCreator onActivated={() => onNavigate('assets')} compact />
+
+      <KnowledgeLifecycle
+        compact
+        titleKey="guideKnowledgeTitle"
+        leadKey="guideKnowledgeLead"
+        onOpenAi={() => onNavigate('providers')}
+        onOpenConversations={() => onOpenAsset('04-conversations')}
+        onOpenDecisions={() => onOpenAsset('02-design/decisions')}
+      />
 
       <section className="pipeline-band">
         <div className="section-heading">

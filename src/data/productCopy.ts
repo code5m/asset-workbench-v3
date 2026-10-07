@@ -110,6 +110,11 @@ export const keyDocuments: KeyDocument[] = [
     description: { 'zh-CN': '核心决策记录：Project Workspace 的边界与来源模型。', en: 'Core decision record: Project Workspace boundaries and source model.' },
   },
   {
+    name: '0004-persist-conversation-discoveries.md',
+    path: '02-design/decisions/0004-persist-substantive-conversation-discoveries-as-project-assets.md',
+    description: { 'zh-CN': '知识沉淀决策：什么样的聊天值得保存，以及证据、工作记录、设计、决策如何分层。', en: 'Knowledge-capture decision: which conversations deserve persistence and how evidence, work records, designs, and decisions stay separated.' },
+  },
+  {
     name: 'product-skeleton.md',
     path: 'docs/product-skeleton.md',
     description: { 'zh-CN': '产品与架构设计：分层、Runtime 与页面结构。', en: 'Product and architecture design: layering, runtime, and page structure.' },
@@ -120,7 +125,7 @@ export const assetCategoryCards: AssetCategory[] = [
   { id: 'code', name: { 'zh-CN': '代码', en: 'Code' }, path: '01-code/', description: { 'zh-CN': 'Git 仓库、Raw、版本、Diff 和源码文件。', en: 'Git repositories, Raw source, versions, diffs, and source files.' }, count: 0, indexed: 0, icon: Code2 },
   { id: 'design', name: { 'zh-CN': '设计方案', en: 'Design' }, path: '02-design/', description: { 'zh-CN': '架构蓝图、产品方案、技术设计和决策记录。', en: 'Architecture blueprints, product plans, technical designs, and decisions.' }, count: 0, indexed: 0, icon: Braces },
   { id: 'document', name: { 'zh-CN': '文稿文档', en: 'Documents' }, path: '03-docs/', description: { 'zh-CN': 'README、说明书、需求文档、报告和可交付文稿。', en: 'README files, manuals, requirements, reports, and deliverable drafts.' }, count: 0, indexed: 0, icon: FileText },
-  { id: 'conversation', name: { 'zh-CN': '聊天记录', en: 'Conversations' }, path: '04-conversations/', description: { 'zh-CN': 'ChatGPT、Codex、CodeBuddy 和人工讨论记录。', en: 'ChatGPT, Codex, CodeBuddy, and human discussion records.' }, count: 0, indexed: 0, icon: MessageSquareText },
+  { id: 'conversation', name: { 'zh-CN': '聊天记录', en: 'Conversations' }, path: '04-conversations/', description: { 'zh-CN': '真实 Transcript、Agent Work Record 与人工讨论证据；过程证据和正式决策分开保存。', en: 'Real Transcripts, Agent Work Records, and human discussion evidence; process evidence stays separate from formal decisions.' }, count: 0, indexed: 0, icon: MessageSquareText },
   { id: 'derived', name: { 'zh-CN': '派生产物', en: 'Derived' }, path: '05-derived/', description: { 'zh-CN': 'CodeGraph、语义索引、摘要、标签和知识图谱。', en: 'CodeGraph, semantic indexes, summaries, tags, and knowledge graphs.' }, count: 0, indexed: 0, icon: Network },
 ];
 

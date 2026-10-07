@@ -31,7 +31,7 @@ export default function App() {
     <div className="app-shell">
       <AppNavigation items={navigationItems} activeSection={activeSection} onSelect={setActiveSection} />
       {activeSection === 'welcome' ? <WelcomePage onNavigate={setActiveSection} onOpenAsset={openAsset} /> : null}
-      {activeSection === 'guide' ? <GuidePage onNavigate={setActiveSection} /> : null}
+      {activeSection === 'guide' ? <GuidePage onNavigate={setActiveSection} onOpenAsset={openAsset} /> : null}
       {activeSection === 'assets' ? <AssetExplorer deepLink={assetDeepLink} onOpenFramework={openFramework} /> : null}
       {activeSection === 'console' ? (
         <div className="console-shell">
@@ -39,7 +39,7 @@ export default function App() {
           <WorkspaceConsole activeStep={activeStep} />
         </div>
       ) : null}
-      {activeSection === 'providers' ? <ProviderManager onNavigate={setActiveSection} /> : null}
+      {activeSection === 'providers' ? <ProviderManager onNavigate={setActiveSection} onOpenAsset={openAsset} /> : null}
       {activeSection === 'framework' ? <FrameworkPage onNavigate={setActiveSection} focusRequest={frameworkFocus} /> : null}
     </div>
   );
