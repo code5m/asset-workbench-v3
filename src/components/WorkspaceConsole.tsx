@@ -25,25 +25,35 @@ export function WorkspaceConsole({ activeStep }: WorkspaceConsoleProps) {
   const [fileCount, setFileCount] = useState(0);
   const [directoryCount, setDirectoryCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [runtimeMode, setRuntimeMode] = useState<'framework-self' | 'business-project'>('framework-self');
 
-  const load = () => {
+  const load = async () => {
     setLoading(true);
-    Promise.all([
-      assetClient.config(),
-      assetClient.tree(''),
-      assetClient.repositories(),
-      assetClient.workspace(),
-    ])
-      .then(([cfg, tree, repositories, ws]) => {
-        setProjectRoot(cfg.projectRoot);
-        setFileCount(tree.fileCount);
-        setDirectoryCount(tree.directoryCount);
-        setScannedAt(tree.parent.modifiedAt);
-        setRepos(repositories);
-        setScannedAt(ws.lastScannedAt ?? tree.parent.modifiedAt);
-      })
-      .catch(() => undefined)
-      .finally(() => setLoading(false));
+    try {
+      const cfg = await assetClient.config();
+      setProjectRoot(cfg.projectRoot);
+      setRuntimeMode(cfg.mode);
+      if (cfg.mode === 'framework-self') {
+        setFileCount(0);
+        setDirectoryCount(0);
+        setRepos([]);
+        setScannedAt('');
+        return;
+      }
+      const [tree, repositories, ws] = await Promise.all([
+        assetClient.tree(''),
+        assetClient.repositories(),
+        assetClient.workspace(),
+      ]);
+      setFileCount(tree.fileCount);
+      setDirectoryCount(tree.directoryCount);
+      setScannedAt(ws.lastScannedAt ?? tree.parent.modifiedAt);
+      setRepos(repositories);
+    } catch {
+      // keep the current visible state; the page must not fabricate project data.
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -68,6 +78,27 @@ export function WorkspaceConsole({ activeStep }: WorkspaceConsoleProps) {
         </div>
       </section>
 
+      {runtimeMode === 'framework-self' ? (
+        <section className="panel runtime-mode-notice framework-self-notice">
+          <div>
+            <p className="eyebrow">{t('runtimeModeFramework')}</p>
+            <h2>{t('runtimeFrameworkNoticeTitle')}</h2>
+            <p>{t('runtimeFrameworkNoticeBody')}</p>
+            <code>{projectRoot}</code>
+          </div>
+        </section>
+      ) : (
+        <section className="panel runtime-mode-notice business-project-notice">
+          <div>
+            <p className="eyebrow">{t('runtimeModeBusiness')}</p>
+            <h2>{t('runtimeBusinessNoticeTitle')}</h2>
+            <p>{t('runtimeBusinessNoticeBody')}</p>
+            <code>{projectRoot}</code>
+          </div>
+        </section>
+      )}
+
+      {runtimeMode === 'framework-self' ? null : (
       <section className="metrics-grid">
         <article className="metric-card">
           <span>{t('statFiles')}</span>
@@ -91,6 +122,11 @@ export function WorkspaceConsole({ activeStep }: WorkspaceConsoleProps) {
         </article>
       </section>
 
+      </section>
+      )}
+
+      {runtimeMode === 'framework-self' ? null : (
+      <>
       <section className="workspace-band">
         <div className="workspace-card">
           <div className="section-heading">
@@ -207,6 +243,8 @@ export function WorkspaceConsole({ activeStep }: WorkspaceConsoleProps) {
           ))}
         </div>
       </section>
+      </>
+      )}
     </main>
   );
 }
