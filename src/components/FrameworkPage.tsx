@@ -22,14 +22,6 @@ const SKELETON_DESCRIPTION_KEYS: Record<string, string> = {
 };
 
 
-const BEGINNER_LEARNING_ORDER = [
-  ['asset-core', 'frameworkLearnAssetTitle', 'frameworkLearnAssetBody'],
-  ['starter', 'frameworkLearnStarterTitle', 'frameworkLearnStarterBody'],
-  ['language-core', 'frameworkLearnLanguageTitle', 'frameworkLearnLanguageBody'],
-  ['protocol', 'frameworkLearnProtocolTitle', 'frameworkLearnProtocolBody'],
-  ['provider-sdk', 'frameworkLearnProviderTitle', 'frameworkLearnProviderBody'],
-] as const;
-
 const PACKAGE_CARDS = [
   ['asset-core', 'Asset Core', 'frameworkPackageAssetTitle', 'frameworkPackageAssetBody', 'frameworkPackageBadgeStart', 'start'],
   ['starter', 'Starter', 'frameworkPackageStarterTitle', 'frameworkPackageStarterBody', 'frameworkPackageBadgeStart', 'start'],
@@ -196,28 +188,6 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
           </article>
         </div>
         <p className="framework-language-neutral">{t('frameworkVsProjectRule')}</p>
-      </section>
-
-      <section className="panel framework-learning-path">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">{t('frameworkLearningEyebrow')}</p>
-            <h2>{t('frameworkLearningTitle')}</h2>
-            <p className="framework-section-lead">{t('frameworkLearningLead')}</p>
-          </div>
-        </div>
-        <div className="framework-learning-list">
-          {BEGINNER_LEARNING_ORDER.map(([name, title, body], index) => (
-            <article key={name}>
-              <span>{index + 1}</span>
-              <div>
-                <code>packages/{name}</code>
-                <strong>{t(title)}</strong>
-                <p>{t(body)}</p>
-              </div>
-            </article>
-          ))}
-        </div>
       </section>
 
       <section className="framework-beginner-scope">
