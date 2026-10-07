@@ -228,6 +228,45 @@ history whenever those visuals reduce cognitive load.
 Documentation remains the precision/archive layer; the UI is the primary
 management and learning layer.
 
+## Visual Framework Learning Console
+
+The Framework learning surface must explain the framework at progressively deeper
+visual layers instead of forcing the user to infer architecture from source code.
+
+Required layers:
+
+1. six-role product model;
+2. directory map;
+3. selected key-file explanations;
+4. Instance / CLI capability status;
+5. Framework -> Instance -> Business Project version relationship;
+6. governed framework evolution.
+
+Directory explanations answer: what it is, why it exists, how deeply a beginner
+should learn it, and when it is edited.
+
+Key-file explanations are intentionally selective. Do **not** document every file.
+Only architecture-bearing files should answer:
+
+- responsibility;
+- who uses it;
+- dependencies;
+- change impact;
+- recommended learning depth.
+
+Instance / CLI remains **UI-first**. The product may show target CLI examples for
+future automation, but any unimplemented command or capability must be visibly
+marked planned and must never be presented as runnable.
+
+The current capability truth is:
+
+- Framework Self mode: available;
+- one external business-project binding: available;
+- Knowledge Init: available;
+- full Workbench Instance Creator / CLI: planned;
+- Instance Manifest / framework-version pinning: planned;
+- upgrade applicability / migration / rollback: planned.
+
 ## Framework Learning vs Business Project Mode
 
 Asset Workbench has two explicit meanings of "project" and they must never be
