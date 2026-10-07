@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_chatgpt_20261007_knowledge_lifecycle_page_audit",
+  "type": "agent-work-record",
+  "title": "Knowledge lifecycle page audit",
+  "source": "chatgpt",
+  "createdAt": "2026-10-07T06:18:00.000Z",
+  "updatedAt": "2026-10-07T06:18:00.000Z",
+  "captureMode": "agent-work-record",
+  "sourceTranscriptId": "transcript_chatgpt_20261007_framework_asset_core_ssot",
+  "transcriptCaptureStatus": "partial",
+  "relatedAssetPaths": [
+    "src/components/KnowledgeLifecycle.tsx",
+    "src/components/WelcomePage.tsx",
+    "src/components/GuidePage.tsx",
+    "src/components/AssetExplorer.tsx",
+    "src/components/ProviderManager.tsx",
+    "src/data/productCopy.ts",
+    "02-design/decisions/0005-keep-knowledge-lifecycle-in-existing-pages.md"
+  ],
+  "promotedTo": [
+    {
+      "type": "decision",
+      "id": "decision_knowledge_lifecycle_existing_pages_20261007"
+    }
+  ]
+}
