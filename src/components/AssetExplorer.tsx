@@ -13,6 +13,7 @@ import type {
 import { useI18n } from '../i18n/I18nProvider';
 import { ROOT_TREE_GROUP_ORDER, assetTreePurposeKey, nestedTreeEntryHelp, rootTreeGroupHintKey, rootTreeGroupKey, rootTreePresentation } from '../domain/rootTreePresentation';
 import { CreateAssetDialog, type CreateMode, type PromoteFrom } from './CreateAssetDialog';
+import { KnowledgeLifecycle } from './KnowledgeLifecycle';
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -344,6 +345,12 @@ export function AssetExplorer({ deepLink, onOpenFramework }: { deepLink: { path:
           </article>
         ))}
       </section>
+
+      <KnowledgeLifecycle
+        compact
+        titleKey="assetKnowledgeTitle"
+        leadKey="assetKnowledgeLead"
+      />
 
       {stats ? (
         <section className="stat-row">
