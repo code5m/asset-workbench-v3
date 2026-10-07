@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "decision_visual_framework_learning_console_20261007",
+  "type": "decision",
+  "title": "Adopt a visual Framework Learning Console",
+  "status": "Accepted",
+  "createdAt": "2026-10-07T08:10:00.000Z",
+  "updatedAt": "2026-10-07T08:10:00.000Z",
+  "sourceConversations": [
+    "transcript_chatgpt_20261007_framework_asset_core_ssot"
+  ],
+  "sourceDesigns": [
+    "02-design/framework-learning/visual-framework-console-v1.md"
+  ],
+  "relatedAssetPaths": [
+    "src/components/FrameworkLearningConsole.tsx",
+    "src/data/frameworkLearning.ts",
+    "src/components/FrameworkPage.tsx",
+    "src/i18n/translations.ts",
+    "src/styles.css",
+    "scripts/test-framework-ui-v1.ts"
+  ]
+}
