@@ -73,23 +73,6 @@ export function AppNavigation({ items, activeSection, onSelect }: AppNavigationP
         </div>
       </section>
 
-      <section className="runtime-identity-card" aria-label={t('runtimeIdentityTitle')}>
-        <div className="runtime-identity-head">
-          <span>{t('runtimeIdentityTitle')}</span>
-          <strong className={runtime?.mode === 'business-project' ? 'business' : 'framework'}>
-            {runtime?.mode === 'business-project' ? t('runtimeModeBusiness') : t('runtimeModeFramework')}
-          </strong>
-        </div>
-        <div className="runtime-identity-row">
-          <small>{t('runtimeCurrentProject')}</small>
-          <b>{projectName}</b>
-        </div>
-        <div className="runtime-identity-row">
-          <small>{t('runtimeFrameworkVersion')}</small>
-          <code>{runtime ? ('v' + runtime.frameworkVersion + ' · ' + runtime.frameworkRevision) : '—'}</code>
-        </div>
-      </section>
-
       <nav>
         {items.map((item, index) => {
           const Icon = item.icon;
