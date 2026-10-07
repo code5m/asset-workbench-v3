@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 import {
   BUILTIN_PROVIDER_DEFINITIONS,
@@ -15,7 +16,7 @@ import {
   LANGUAGE_GENERATED_DIRS,
 } from '../packages/language-core/src/index.ts';
 import { DEFAULT_ASSET_SKELETON } from '../packages/asset-core/src/index.ts';
-import { createStarter } from '../packages/starter/src/index.ts';
+import { createKnowledge, createStarter, verifyKnowledge } from '../packages/starter/src/index.ts';
 import type {
   CanonicalCaptureEvent,
   ProviderDefinition,
@@ -105,6 +106,58 @@ test('starter creates the canonical real 00-05 skeleton', () => {
     assert.ok(fs.statSync(path.join(project, '04-conversations', 'work-records')).isDirectory());
   } finally {
     fs.rmSync(target, { recursive: true, force: true });
+  }
+});
+
+test('Creator Knowledge core creates and verifies the same canonical skeleton', () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-creator-core-'));
+  const project = path.join(parent, 'demo');
+  try {
+    const result = createKnowledge({ target: project, name: 'demo' });
+    assert.equal(result.verification.ok, true);
+    assert.ok(result.verification.checks.length > DEFAULT_ASSET_SKELETON.length);
+    assert.equal(verifyKnowledge(project).ok, true);
+
+    fs.rmSync(path.join(project, '03-docs'), { recursive: true, force: true });
+    const broken = verifyKnowledge(project);
+    assert.equal(broken.ok, false);
+    assert.ok(broken.checks.some((check) => check.path === '03-docs' && !check.ok));
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('Creator CLI can create then independently verify project knowledge', () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-creator-cli-'));
+  const project = path.join(parent, 'demo');
+  try {
+    const createOutput = execFileSync(process.execPath, [
+      '--experimental-strip-types',
+      'scripts/creator-cli.ts',
+      'knowledge',
+      'create',
+      '--target',
+      project,
+      '--name',
+      'demo',
+    ], { cwd: process.cwd(), encoding: 'utf8' });
+    const created = JSON.parse(createOutput) as { command: string; verification: { ok: boolean } };
+    assert.equal(created.command, 'creator knowledge create');
+    assert.equal(created.verification.ok, true);
+
+    const verifyOutput = execFileSync(process.execPath, [
+      '--experimental-strip-types',
+      'scripts/creator-cli.ts',
+      'knowledge',
+      'verify',
+      '--target',
+      project,
+    ], { cwd: process.cwd(), encoding: 'utf8' });
+    const verified = JSON.parse(verifyOutput) as { command: string; ok: boolean };
+    assert.equal(verified.command, 'creator knowledge verify');
+    assert.equal(verified.ok, true);
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
   }
 });
 
