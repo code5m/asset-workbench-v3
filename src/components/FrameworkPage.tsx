@@ -33,7 +33,7 @@ const PACKAGE_CARDS = [
 export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) {
   const { t } = useI18n();
   const architectureRef = useRef<HTMLElement | null>(null);
-  const packagesRef = useRef<HTMLElement | null>(null);
+  const packagesRef = useRef<HTMLDetailsElement | null>(null);
   const providersRef = useRef<HTMLElement | null>(null);
   const starterRef = useRef<HTMLDivElement | null>(null);
   const skeletonRef = useRef<HTMLElement | null>(null);
