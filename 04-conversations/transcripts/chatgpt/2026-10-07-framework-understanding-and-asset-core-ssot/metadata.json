@@ -5,7 +5,7 @@
   "title": "Framework understanding and Asset Core single-source-of-truth discussion",
   "source": "chatgpt",
   "createdAt": "2026-10-07T05:55:00.000Z",
-  "updatedAt": "2026-10-07T05:55:00.000Z",
+  "updatedAt": "2026-10-07T06:18:00.000Z",
   "captureMode": "manual",
   "completeness": "partial",
   "capturedAt": "2026-10-07T05:55:00.000Z",
@@ -21,6 +21,8 @@
     "src/components/FrameworkPage.tsx",
     "src/i18n/translations.ts",
     "02-design/decisions/0003-adopt-asset-core-as-00-05-single-source-of-truth.md",
-    "02-design/decisions/0004-persist-substantive-conversation-discoveries-as-project-assets.md"
+    "02-design/decisions/0004-persist-substantive-conversation-discoveries-as-project-assets.md",
+    "src/components/KnowledgeLifecycle.tsx",
+    "02-design/decisions/0005-keep-knowledge-lifecycle-in-existing-pages.md"
   ]
 }
