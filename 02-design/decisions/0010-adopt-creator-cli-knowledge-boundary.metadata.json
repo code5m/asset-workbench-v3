@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "decision_creator_cli_knowledge_20261008",
+  "type": "decision",
+  "title": "Use Creator as the shared UI/CLI execution boundary and Knowledge as its first capability",
+  "status": "Accepted",
+  "createdAt": "2026-10-08T00:00:00.000Z",
+  "updatedAt": "2026-10-08T00:00:00.000Z",
+  "sourceDesigns": [
+    "02-design/framework-learning/creator-cli-knowledge-v1.md"
+  ],
+  "relatedAssetPaths": [
+    "packages/starter/src/index.ts",
+    "scripts/creator-cli.ts",
+    "server/assetPlugin.ts",
+    "src/services/assetClient.ts",
+    "src/components/StarterCreator.tsx",
+    "src/components/FrameworkLearningConsole.tsx",
+    "04-conversations/work-records/chatgpt/2026-10-08-creator-cli-knowledge/conversation.md"
+  ]
+}

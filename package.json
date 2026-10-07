@@ -34,7 +34,8 @@
     "test:root-tree-visual-ia": "node --experimental-strip-types scripts/test-root-tree-visual-ia.ts",
     "starter:create": "node --experimental-strip-types scripts/create-starter.ts",
     "test:framework-starter-v1": "node --experimental-strip-types scripts/test-framework-starter-v1.ts",
-    "test:framework-ui-v1": "node --experimental-strip-types scripts/test-framework-ui-v1.ts"
+    "test:framework-ui-v1": "node --experimental-strip-types scripts/test-framework-ui-v1.ts",
+    "creator": "node --experimental-strip-types scripts/creator-cli.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.4",

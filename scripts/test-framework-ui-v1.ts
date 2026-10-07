@@ -29,15 +29,20 @@ test('existing product pages link into framework without changing their core rol
   assert.match(provider, /ProviderConsole/);
 });
 
-test('Starter UI crosses the Local API boundary instead of writing files in React', () => {
+test('Knowledge Creator UI crosses the Local API boundary instead of writing files in React', () => {
   const starter = read('src/components/StarterCreator.tsx');
   const client = read('src/services/assetClient.ts');
   const server = read('server/assetPlugin.ts');
-  assert.doesNotMatch(starter, /node:fs|writeFileSync|mkdirSync/);
-  assert.match(starter, /assetClient\.createStarter/);
-  assert.match(client, /\/starter\/create/);
+  assert.doesNotMatch(starter, /node:fs|writeFileSync|mkdirSync|child_process/);
+  assert.match(starter, /assetClient\.createKnowledge/);
+  assert.match(starter, /assetClient\.verifyKnowledge/);
+  assert.match(client, /\/creator\/knowledge\/create/);
+  assert.match(client, /\/creator\/knowledge\/verify/);
+  assert.match(server, /pathPart === '\/creator\/knowledge\/create'/);
+  assert.match(server, /pathPart === '\/creator\/knowledge\/verify'/);
+  assert.match(server, /createKnowledge\(\{ target, name \}\)/);
+  assert.match(server, /verifyKnowledge\(target\)/);
   assert.match(server, /pathPart === '\/starter\/create'/);
-  assert.match(server, /createStarter\(\{ target, name \}\)/);
 });
 
 test('framework UI consumes framework single sources of truth', () => {
@@ -528,6 +533,35 @@ test('Instance / CLI UI is visual-first and honest about implemented vs planned 
   assert.match(learning, /status: 'planned'/);
 });
 
+test('Creator Knowledge is executable from UI and shares its core with CLI and Local API', () => {
+  const creator = read('src/components/StarterCreator.tsx');
+  const client = read('src/services/assetClient.ts');
+  const plugin = read('server/assetPlugin.ts');
+  const core = read('packages/starter/src/index.ts');
+  const cli = read('scripts/creator-cli.ts');
+  const framework = read('src/components/FrameworkLearningConsole.tsx');
+  const packageJson = JSON.parse(read('package.json')) as { scripts: Record<string, string> };
+
+  assert.match(creator, /assetClient\.createKnowledge/);
+  assert.match(creator, /assetClient\.verifyKnowledge/);
+  assert.match(creator, /starterVerificationTitle/);
+  assert.match(creator, /starter-cli-map/);
+  assert.match(client, /\/creator\/knowledge\/create/);
+  assert.match(client, /\/creator\/knowledge\/verify/);
+  assert.match(plugin, /createKnowledge/);
+  assert.match(plugin, /verifyKnowledge/);
+  assert.match(plugin, /\/creator\/knowledge\/create/);
+  assert.match(plugin, /\/creator\/knowledge\/verify/);
+  assert.match(core, /export function createKnowledge/);
+  assert.match(core, /export function verifyKnowledge/);
+  assert.match(cli, /creator knowledge/);
+  assert.equal(packageJson.scripts.creator, 'node --experimental-strip-types scripts/creator-cli.ts');
+  assert.match(framework, /<StarterCreator compact/);
+  assert.match(framework, /npm run creator -- knowledge create/);
+  assert.match(framework, /asset-workbench creator instance create/);
+  assert.match(framework, /frameworkInstanceCliPlanned/);
+});
+
 test('version view keeps Framework, Instance, and Business Project identities separate', () => {
   const component = read('src/components/FrameworkLearningConsole.tsx');
 
@@ -560,6 +594,12 @@ test('visual framework console copy exists in zh-CN and en', () => {
     'frameworkInstanceUiFirstTitle',
     'frameworkInstanceCurrentMode',
     'frameworkInstanceBindAction',
+    'frameworkCreatorCliAvailable',
+    'frameworkInstanceCliFuture',
+    'starterVerify',
+    'starterVerificationTitle',
+    'starterCliCreateTitle',
+    'starterCliVerifyTitle',
     'frameworkVersionMapTitle',
     'frameworkVersionHonesty',
   ];

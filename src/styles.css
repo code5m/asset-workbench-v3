@@ -3644,3 +3644,119 @@ code {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ---- Creator Knowledge verification ------------------------------------ */
+.starter-cli-map {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.starter-cli-map > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.starter-cli-map strong {
+  color: #344054;
+  font-size: 11px;
+}
+
+.starter-cli-map code {
+  overflow-x: auto;
+  padding: 8px;
+  border-radius: 7px;
+  background: #101828;
+  color: #f2f4f7;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.starter-verification {
+  display: grid;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid #dbe3ec;
+  border-radius: 9px;
+}
+
+.starter-verification.pass {
+  border-color: #bfe0d3;
+  background: #f3fbf7;
+}
+
+.starter-verification.fail {
+  border-color: #ead9b6;
+  background: #fff9ec;
+}
+
+.starter-verification-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.starter-verification-head > div {
+  display: grid;
+  gap: 2px;
+}
+
+.starter-verification-head strong {
+  color: #17202a;
+  font-size: 13px;
+}
+
+.starter-verification-head span {
+  color: #667085;
+  font-size: 11px;
+}
+
+.starter-verification-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.starter-verification-list > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  padding: 7px 8px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.starter-verification-list code {
+  overflow: hidden;
+  color: #344054;
+  font-size: 10px;
+  text-overflow: ellipsis;
+}
+
+.starter-verification-list small {
+  color: #98a2b3;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.starter-verification-list .pass > svg {
+  color: #087a55;
+}
+
+.starter-verification-list .fail > svg {
+  color: #b54708;
+}
+
+@media (max-width: 680px) {
+  .starter-cli-map,
+  .starter-verification-list {
+    grid-template-columns: 1fr;
+  }
+}

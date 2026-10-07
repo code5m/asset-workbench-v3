@@ -75,6 +75,25 @@ function encode(rel: string): string {
   return encodeURIComponent(rel);
 }
 
+export interface KnowledgeVerificationCheckView {
+  path: string;
+  kind: 'file' | 'directory';
+  ok: boolean;
+  detail: string;
+}
+
+export interface KnowledgeVerificationView {
+  target: string;
+  ok: boolean;
+  checks: KnowledgeVerificationCheckView[];
+}
+
+export interface KnowledgeCreateView {
+  target: string;
+  created: string[];
+  verification: KnowledgeVerificationView;
+}
+
 export const assetClient = {
   workspace(): Promise<ProjectWorkspace> {
     return getJson<ProjectWorkspace>(`${BASE}/workspace`);
@@ -102,15 +121,28 @@ export const assetClient = {
   }> {
     return getJson(`${BASE}/config`);
   },
-  async createStarter(target: string, name?: string): Promise<{ target: string; created: string[] }> {
-    const res = await fetch(`${BASE}/starter/create`, {
+  async createKnowledge(target: string, name?: string): Promise<KnowledgeCreateView> {
+    const res = await fetch(`${BASE}/creator/knowledge/create`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ target, name }),
     });
-    const value = await res.json() as { target?: string; created?: string[]; error?: string };
+    const value = await res.json() as KnowledgeCreateView & { error?: string };
     if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
-    return { target: value.target ?? target, created: value.created ?? [] };
+    return value;
+  },
+  async verifyKnowledge(target: string): Promise<KnowledgeVerificationView> {
+    const res = await fetch(`${BASE}/creator/knowledge/verify`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ target }),
+    });
+    const value = await res.json() as KnowledgeVerificationView & { error?: string };
+    if (!res.ok && res.status !== 422) throw new ApiError(res.status, value.error ?? res.statusText);
+    return value;
+  },
+  async createStarter(target: string, name?: string): Promise<KnowledgeCreateView> {
+    return this.createKnowledge(target, name);
   },
   async providerOverview(force = false): Promise<{ providers: ProviderStatusView[]; detectedAt: string }> {
     const now = Date.now();
