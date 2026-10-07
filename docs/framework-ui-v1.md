@@ -105,3 +105,22 @@ The card title is now plain language first, with the technical package name show
 
 This preserves the real `packages/*` paths and package responsibilities while reducing beginner-facing terminology.
 
+
+
+## Asset Core vs Starter
+
+Asset Core is **not** a future-only scaffold. It is the canonical definition of the
+current 00–05 project knowledge structure.
+
+```text
+packages/asset-core
+  DEFAULT_ASSET_SKELETON
+        |
+        +--> server/assetService   checks the current workspace
+        +--> Framework UI         explains/displays the structure
+        +--> packages/starter     creates a new project from the same structure
+```
+
+Starter is the creator; Asset Core is the definition. The server must not keep a
+second hard-coded copy of the 00–05 list.
+
