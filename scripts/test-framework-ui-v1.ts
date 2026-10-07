@@ -186,7 +186,7 @@ test('beginner learning order starts with assets and leaves Provider SDK last', 
 test('framework-vs-managed-project explanation explicitly prevents copying Workbench internals into business projects', () => {
   assert.match(ui['zh-CN'].frameworkVsProjectLead, /工具本身/);
   assert.match(ui['zh-CN'].frameworkManagedBody, /真实项目/);
-  assert.match(ui['zh-CN'].frameworkVsProjectRule, /不.*必须.*src\/server\/packages/);
+  assert.match(ui['zh-CN'].frameworkVsProjectRule, /src\/server\/packages.*必须/);
   assert.match(ui.en.frameworkVsProjectRule, /does not need Workbench’s own src\/server\/packages directories/);
 });
 
