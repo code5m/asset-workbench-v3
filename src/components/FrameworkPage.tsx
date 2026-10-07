@@ -221,6 +221,50 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
         </div>
       </section>
 
+      <details className="panel framework-evolution">
+        <summary>
+          <div>
+            <p className="eyebrow">{t('frameworkEvolutionEyebrow')}</p>
+            <strong>{t('frameworkEvolutionTitle')}</strong>
+            <span>{t('frameworkEvolutionSummary')}</span>
+          </div>
+        </summary>
+        <div className="framework-evolution-body">
+          <p className="framework-section-lead">{t('frameworkEvolutionLead')}</p>
+
+          <div className="framework-evolution-flow">
+            <div><b>{t('frameworkEvolutionProject')}</b><small>{t('frameworkEvolutionProjectNote')}</small></div>
+            <i>→</i>
+            <div><b>{t('frameworkEvolutionEvidence')}</b><small>{t('frameworkEvolutionEvidenceNote')}</small></div>
+            <i>→</i>
+            <div><b>{t('frameworkEvolutionPattern')}</b><small>{t('frameworkEvolutionPatternNote')}</small></div>
+            <i>→</i>
+            <div><b>{t('frameworkEvolutionCandidate')}</b><small>{t('frameworkEvolutionCandidateNote')}</small></div>
+            <i>→</i>
+            <div><b>{t('frameworkEvolutionVerify')}</b><small>{t('frameworkEvolutionVerifyNote')}</small></div>
+            <i>→</i>
+            <div><b>{t('frameworkEvolutionRelease')}</b><small>{t('frameworkEvolutionReleaseNote')}</small></div>
+            <i>→</i>
+            <div><b>{t('frameworkEvolutionAdopt')}</b><small>{t('frameworkEvolutionAdoptNote')}</small></div>
+          </div>
+
+          <div className="framework-evolution-rules">
+            <article>
+              <strong>{t('frameworkEvolutionRuleProjectTitle')}</strong>
+              <p>{t('frameworkEvolutionRuleProjectBody')}</p>
+            </article>
+            <article>
+              <strong>{t('frameworkEvolutionRuleCoreTitle')}</strong>
+              <p>{t('frameworkEvolutionRuleCoreBody')}</p>
+            </article>
+            <article>
+              <strong>{t('frameworkEvolutionRuleRsiTitle')}</strong>
+              <p>{t('frameworkEvolutionRuleRsiBody')}</p>
+            </article>
+          </div>
+        </div>
+      </details>
+
       <section className="panel" ref={architectureRef}>
         <div className="section-heading">
           <div>
