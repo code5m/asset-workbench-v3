@@ -97,3 +97,63 @@ The missing piece was cross-page continuity:
 Do not add a duplicate knowledge-management page. Reuse the existing navigation
 and make the knowledge lifecycle visible at the points where users naturally
 need it.
+
+
+## Advanced goal: real projects drive framework evolution
+
+### User
+
+> 我们的框架肯定是在实际管理项目的过程中去演进和进化和优化甚至RSI的
+
+### Resulting insight
+
+The framework should not be treated as a finished template that is designed once
+and then copied forever. It should improve through real project management:
+
+```text
+Real project
+-> problem / idea / discussion
+-> evidence
+-> reflection
+-> design / decision
+-> framework change
+-> verification
+-> continued real use
+```
+
+RSI is a higher-stage objective, but must remain governed by evidence, tests,
+versioning, compatibility, migration, and rollback.
+
+### User
+
+> 这是我们更高级阶段的目标，我有很多想法和框架，需要进行管理和实践，我会通过沟通发现通用性的问题进行调整然后分发给所有项目使用这个框架的项目，以实现进一步的优化迭代
+
+### Resulting insight
+
+The long-term model is multi-project learning:
+
+- many real projects act as practice sites;
+- conversations and runtime behavior expose issues and ideas;
+- project-specific observations remain local by default;
+- repeated/reusable patterns become Framework Candidates;
+- only validated candidates enter shared Core;
+- released improvements are distributed to applicable projects through
+  versioned capabilities/rules/schemas/migrations rather than by copying the
+  whole Workbench repository;
+- adoption feedback starts the next learning loop.
+
+This becomes the project's **Evidence-Driven Framework Evolution** model.
+
+### User
+
+> [@GitHub] 可以进行实施；另外我们在这里交流的聊天记录和决策，我希望你可以直接写入项目，方便到时候回顾，你看，刚才我们通过交流是不就发现了一个问题，我觉得都是需要记录，后面我需要认真去反思的资产
+
+### Implemented response
+
+The advanced evolution model is being persisted as:
+
+- a Framework evolution Design;
+- an accepted Decision;
+- AGENTS governance rules;
+- an advanced, collapsed section in the Framework page;
+- this partial ChatGPT evidence plus a separate Work Record.

@@ -209,6 +209,43 @@ A conversation that discovers a defect is valuable project evidence even when th
 final code change is small. Trivial chat, typo fixes, and mechanical edits can
 still be skipped with an explicit reason.
 
+## Evidence-Driven Framework Evolution (governance)
+
+Asset Workbench evolves from real project practice, but **project-specific behavior
+must never jump directly into framework Core**.
+
+Required promotion funnel for reusable framework change:
+
+```text
+Project observation
+-> Evidence (Conversation / Work Record / runtime facts)
+-> Repeated pattern across projects or strong reusable proof
+-> Framework candidate
+-> Design + Decision
+-> Implementation
+-> Verification (tests + representative real projects)
+-> Framework release/version
+-> Controlled project adoption/migration
+-> Feedback
+```
+
+Hard rules:
+
+1. A one-project special case remains project-local by default.
+2. Repetition is evidence, not automatic permission to change Core.
+3. A Framework Candidate must state scope, affected projects, compatibility,
+   migration, and rollback expectations.
+4. Shared Core changes require reusable evidence and regression tests.
+5. Distribution to managed projects happens by versioned capability/schema/rule
+   adoption, **not by copying the entire Workbench repository into each project**.
+6. The framework may propose and implement improvements automatically only inside
+   existing safety/verification gates; it must not self-promote unverified changes.
+7. Long-term RSI is a governed objective: Discover -> Propose -> Prove -> Promote
+   -> Propagate -> Observe. Evidence, versioning, migration, and rollback remain
+   mandatory.
+8. Preserve project-local evidence even when a generalized framework capability is
+   later created; the original source project remains part of traceability.
+
 ## Agent Knowledge Capture Protocol
 
 The default Agent workflow is **automatic knowledge capture**. An Agent must

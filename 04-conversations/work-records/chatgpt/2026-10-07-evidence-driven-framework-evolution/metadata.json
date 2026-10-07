@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_chatgpt_20261007_evidence_driven_framework_evolution",
+  "type": "agent-work-record",
+  "title": "Evidence-driven framework evolution",
+  "source": "chatgpt",
+  "createdAt": "2026-10-07T06:58:00.000Z",
+  "updatedAt": "2026-10-07T06:58:00.000Z",
+  "captureMode": "agent-work-record",
+  "sourceTranscriptId": "transcript_chatgpt_20261007_framework_asset_core_ssot",
+  "transcriptCaptureStatus": "partial",
+  "relatedAssetPaths": [
+    "02-design/framework-evolution/evidence-driven-framework-evolution-v1.md",
+    "02-design/decisions/0006-adopt-evidence-driven-framework-evolution.md",
+    "AGENTS.md",
+    "src/components/FrameworkPage.tsx",
+    "src/i18n/translations.ts"
+  ],
+  "promotedTo": [
+    {
+      "type": "design",
+      "id": "02-design/framework-evolution/evidence-driven-framework-evolution-v1.md"
+    },
+    {
+      "type": "decision",
+      "id": "decision_evidence_driven_framework_evolution_20261007"
+    }
+  ]
+}

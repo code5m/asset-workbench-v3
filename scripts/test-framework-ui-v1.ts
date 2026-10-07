@@ -323,3 +323,54 @@ test('knowledge lifecycle copy is bilingual and keeps evidence separate from con
   assert.match(ui['zh-CN'].knowledgeLifecycleRuleBody, /02-design\/decisions/);
   assert.match(ui['zh-CN'].providerKnowledgeLead, /不等于|另外判断|证据/);
 });
+
+
+test('Framework page exposes governed evolution only as an advanced collapsed section', () => {
+  const page = read('src/components/FrameworkPage.tsx');
+
+  assert.match(page, /<details className="panel framework-evolution">/);
+  assert.match(page, /frameworkEvolutionTitle/);
+  assert.match(page, /frameworkEvolutionProject/);
+  assert.match(page, /frameworkEvolutionEvidence/);
+  assert.match(page, /frameworkEvolutionPattern/);
+  assert.match(page, /frameworkEvolutionCandidate/);
+  assert.match(page, /frameworkEvolutionVerify/);
+  assert.match(page, /frameworkEvolutionRelease/);
+  assert.match(page, /frameworkEvolutionAdopt/);
+});
+
+test('framework evolution copy is bilingual and protects Core from one-project exceptions', () => {
+  const keys = [
+    'frameworkEvolutionTitle',
+    'frameworkEvolutionSummary',
+    'frameworkEvolutionLead',
+    'frameworkEvolutionProject',
+    'frameworkEvolutionEvidence',
+    'frameworkEvolutionPattern',
+    'frameworkEvolutionCandidate',
+    'frameworkEvolutionVerify',
+    'frameworkEvolutionRelease',
+    'frameworkEvolutionAdopt',
+    'frameworkEvolutionRuleProjectTitle',
+    'frameworkEvolutionRuleCoreTitle',
+    'frameworkEvolutionRuleRsiTitle',
+  ];
+
+  for (const key of keys) {
+    assert.ok(ui['zh-CN'][key], `missing zh-CN framework evolution key: ${key}`);
+    assert.ok(ui.en[key], `missing en framework evolution key: ${key}`);
+  }
+
+  assert.match(ui['zh-CN'].frameworkEvolutionRuleProjectBody, /不能.*直接进入.*Core|不能.*进入公共 Core/);
+  assert.match(ui['zh-CN'].frameworkEvolutionRuleRsiBody, /证据.*版本.*兼容性.*迁移.*回滚/);
+});
+
+test('AGENTS governs evidence-driven framework evolution and controlled RSI', () => {
+  const agents = read('AGENTS.md');
+
+  assert.match(agents, /Evidence-Driven Framework Evolution/);
+  assert.match(agents, /one-project special case remains project-local by default/i);
+  assert.match(agents, /Framework Candidate/);
+  assert.match(agents, /not by copying the entire Workbench repository/i);
+  assert.match(agents, /Discover -> Propose -> Prove -> Promote/);
+});
