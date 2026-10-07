@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_chatgpt_20261007_visual_first_framework_management",
+  "type": "agent-work-record",
+  "title": "Visual-first framework management",
+  "source": "chatgpt",
+  "createdAt": "2026-10-07T08:05:00.000Z",
+  "updatedAt": "2026-10-07T08:05:00.000Z",
+  "captureMode": "agent-work-record",
+  "sourceTranscriptId": "transcript_chatgpt_20261007_framework_asset_core_ssot",
+  "transcriptCaptureStatus": "partial",
+  "relatedAssetPaths": [
+    "02-design/decisions/0008-adopt-visual-first-framework-management.md",
+    "src/components/AppNavigation.tsx",
+    "server/config.ts",
+    "src/services/assetClient.ts",
+    "src/styles.css"
+  ],
+  "promotedTo": [
+    {
+      "type": "decision",
+      "id": "decision_visual_first_framework_management_20261007"
+    }
+  ]
+}
