@@ -235,7 +235,7 @@ test('framework package cards are beginner-first and follow the recommended lear
 test('framework package cards use plain-language primary titles and technical names second', () => {
   assert.equal(ui['zh-CN'].frameworkPackagesEyebrow, '底层能力');
   assert.equal(ui['zh-CN'].frameworkPackagesTitle, '这 5 块分别负责什么');
-  assert.equal(ui['zh-CN'].frameworkPackageAssetTitle, '项目资产骨架');
+  assert.equal(ui['zh-CN'].frameworkPackageAssetTitle, '项目知识结构');
   assert.equal(ui['zh-CN'].frameworkPackageStarterTitle, '新项目生成器');
   assert.equal(ui['zh-CN'].frameworkPackageLanguageTitle, '项目语言识别');
   assert.equal(ui['zh-CN'].frameworkPackageProtocolTitle, '统一数据规则');
@@ -259,4 +259,13 @@ test('framework package learning badges exist in both locales', () => {
     assert.ok(ui['zh-CN'][key], `missing zh-CN package learning key: ${key}`);
     assert.ok(ui.en[key], `missing en package learning key: ${key}`);
   }
+});
+
+
+test('Asset Core copy says it is already in use and Starter consumes the standard', () => {
+  assert.match(ui['zh-CN'].frameworkPackageAssetBody, /当前 Workbench 已经在使用/);
+  assert.match(ui['zh-CN'].frameworkPackageAssetBody, /新项目也会复用/);
+  assert.match(ui['zh-CN'].starterLead, /Starter 按 Asset Core 定义/);
+  assert.match(ui.en.frameworkPackageAssetBody, /current Workbench already uses/);
+  assert.match(ui.en.starterLead, /Starter creates a new project from the Asset Core standard/);
 });
