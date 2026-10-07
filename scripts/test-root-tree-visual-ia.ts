@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ROOT_TREE_GROUP_ORDER,
+  assetTreePurposeKey,
+  nestedTreeEntryHelp,
   rootTreeGroupHintKey,
   rootTreeGroupKey,
   rootTreePresentation,
@@ -112,4 +114,35 @@ test('presentation metadata never invents a virtual path or virtual children', (
     assert.equal('children' in presentation, false);
     assert.equal('virtualParent' in presentation, false);
   }
+});
+
+
+test('first-level architecture help explains framework and frontend while keeping server tree selective', () => {
+  assert.deepEqual(nestedTreeEntryHelp('packages/asset-core'), {
+    purposeKey: 'treeHelpPackageAssetCore',
+    showInTree: true,
+    learnMoreFocus: 'packages',
+  });
+  assert.deepEqual(nestedTreeEntryHelp('src/components'), {
+    purposeKey: 'treeHelpSrcComponents',
+    showInTree: true,
+    learnMoreFocus: 'architecture',
+  });
+  assert.deepEqual(nestedTreeEntryHelp('providers/examples'), {
+    purposeKey: 'treeHelpProviderExamples',
+    showInTree: true,
+    learnMoreFocus: 'providers',
+  });
+
+  assert.equal(nestedTreeEntryHelp('server/assetPlugin.ts')?.showInTree, true);
+  assert.equal(nestedTreeEntryHelp('server/captureService.ts')?.showInTree, true);
+  assert.equal(nestedTreeEntryHelp('server/providerPlatformService.ts')?.showInTree, true);
+
+  assert.equal(nestedTreeEntryHelp('server/assetScanner.ts')?.showInTree, false);
+  assert.equal(nestedTreeEntryHelp('server/durableWrite.ts')?.showInTree, false);
+  assert.equal(assetTreePurposeKey('server/assetScanner.ts'), 'treeHelpServerAssetScanner');
+  assert.equal(assetTreePurposeKey('server/durableWrite.ts'), 'treeHelpServerDurableWrite');
+
+  assert.equal(nestedTreeEntryHelp('packages/protocol/src'), undefined);
+  assert.equal(nestedTreeEntryHelp('src/components/AssetExplorer.tsx'), undefined);
 });
