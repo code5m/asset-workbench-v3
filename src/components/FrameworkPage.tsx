@@ -86,6 +86,38 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
         </div>
       </section>
 
+      <section className="panel framework-learning-purpose">
+        <p className="eyebrow">{t('frameworkLearningPurposeEyebrow')}</p>
+        <h2>{t('frameworkLearningPurposeTitle')}</h2>
+        <p className="framework-section-lead">{t('frameworkLearningPurposeBody')}</p>
+      </section>
+
+      <section className="framework-role-model">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">{t('frameworkModelEyebrow')}</p>
+            <h2>{t('frameworkModelTitle')}</h2>
+            <p className="framework-section-lead">{t('frameworkModelLead')}</p>
+          </div>
+        </div>
+        <div className="framework-role-grid">
+          <article className="panel"><span>01</span><strong>{t('frameworkRoleFrameworkTitle')}</strong><p>{t('frameworkRoleFrameworkBody')}</p></article>
+          <article className="panel"><span>02</span><strong>{t('frameworkRoleInstanceTitle')}</strong><p>{t('frameworkRoleInstanceBody')}</p></article>
+          <article className="panel"><span>03</span><strong>{t('frameworkRoleBindingTitle')}</strong><p>{t('frameworkRoleBindingBody')}</p></article>
+          <article className="panel"><span>04</span><strong>{t('frameworkRoleKnowledgeTitle')}</strong><p>{t('frameworkRoleKnowledgeBody')}</p></article>
+          <article className="panel"><span>05</span><strong>{t('frameworkRoleProviderTitle')}</strong><p>{t('frameworkRoleProviderBody')}</p></article>
+          <article className="panel"><span>06</span><strong>{t('frameworkRoleEvolutionTitle')}</strong><p>{t('frameworkRoleEvolutionBody')}</p></article>
+        </div>
+        <div className="framework-role-flow" aria-label={t('frameworkModelTitle')}>
+          <span>{t('frameworkRoleFrameworkTitle')}</span><i>→</i>
+          <span>{t('frameworkRoleInstanceTitle')}</span><i>→</i>
+          <span>{t('frameworkRoleBindingTitle')}</span><i>→</i>
+          <span>{t('frameworkRoleKnowledgeTitle')}</span><i>↔</i>
+          <span>{t('frameworkRoleProviderTitle')}</span><i>→</i>
+          <span>{t('frameworkRoleEvolutionTitle')}</span>
+        </div>
+      </section>
+
       <section className="panel framework-beginner-map">
         <div>
           <p className="eyebrow">{t('frameworkBeginnerEyebrow')}</p>
@@ -286,15 +318,16 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
         <p className="framework-language-neutral">{t('frameworkLanguageNeutral')}</p>
       </section>
 
-      <section ref={packagesRef}>
-        <div className="section-heading">
+      <details className="panel framework-technical-details" ref={packagesRef}>
+        <summary>
           <div>
-            <p className="eyebrow">{t('frameworkPackagesEyebrow')}</p>
-            <h2>{t('frameworkPackagesTitle')}</h2>
-            <p className="framework-section-lead">{t('frameworkPackagesLead')}</p>
+            <p className="eyebrow">{t('frameworkTechnicalDetailsEyebrow')}</p>
+            <strong>{t('frameworkTechnicalDetailsTitle')}</strong>
+            <span>{t('frameworkTechnicalDetailsLead')}</span>
           </div>
-        </div>
-        <div className="framework-package-grid">
+        </summary>
+        <div className="framework-technical-details-body">
+          <div className="framework-package-grid">
           {PACKAGE_CARDS.map(([name, technicalName, title, body, badge, badgeTone], index) => (
             <article className="panel framework-package-card" key={name}>
               <div className="framework-package-card-top">
@@ -309,8 +342,9 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
               <p>{t(body)}</p>
             </article>
           ))}
+          </div>
         </div>
-      </section>
+      </details>
 
       <section>
         <div className="section-heading">
