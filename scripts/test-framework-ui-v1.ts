@@ -214,3 +214,49 @@ test('all four beginner mental-model sections have zh-CN and en coverage', () =>
     assert.ok(ui.en[key], `missing en mental-model key: ${key}`);
   }
 });
+
+
+test('framework package cards are beginner-first and follow the recommended learning order', () => {
+  const page = read('src/components/FrameworkPage.tsx');
+
+  const asset = page.indexOf("['asset-core', 'Asset Core'");
+  const starter = page.indexOf("['starter', 'Starter'");
+  const language = page.indexOf("['language-core', 'Language Core'");
+  const protocol = page.indexOf("['protocol', 'Protocol'");
+  const provider = page.indexOf("['provider-sdk', 'Provider SDK'");
+
+  assert.ok(asset >= 0 && starter > asset && language > starter && protocol > language && provider > protocol);
+  assert.match(page, /framework-package-badge/);
+  assert.match(page, /frameworkPackageBadgeStart/);
+  assert.match(page, /frameworkPackageBadgeLater/);
+  assert.match(page, /frameworkPackageBadgeProvider/);
+});
+
+test('framework package cards use plain-language primary titles and technical names second', () => {
+  assert.equal(ui['zh-CN'].frameworkPackagesEyebrow, '底层能力');
+  assert.equal(ui['zh-CN'].frameworkPackagesTitle, '这 5 块分别负责什么');
+  assert.equal(ui['zh-CN'].frameworkPackageAssetTitle, '项目资产骨架');
+  assert.equal(ui['zh-CN'].frameworkPackageStarterTitle, '新项目生成器');
+  assert.equal(ui['zh-CN'].frameworkPackageLanguageTitle, '项目语言识别');
+  assert.equal(ui['zh-CN'].frameworkPackageProtocolTitle, '统一数据规则');
+  assert.equal(ui['zh-CN'].frameworkPackageProviderTitle, 'AI 接入工具箱');
+
+  const page = read('src/components/FrameworkPage.tsx');
+  assert.match(page, /<h3>\{t\(title\)\}<\/h3>/);
+  assert.match(page, /<code>\{technicalName\}<\/code>/);
+  assert.match(page, /<small>packages\/\{name\}<\/small>/);
+});
+
+test('framework package learning badges exist in both locales', () => {
+  const keys = [
+    'frameworkPackagesLead',
+    'frameworkPackageBadgeStart',
+    'frameworkPackageBadgeLater',
+    'frameworkPackageBadgeProvider',
+  ];
+
+  for (const key of keys) {
+    assert.ok(ui['zh-CN'][key], `missing zh-CN package learning key: ${key}`);
+    assert.ok(ui.en[key], `missing en package learning key: ${key}`);
+  }
+});
