@@ -18,6 +18,12 @@ function statusLabel(status: FrameworkCapabilityStatus, t: (key: string) => stri
   return t('frameworkCapabilityPlanned');
 }
 
+function levelLabel(level: FrameworkDirectoryGuide['level'], t: (key: string) => string): string {
+  if (level === 'must-understand') return t('frameworkLevelMust');
+  if (level === 'understand-later') return t('frameworkLevelLater');
+  return t('frameworkLevelAdvanced');
+}
+
 export function FrameworkLearningConsole() {
   const { t, loc } = useI18n();
   const [tab, setTab] = useState<Tab>('directories');
@@ -119,7 +125,7 @@ function DirectoryDetail({ item, onOpenFile }: { item: FrameworkDirectoryGuide; 
     <article className="panel framework-console-detail">
       <div className="framework-console-detail-head">
         <div>
-          <span className={`framework-learning-level ${item.level}`}>{t(`frameworkLevel.${item.level}`)}</span>
+          <span className={`framework-learning-level ${item.level}`}>{levelLabel(item.level, t)}</span>
           <h3>{loc(item.title)}</h3>
           <code>{item.path}</code>
         </div>
@@ -170,7 +176,7 @@ function FileDetail({ item }: { item: FrameworkKeyFileGuide }) {
     <article className="panel framework-console-detail">
       <div className="framework-console-detail-head">
         <div>
-          <span className={`framework-learning-level ${item.level}`}>{t(`frameworkLevel.${item.level}`)}</span>
+          <span className={`framework-learning-level ${item.level}`}>{levelLabel(item.level, t)}</span>
           <h3>{loc(item.title)}</h3>
           <code>{item.path}</code>
         </div>
