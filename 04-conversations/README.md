@@ -56,3 +56,23 @@ npm run migrate:conversations-v2
 The migration is idempotent, preserves asset IDs and metadata, rewrites related
 paths where needed, and does not maintain a permanent dual-write compatibility
 layout.
+
+
+## Substantive discussion as project evidence
+
+Keep a conversation when it changes what the project knows: for example when a
+question exposes a hidden assumption, misleading terminology, duplicated source
+of truth, an architectural trade-off, or an accepted decision.
+
+For ChatGPT, a manually persisted active-chat excerpt is allowed only when it is
+honest about its limits:
+
+- use `captureMode: manual`;
+- mark it `completeness: partial`;
+- include only excerpts genuinely present in the active conversation;
+- never label reconstructed text as a full transcript;
+- keep the Agent Work Record separately;
+- promote accepted conclusions into `02-design/decisions`.
+
+The point is not to archive every chat message. The point is to preserve the
+reasoning trail when the discussion itself produced reusable project knowledge.

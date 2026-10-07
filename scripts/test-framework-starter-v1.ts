@@ -21,6 +21,10 @@ import type {
   ProviderDefinition,
 } from '../packages/protocol/src/index.ts';
 
+function read(filePath: string): string {
+  return fs.readFileSync(filePath, 'utf8');
+}
+
 test('framework exports stable Provider definitions through SDK', () => {
   assert.deepEqual(
     BUILTIN_PROVIDER_DEFINITIONS.map((provider) => provider.id),
@@ -119,4 +123,21 @@ test('protocol contract can describe a canonical cross-language event', () => {
     captureSource: 'provider-api',
   };
   assert.equal(event.eventType, 'user.message');
+});
+
+
+test('Asset Core is the single source of truth for the 00-05 knowledge structure', () => {
+  const starter = read('packages/starter/src/index.ts');
+  const server = read('server/assetService.ts');
+  const frameworkUi = read('src/components/FrameworkPage.tsx');
+
+  assert.match(starter, /DEFAULT_ASSET_SKELETON/);
+  assert.match(server, /DEFAULT_ASSET_SKELETON/);
+  assert.match(frameworkUi, /DEFAULT_ASSET_SKELETON/);
+  assert.doesNotMatch(server, /const EXPECTED_SKELETON/);
+
+  assert.deepEqual(
+    DEFAULT_ASSET_SKELETON.map((entry) => entry.path),
+    ['00-introduction', '01-code', '02-design', '03-docs', '04-conversations', '05-derived'],
+  );
 });

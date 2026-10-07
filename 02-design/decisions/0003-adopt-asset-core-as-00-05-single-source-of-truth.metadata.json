@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "decision_asset_core_ssot_20261007",
+  "type": "decision",
+  "title": "Adopt Asset Core as the 00–05 single source of truth",
+  "status": "Accepted",
+  "createdAt": "2026-10-07T05:55:00.000Z",
+  "updatedAt": "2026-10-07T05:55:00.000Z",
+  "sourceConversations": [
+    "transcript_chatgpt_20261007_framework_asset_core_ssot",
+    "conv_chatgpt_20261007_framework_asset_core_ssot"
+  ],
+  "sourceDesigns": [],
+  "relatedAssetPaths": [
+    "packages/asset-core/src/index.ts",
+    "packages/starter/src/index.ts",
+    "server/assetService.ts",
+    "src/components/FrameworkPage.tsx",
+    "src/i18n/translations.ts"
+  ]
+}

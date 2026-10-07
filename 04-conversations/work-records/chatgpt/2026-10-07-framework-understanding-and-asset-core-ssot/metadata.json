@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_chatgpt_20261007_framework_asset_core_ssot",
+  "type": "agent-work-record",
+  "title": "Framework understanding and Asset Core single-source-of-truth",
+  "source": "chatgpt",
+  "createdAt": "2026-10-07T05:55:00.000Z",
+  "updatedAt": "2026-10-07T05:55:00.000Z",
+  "captureMode": "agent-work-record",
+  "relatedAssetPaths": [
+    "04-conversations/transcripts/chatgpt/2026-10-07-framework-understanding-and-asset-core-ssot/transcript.md",
+    "packages/asset-core/src/index.ts",
+    "server/assetService.ts",
+    "packages/starter/src/index.ts",
+    "src/i18n/translations.ts",
+    "AGENTS.md"
+  ],
+  "promotedTo": [
+    {
+      "type": "decision",
+      "id": "decision_asset_core_ssot_20261007"
+    },
+    {
+      "type": "decision",
+      "id": "decision_persist_chat_discoveries_20261007"
+    }
+  ]
+}

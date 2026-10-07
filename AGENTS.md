@@ -181,6 +181,34 @@ permanently dual-write old and new layouts. An `AgentSession` can link BOTH a
 `transcriptAssetId` and a `workRecordAssetId`, with bidirectional back-links in
 each asset's `metadata.json`.
 
+## Conversation-derived knowledge is a first-class asset
+
+Substantive user/assistant discussion is not disposable when it materially changes
+understanding of the project. Capture it when the conversation reveals or changes:
+
+- product intent or scope;
+- architecture assumptions or boundaries;
+- terminology/mental-model problems;
+- hidden duplication, technical debt, or a previously missed defect;
+- trade-offs, rejected alternatives, or accepted decisions.
+
+The evidence and the conclusion remain separate:
+
+- real conversation evidence -> `04-conversations/transcripts/<source>/...`;
+- Agent execution summary -> `04-conversations/work-records/<source>/...`;
+- reusable proposal -> `02-design/**`;
+- accepted ruling -> `02-design/decisions/**`.
+
+For ChatGPT specifically, never reconstruct or claim a full transcript when a real
+platform export is unavailable. If the active conversation itself is available,
+persist only real excerpts that are actually present, mark the evidence
+`captureMode: manual` and `completeness: partial`, and keep a separate Work
+Record. The resulting Decision may cite both.
+
+A conversation that discovers a defect is valuable project evidence even when the
+final code change is small. Trivial chat, typo fixes, and mechanical edits can
+still be skipped with an explicit reason.
+
 ## Agent Knowledge Capture Protocol
 
 The default Agent workflow is **automatic knowledge capture**. An Agent must
