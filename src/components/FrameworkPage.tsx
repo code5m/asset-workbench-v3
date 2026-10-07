@@ -31,11 +31,11 @@ const BEGINNER_LEARNING_ORDER = [
 ] as const;
 
 const PACKAGE_CARDS = [
-  ['protocol', 'frameworkPackageProtocolTitle', 'frameworkPackageProtocolBody'],
-  ['provider-sdk', 'frameworkPackageProviderTitle', 'frameworkPackageProviderBody'],
-  ['language-core', 'frameworkPackageLanguageTitle', 'frameworkPackageLanguageBody'],
-  ['asset-core', 'frameworkPackageAssetTitle', 'frameworkPackageAssetBody'],
-  ['starter', 'frameworkPackageStarterTitle', 'frameworkPackageStarterBody'],
+  ['asset-core', 'Asset Core', 'frameworkPackageAssetTitle', 'frameworkPackageAssetBody', 'frameworkPackageBadgeStart', 'start'],
+  ['starter', 'Starter', 'frameworkPackageStarterTitle', 'frameworkPackageStarterBody', 'frameworkPackageBadgeStart', 'start'],
+  ['language-core', 'Language Core', 'frameworkPackageLanguageTitle', 'frameworkPackageLanguageBody', 'frameworkPackageBadgeStart', 'start'],
+  ['protocol', 'Protocol', 'frameworkPackageProtocolTitle', 'frameworkPackageProtocolBody', 'frameworkPackageBadgeLater', 'later'],
+  ['provider-sdk', 'Provider SDK', 'frameworkPackageProviderTitle', 'frameworkPackageProviderBody', 'frameworkPackageBadgeProvider', 'provider'],
 ] as const;
 
 export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) {
@@ -247,13 +247,21 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
           <div>
             <p className="eyebrow">{t('frameworkPackagesEyebrow')}</p>
             <h2>{t('frameworkPackagesTitle')}</h2>
+            <p className="framework-section-lead">{t('frameworkPackagesLead')}</p>
           </div>
         </div>
         <div className="framework-package-grid">
-          {PACKAGE_CARDS.map(([name, title, body]) => (
+          {PACKAGE_CARDS.map(([name, technicalName, title, body, badge, badgeTone], index) => (
             <article className="panel framework-package-card" key={name}>
-              <code>packages/{name}</code>
+              <div className="framework-package-card-top">
+                <span className="framework-package-order">{index + 1}</span>
+                <span className={`framework-package-badge ${badgeTone}`}>{t(badge)}</span>
+              </div>
               <h3>{t(title)}</h3>
+              <div className="framework-package-technical">
+                <code>{technicalName}</code>
+                <small>packages/{name}</small>
+              </div>
               <p>{t(body)}</p>
             </article>
           ))}

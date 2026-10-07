@@ -89,3 +89,19 @@ The Framework page reads `LANGUAGE_DESCRIPTORS` directly from `packages/language
 The Framework page reads `BUILTIN_PROVIDER_DEFINITIONS` from `packages/provider-sdk`. Existing built-in Provider definitions therefore remain the source of truth for the developer view.
 
 Provider Adapter implementation language is intentionally separate from Workbench runtime implementation language. The Workbench runtime remains TypeScript/Node.js.
+
+
+## Beginner-first framework package cards
+
+The five framework package cards now follow the same learning order used elsewhere in the page:
+
+1. Asset Core
+2. Starter
+3. Language Core
+4. Protocol
+5. Provider SDK
+
+The card title is now plain language first, with the technical package name shown second. Each card also tells the user whether it is something to learn now or only when extending the framework/Provider platform.
+
+This preserves the real `packages/*` paths and package responsibilities while reducing beginner-facing terminology.
+
