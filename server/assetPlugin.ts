@@ -130,7 +130,7 @@ function createHandler() {
         return;
       }
       if (req.method === 'GET' && pathPart === '/config') {
-        sendJson(res, 200, { projectRoot: getProjectRoot(), configurable: true });
+        sendJson(res, 200, { ...loadConfig(), configurable: true });
         return;
       }
       if (req.method === 'GET' && pathPart === '/providers') {
