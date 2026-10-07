@@ -111,7 +111,7 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
         </div>
       </section>
 
-      <FrameworkLearningConsole />
+      <FrameworkLearningConsole onNavigate={onNavigate} />
 
       <section className="panel framework-beginner-map">
         <div>
