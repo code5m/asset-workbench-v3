@@ -50,6 +50,21 @@ Project & Engineering Files
 
 These are visual headings only. Every row keeps its original relative path, deep links continue to use real paths, and Provider hooks/configuration remain untouched.
 
+
+
+## Beginner mental model
+
+The Framework page now closes the beginner-understanding loop before users move on to connecting real projects.
+
+It teaches four things explicitly:
+
+1. **Runtime flow** — how `src` (frontend), `server` (local backend), `packages` (shared foundations), Provider integration, Capture, and 00–05 assets connect.
+2. **Framework project vs managed project** — `asset-workbench-v3` is the tool itself; an imported Java/Python/Rust/Node project is the business project being managed. Connected projects do not need Workbench's own `src/server/packages` structure.
+3. **Recommended learning order** — Asset Core → Starter → Language Core → Protocol → Provider SDK.
+4. **Beginner scope** — normal users should learn project selection, Provider management, Asset Space, Transcript vs Work Record, and 00–05 first. Protocol internals, Provider SDK implementation, server internals, scripts, and CI can wait until framework extension work is needed.
+
+This is intentionally a progressive-disclosure layer. It does not alter runtime architecture or project filesystem semantics.
+
 ## Starter UI contract
 
 The browser never writes the filesystem directly.

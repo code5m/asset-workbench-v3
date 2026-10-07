@@ -155,3 +155,62 @@ test('first-level architecture explanations exist in zh-CN and en', () => {
     assert.ok(ui.en[key], `missing en architecture help key: ${key}`);
   }
 });
+
+
+test('Framework page closes the beginner mental-model loop', () => {
+  const page = read('src/components/FrameworkPage.tsx');
+
+  assert.match(page, /frameworkRuntimeTitle/);
+  assert.match(page, /frameworkRuntimeFrontend/);
+  assert.match(page, /frameworkRuntimeBackend/);
+  assert.match(page, /frameworkVsProjectTitle/);
+  assert.match(page, /frameworkSelfTitle/);
+  assert.match(page, /frameworkManagedTitle/);
+  assert.match(page, /BEGINNER_LEARNING_ORDER/);
+  assert.match(page, /frameworkLearningTitle/);
+  assert.match(page, /frameworkScopeKnowTitle/);
+  assert.match(page, /frameworkScopeSkipTitle/);
+});
+
+test('beginner learning order starts with assets and leaves Provider SDK last', () => {
+  const page = read('src/components/FrameworkPage.tsx');
+  const asset = page.indexOf("['asset-core', 'frameworkLearnAssetTitle'");
+  const starter = page.indexOf("['starter', 'frameworkLearnStarterTitle'");
+  const language = page.indexOf("['language-core', 'frameworkLearnLanguageTitle'");
+  const protocol = page.indexOf("['protocol', 'frameworkLearnProtocolTitle'");
+  const provider = page.indexOf("['provider-sdk', 'frameworkLearnProviderTitle'");
+
+  assert.ok(asset >= 0 && starter > asset && language > starter && protocol > language && provider > protocol);
+});
+
+test('framework-vs-managed-project explanation explicitly prevents copying Workbench internals into business projects', () => {
+  assert.match(ui['zh-CN'].frameworkVsProjectLead, /工具本身/);
+  assert.match(ui['zh-CN'].frameworkManagedBody, /真实项目/);
+  assert.match(ui['zh-CN'].frameworkVsProjectRule, /src\/server\/packages.*必须/);
+  assert.match(ui.en.frameworkVsProjectRule, /does not need Workbench’s own src\/server\/packages directories/);
+});
+
+test('all four beginner mental-model sections have zh-CN and en coverage', () => {
+  const keys = [
+    'frameworkRuntimeTitle',
+    'frameworkRuntimeFrontend',
+    'frameworkRuntimeBackend',
+    'frameworkVsProjectTitle',
+    'frameworkSelfTitle',
+    'frameworkManagedTitle',
+    'frameworkLearningTitle',
+    'frameworkLearnAssetTitle',
+    'frameworkLearnStarterTitle',
+    'frameworkLearnLanguageTitle',
+    'frameworkLearnProtocolTitle',
+    'frameworkLearnProviderTitle',
+    'frameworkScopeTitle',
+    'frameworkScopeKnowTitle',
+    'frameworkScopeSkipTitle',
+  ];
+
+  for (const key of keys) {
+    assert.ok(ui['zh-CN'][key], `missing zh-CN mental-model key: ${key}`);
+    assert.ok(ui.en[key], `missing en mental-model key: ${key}`);
+  }
+});
