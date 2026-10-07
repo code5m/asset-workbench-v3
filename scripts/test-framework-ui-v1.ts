@@ -269,3 +269,57 @@ test('Asset Core copy says it is already in use and Starter consumes the standar
   assert.match(ui.en.frameworkPackageAssetBody, /current Workbench already uses/);
   assert.match(ui.en.starterLead, /Starter creates a new project from the Asset Core standard/);
 });
+
+
+test('knowledge lifecycle is integrated into existing product pages without adding a duplicate navigation page', () => {
+  const component = read('src/components/KnowledgeLifecycle.tsx');
+  const welcome = read('src/components/WelcomePage.tsx');
+  const guide = read('src/components/GuidePage.tsx');
+  const assets = read('src/components/AssetExplorer.tsx');
+  const providers = read('src/components/ProviderManager.tsx');
+  const app = read('src/App.tsx');
+  const navigation = read('src/data/navigation.ts');
+
+  assert.match(component, /knowledgeStepConversationTitle/);
+  assert.match(component, /knowledgeStepWorkRecordTitle/);
+  assert.match(component, /knowledgeStepDesignTitle/);
+  assert.match(component, /knowledgeStepDecisionTitle/);
+
+  assert.match(welcome, /KnowledgeLifecycle/);
+  assert.match(welcome, /04-conversations/);
+  assert.match(welcome, /02-design\/decisions/);
+
+  assert.match(guide, /titleKey="guideKnowledgeTitle"/);
+  assert.match(guide, /onOpenAsset/);
+  assert.match(assets, /titleKey="assetKnowledgeTitle"/);
+  assert.match(providers, /titleKey="providerKnowledgeTitle"/);
+  assert.match(app, /GuidePage onNavigate=\{setActiveSection\} onOpenAsset=\{openAsset\}/);
+  assert.match(app, /ProviderManager onNavigate=\{setActiveSection\} onOpenAsset=\{openAsset\}/);
+
+  assert.doesNotMatch(navigation, /id: 'knowledge'/);
+  assert.doesNotMatch(navigation, /id: 'decisions'/);
+});
+
+test('knowledge lifecycle copy is bilingual and keeps evidence separate from conclusions', () => {
+  const keys = [
+    'knowledgeLifecycleTitle',
+    'knowledgeLifecycleLead',
+    'knowledgeStepConversationTitle',
+    'knowledgeStepWorkRecordTitle',
+    'knowledgeStepDesignTitle',
+    'knowledgeStepDecisionTitle',
+    'knowledgeLifecycleRuleBody',
+    'guideKnowledgeTitle',
+    'assetKnowledgeTitle',
+    'providerKnowledgeTitle',
+  ];
+
+  for (const key of keys) {
+    assert.ok(ui['zh-CN'][key], `missing zh-CN knowledge lifecycle key: ${key}`);
+    assert.ok(ui.en[key], `missing en knowledge lifecycle key: ${key}`);
+  }
+
+  assert.match(ui['zh-CN'].knowledgeLifecycleRuleBody, /04-conversations/);
+  assert.match(ui['zh-CN'].knowledgeLifecycleRuleBody, /02-design\/decisions/);
+  assert.match(ui['zh-CN'].providerKnowledgeLead, /不等于|另外判断|证据/);
+});
