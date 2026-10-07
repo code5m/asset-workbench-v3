@@ -2835,3 +2835,120 @@ code {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ---- Governed framework evolution -------------------------------------- */
+.framework-evolution {
+  display: grid;
+  gap: 0;
+}
+
+.framework-evolution > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.framework-evolution > summary::-webkit-details-marker {
+  display: none;
+}
+
+.framework-evolution > summary > div {
+  display: grid;
+  gap: 5px;
+}
+
+.framework-evolution > summary strong {
+  color: #17202a;
+  font-size: 18px;
+}
+
+.framework-evolution > summary span {
+  color: #667085;
+  line-height: 1.55;
+}
+
+.framework-evolution-body {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e4e7ec;
+}
+
+.framework-evolution-flow {
+  display: grid;
+  grid-template-columns: repeat(13, minmax(0, auto));
+  gap: 8px;
+  align-items: stretch;
+}
+
+.framework-evolution-flow > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #dbe3ec;
+  border-radius: 9px;
+  background: #fbfcfd;
+}
+
+.framework-evolution-flow b {
+  color: #1f3e56;
+  font-size: 12px;
+}
+
+.framework-evolution-flow small {
+  color: #667085;
+  line-height: 1.45;
+}
+
+.framework-evolution-flow > i {
+  align-self: center;
+  color: #98a2b3;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.framework-evolution-rules {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.framework-evolution-rules article {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #d7e5e9;
+  border-radius: 9px;
+  background: #f7fbfc;
+}
+
+.framework-evolution-rules strong {
+  color: #174e63;
+  font-size: 13px;
+}
+
+.framework-evolution-rules p {
+  margin: 0;
+  color: #667085;
+  line-height: 1.55;
+  font-size: 12px;
+}
+
+@media (max-width: 1180px) {
+  .framework-evolution-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .framework-evolution-flow > i {
+    justify-self: center;
+    transform: rotate(90deg);
+  }
+}
+
+@media (max-width: 780px) {
+  .framework-evolution-rules {
+    grid-template-columns: 1fr;
+  }
+}
