@@ -104,8 +104,8 @@ test('beginner-facing copy exists in both locales', () => {
 
   assert.match(ui['zh-CN'].rootPurposeFrameworkPackages, /底层能力/);
   assert.match(ui['zh-CN'].rootPurposeFrameworkProviders, /AI 工具接入/);
-  assert.match(ui['zh-CN'].rootPurposeAppSource, /页面和客户端代码/);
-  assert.match(ui['zh-CN'].rootPurposeAppServer, /本地运行的后台服务/);
+  assert.match(ui['zh-CN'].rootPurposeAppSource, /Workbench 前端/);
+  assert.match(ui['zh-CN'].rootPurposeAppServer, /Workbench 本地后端/);
 });
 
 
