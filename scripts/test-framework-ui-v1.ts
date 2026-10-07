@@ -435,3 +435,26 @@ test('Starter is presented honestly as current knowledge initialization, not a f
   assert.match(ui['zh-CN'].frameworkRoleInstanceBody, /还没有完整实例生成器/);
   assert.match(ui.en.frameworkRoleInstanceBody, /full instance generator does not exist yet/);
 });
+
+
+test('navigation always shows visual runtime identity so the user can manage by sight', () => {
+  const nav = read('src/components/AppNavigation.tsx');
+  const config = read('server/config.ts');
+  const client = read('src/services/assetClient.ts');
+
+  assert.match(nav, /nav-runtime-card/);
+  assert.match(nav, /navRuntimeTitle/);
+  assert.match(nav, /navFrameworkVersion/);
+  assert.match(nav, /navCurrentProject/);
+  assert.match(nav, /frameworkRevision/);
+  assert.match(nav, /navNoBusinessProject/);
+  assert.match(config, /frameworkVersion/);
+  assert.match(config, /frameworkRevision/);
+  assert.match(client, /frameworkVersion: string/);
+  assert.match(client, /frameworkRevision: string/);
+
+  for (const key of ['navRuntimeTitle', 'navFrameworkVersion', 'navCurrentProject', 'navNoBusinessProject']) {
+    assert.ok(ui['zh-CN'][key], `missing zh-CN runtime identity key: ${key}`);
+    assert.ok(ui.en[key], `missing en runtime identity key: ${key}`);
+  }
+});
