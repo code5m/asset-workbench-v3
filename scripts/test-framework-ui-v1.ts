@@ -458,3 +458,114 @@ test('navigation always shows visual runtime identity so the user can manage by 
     assert.ok(ui.en[key], `missing en runtime identity key: ${key}`);
   }
 });
+
+
+test('visual framework console exposes directories, key files, instances, and version learning views', () => {
+  const page = read('src/components/FrameworkPage.tsx');
+  const consoleView = read('src/components/FrameworkLearningConsole.tsx');
+  const learning = read('src/data/frameworkLearning.ts');
+
+  assert.match(page, /FrameworkLearningConsole/);
+  assert.match(page, /onNavigate=\{onNavigate\}/);
+  assert.match(consoleView, /frameworkConsoleDirectories/);
+  assert.match(consoleView, /frameworkConsoleFiles/);
+  assert.match(consoleView, /frameworkConsoleInstances/);
+  assert.match(consoleView, /frameworkConsoleVersions/);
+  assert.match(consoleView, /DirectoryDetail/);
+  assert.match(consoleView, /FileDetail/);
+  assert.match(consoleView, /InstanceManager/);
+  assert.match(consoleView, /VersionMap/);
+
+  for (const path of ['src', 'server', 'packages', 'providers', 'scripts', '00–05', 'docs']) {
+    assert.match(learning, new RegExp(`path: '${path.replace(/[.*+?^$()|[\]\\]/g, '\\$&')}'`));
+  }
+});
+
+test('directory learning explains purpose, reason, learning depth, edit advice, and key files', () => {
+  const learning = read('src/data/frameworkLearning.ts');
+
+  assert.match(learning, /purpose:/);
+  assert.match(learning, /why:/);
+  assert.match(learning, /learning:/);
+  assert.match(learning, /editAdvice:/);
+  assert.match(learning, /keyFiles:/);
+  assert.match(learning, /server\/config\.ts/);
+  assert.match(learning, /src\/components\/FrameworkPage\.tsx/);
+  assert.match(learning, /packages\/asset-core\/src\/index\.ts/);
+});
+
+test('key file explanations answer the five beginner questions without documenting every file', () => {
+  const component = read('src/components/FrameworkLearningConsole.tsx');
+  const learning = read('src/data/frameworkLearning.ts');
+
+  assert.match(component, /frameworkFileResponsibility/);
+  assert.match(component, /frameworkFileUsedBy/);
+  assert.match(component, /frameworkFileDependsOn/);
+  assert.match(component, /frameworkFileImpact/);
+  assert.match(component, /frameworkFileLearning/);
+
+  assert.match(learning, /responsibility:/);
+  assert.match(learning, /usedBy:/);
+  assert.match(learning, /dependsOn:/);
+  assert.match(learning, /impact:/);
+  assert.match(learning, /AGENTS\.md/);
+});
+
+test('Instance / CLI UI is visual-first and honest about implemented vs planned capabilities', () => {
+  const component = read('src/components/FrameworkLearningConsole.tsx');
+  const learning = read('src/data/frameworkLearning.ts');
+
+  assert.match(component, /assetClient\.config\(\)/);
+  assert.match(component, /framework-instance-current/);
+  assert.match(component, /onNavigate\('guide'\)/);
+  assert.match(component, /frameworkInstanceCliPlanned/);
+  assert.match(learning, /id: 'knowledge-init'/);
+  assert.match(learning, /status: 'available'/);
+  assert.match(learning, /id: 'instance-creator'/);
+  assert.match(learning, /id: 'instance-manifest'/);
+  assert.match(learning, /id: 'upgrade'/);
+  assert.match(learning, /id: 'migration'/);
+  assert.match(learning, /status: 'planned'/);
+});
+
+test('version view keeps Framework, Instance, and Business Project identities separate', () => {
+  const component = read('src/components/FrameworkLearningConsole.tsx');
+
+  assert.match(component, /frameworkVersionCentral/);
+  assert.match(component, /frameworkVersionInstance/);
+  assert.match(component, /frameworkVersionProject/);
+  assert.match(component, /frameworkRevision/);
+  assert.match(component, /frameworkVersionInstanceCurrentBound/);
+  assert.match(component, /frameworkVersionInstanceUnbound/);
+  assert.match(component, /frameworkVersionHonesty/);
+});
+
+test('visual framework console copy exists in zh-CN and en', () => {
+  const keys = [
+    'frameworkConsoleTitle',
+    'frameworkConsoleDirectories',
+    'frameworkConsoleFiles',
+    'frameworkConsoleInstances',
+    'frameworkConsoleVersions',
+    'frameworkGuideWhat',
+    'frameworkGuideWhy',
+    'frameworkGuideLearn',
+    'frameworkGuideEdit',
+    'frameworkFileResponsibility',
+    'frameworkFileUsedBy',
+    'frameworkFileDependsOn',
+    'frameworkFileImpact',
+    'frameworkFileLearning',
+    'frameworkInstanceTitle',
+    'frameworkInstanceUiFirstTitle',
+    'frameworkInstanceCurrentMode',
+    'frameworkInstanceBindAction',
+    'frameworkVersionMapTitle',
+    'frameworkVersionHonesty',
+  ];
+
+  for (const key of keys) {
+    assert.ok(ui['zh-CN'][key], `missing zh-CN visual framework console key: ${key}`);
+    assert.ok(ui.en[key], `missing en visual framework console key: ${key}`);
+  }
+});

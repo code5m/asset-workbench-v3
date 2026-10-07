@@ -5,7 +5,7 @@
   "title": "Framework understanding and Asset Core single-source-of-truth discussion",
   "source": "chatgpt",
   "createdAt": "2026-10-07T05:55:00.000Z",
-  "updatedAt": "2026-10-07T07:30:00.000Z",
+  "updatedAt": "2026-10-07T08:10:00.000Z",
   "captureMode": "manual",
   "completeness": "partial",
   "capturedAt": "2026-10-07T05:55:00.000Z",
@@ -28,6 +28,9 @@
     "02-design/decisions/0006-adopt-evidence-driven-framework-evolution.md",
     "AGENTS.md",
     "02-design/workbench-instance-model/framework-learning-and-one-project-instance-v1.md",
-    "02-design/decisions/0007-separate-framework-learning-from-business-project-mode.md"
+    "02-design/decisions/0007-separate-framework-learning-from-business-project-mode.md",
+    "02-design/framework-learning/visual-framework-console-v1.md",
+    "02-design/decisions/0009-adopt-visual-framework-learning-console.md",
+    "04-conversations/work-records/chatgpt/2026-10-07-visual-framework-console/conversation.md"
   ]
 }

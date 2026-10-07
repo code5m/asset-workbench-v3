@@ -3,6 +3,7 @@ import { ArrowRight, Box, Code2, FolderPlus, Plug } from 'lucide-react';
 import type { AppSection, FrameworkFocus } from '../domain/workspace';
 import { useI18n } from '../i18n/I18nProvider';
 import { StarterCreator } from './StarterCreator';
+import { FrameworkLearningConsole } from './FrameworkLearningConsole';
 import { DEFAULT_ASSET_SKELETON } from '../../packages/asset-core/src/index.ts';
 import { LANGUAGE_DESCRIPTORS } from '../../packages/language-core/src/index.ts';
 import { BUILTIN_PROVIDER_DEFINITIONS } from '../../packages/provider-sdk/src/index.ts';
@@ -109,6 +110,8 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
           <span>{t('frameworkRoleEvolutionTitle')}</span>
         </div>
       </section>
+
+      <FrameworkLearningConsole onNavigate={onNavigate} />
 
       <section className="panel framework-beginner-map">
         <div>

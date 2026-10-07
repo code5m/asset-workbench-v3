@@ -261,3 +261,46 @@ diagnostics.
 Add the runtime identity to the persistent left navigation so every page visibly
 answers: "What mode am I in, what project am I studying, and what framework code
 is actually running?"
+
+
+## Visual Framework Console: directory map, key files, Instance / CLI, and versions
+
+### User
+
+> 6个角色我是理解的，但是中央框架，实例CLI如何体现如何理解呢？需要管理页面给小白操作吗？需要目录说明和文件说明吗
+
+### Resulting insight
+
+The six-role mental model is necessary but not sufficient. The framework must
+bridge product concepts into the real repository and future instance lifecycle.
+
+The user needs:
+
+- a visual directory map that explains the real framework structure;
+- selective key-file explanations rather than documentation for every file;
+- an Instance / CLI management surface where UI is primary and CLI is underlying;
+- a visible version relationship between Central Framework, Workbench Instance,
+  and Business Project;
+- honest "available now" vs "planned" capability status.
+
+The current Knowledge Init must remain distinct from a future full Instance
+Creator / CLI / Scaffold.
+
+### User
+
+> [@GitHub]制定详细的实施计划，一次性完成，无人值守模式
+
+### Accepted implementation direction
+
+Implement the plan in one unattended round:
+
+1. keep the six-role model;
+2. add Directory Map;
+3. add Key Files;
+4. add Instance / CLI;
+5. add Versions & Upgrades;
+6. keep technical package detail secondary;
+7. make current runtime identity live;
+8. mark future capabilities as planned;
+9. persist the Design / Decision / Work Record;
+10. pass CI and merge.
