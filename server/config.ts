@@ -22,8 +22,13 @@ export function getDataDir(): string {
 
 const CONFIG_FILE = path.join(APP_ROOT, '.asset-workbench-data', 'config.json');
 
+export type WorkbenchRuntimeMode = 'framework-self' | 'business-project';
+
 export interface WorkbenchConfig {
   projectRoot: string;
+  appRoot: string;
+  mode: WorkbenchRuntimeMode;
+  hasExternalProject: boolean;
 }
 
 let currentRoot = APP_ROOT;
@@ -33,6 +38,10 @@ export function ensureDataDir(): void {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
+}
+
+function runtimeMode(root = currentRoot): WorkbenchRuntimeMode {
+  return path.resolve(root) === path.resolve(APP_ROOT) ? 'framework-self' : 'business-project';
 }
 
 export function loadConfig(): WorkbenchConfig {
@@ -46,7 +55,12 @@ export function loadConfig(): WorkbenchConfig {
   } catch {
     // keep default (current working directory)
   }
-  return { projectRoot: currentRoot };
+  return {
+    projectRoot: currentRoot,
+    appRoot: APP_ROOT,
+    mode: runtimeMode(currentRoot),
+    hasExternalProject: runtimeMode(currentRoot) === 'business-project',
+  };
 }
 
 export function getProjectRoot(): string {
@@ -64,5 +78,10 @@ export function setProjectRoot(root: string): WorkbenchConfig {
   currentRoot = fs.realpathSync(resolved);
   ensureDataDir();
   fs.writeFileSync(CONFIG_FILE, JSON.stringify({ projectRoot: currentRoot }, null, 2), 'utf8');
-  return { projectRoot: currentRoot };
+  return {
+    projectRoot: currentRoot,
+    appRoot: APP_ROOT,
+    mode: runtimeMode(currentRoot),
+    hasExternalProject: runtimeMode(currentRoot) === 'business-project',
+  };
 }
