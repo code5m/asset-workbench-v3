@@ -29,7 +29,7 @@ import {
 import { detectProviders } from './providerAdapterService.ts';
 import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, listProviderStatuses, redetectProviderStatuses, runProviderVerification, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
-import { createStarter } from '../packages/starter/src/index.ts';
+import { createKnowledge, verifyKnowledge } from '../packages/starter/src/index.ts';
 
 /**
  * Vite plugin that mounts the Local Asset API under /api.
@@ -138,6 +138,39 @@ function createHandler() {
         return;
       }
 
+      if (req.method === 'POST' && pathPart === '/creator/knowledge/create') {
+        try {
+          const body = await readBody(req);
+          const target = typeof body.target === 'string' ? body.target.trim() : '';
+          const name = typeof body.name === 'string' ? body.name.trim() : undefined;
+          if (!target) {
+            sendJson(res, 400, { error: 'target is required' });
+            return;
+          }
+          sendJson(res, 201, createKnowledge({ target, name }));
+        } catch (e) {
+          sendJson(res, 400, { error: (e as Error).message });
+        }
+        return;
+      }
+
+      if (req.method === 'POST' && pathPart === '/creator/knowledge/verify') {
+        try {
+          const body = await readBody(req);
+          const target = typeof body.target === 'string' ? body.target.trim() : '';
+          if (!target) {
+            sendJson(res, 400, { error: 'target is required' });
+            return;
+          }
+          const result = verifyKnowledge(target);
+          sendJson(res, result.ok ? 200 : 422, result);
+        } catch (e) {
+          sendJson(res, 400, { error: (e as Error).message });
+        }
+        return;
+      }
+
+      // Backward-compatible Knowledge Init route. New UI/CLI should use Creator endpoints.
       if (req.method === 'POST' && pathPart === '/starter/create') {
         try {
           const body = await readBody(req);
@@ -147,8 +180,7 @@ function createHandler() {
             sendJson(res, 400, { error: 'target is required' });
             return;
           }
-          const result = createStarter({ target, name });
-          sendJson(res, 201, result);
+          sendJson(res, 201, createKnowledge({ target, name }));
         } catch (e) {
           sendJson(res, 400, { error: (e as Error).message });
         }
