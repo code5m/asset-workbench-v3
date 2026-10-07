@@ -2358,3 +2358,42 @@ code {
     margin-left: 34px;
   }
 }
+
+
+/* ---- First-level architecture help ------------------------------------- */
+.tree-help-hint {
+  max-width: 620px;
+  margin: 5px 0 0;
+  color: #7a8798;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.asset-purpose-note {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 11px 12px;
+  border: 1px solid #d7e7ed;
+  border-radius: 8px;
+  background: #f5fafb;
+}
+
+.asset-purpose-note span {
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.asset-purpose-note strong {
+  color: #274c5e;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tree-node .tree-node .tree-purpose {
+  margin-top: 2px;
+  padding: 1px 6px;
+  background: #f3f7f9;
+  color: #476979;
+}
