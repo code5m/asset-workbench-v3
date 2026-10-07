@@ -7,6 +7,7 @@ import { AssetWatcher } from './assetWatcher.ts';
 import { MANAGED_ROOTS } from './managedPathPolicy.ts';
 import { recoverDurableTransactions } from './durableWrite.ts';
 import { probeRepository } from './gitProbe.ts';
+import { DEFAULT_ASSET_SKELETON } from '../packages/asset-core/src/index.ts';
 import type {
   AssetNode,
   AssetContent,
@@ -16,15 +17,6 @@ import type {
   ServerEvent,
   TreeResponse,
 } from '../src/domain/asset';
-
-const EXPECTED_SKELETON: { path: string; assetType: ExpectedSkeletonEntry['assetType'] }[] = [
-  { path: '00-introduction', assetType: 'introduction' },
-  { path: '01-code', assetType: 'code' },
-  { path: '02-design', assetType: 'design' },
-  { path: '03-docs', assetType: 'document' },
-  { path: '04-conversations', assetType: 'conversation' },
-  { path: '05-derived', assetType: 'derived' },
-];
 
 const MAX_DIRECTORY_CACHE = 96;
 
@@ -145,7 +137,7 @@ export class AssetService {
 
   getExpectedSkeleton(): ExpectedSkeletonEntry[] {
     const root = getProjectRoot();
-    return EXPECTED_SKELETON.map((entry) => {
+    return DEFAULT_ASSET_SKELETON.map((entry) => {
       const abs = path.join(root, entry.path);
       if (!fs.existsSync(abs)) return { ...entry, status: 'MISSING' as const };
       let status: ExpectedSkeletonEntry['status'] = 'PARTIAL';
