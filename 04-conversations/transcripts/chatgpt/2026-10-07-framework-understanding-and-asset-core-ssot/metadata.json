@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "transcript_chatgpt_20261007_framework_asset_core_ssot",
+  "type": "conversation-transcript",
+  "title": "Framework understanding and Asset Core single-source-of-truth discussion",
+  "source": "chatgpt",
+  "createdAt": "2026-10-07T05:55:00.000Z",
+  "updatedAt": "2026-10-07T05:55:00.000Z",
+  "captureMode": "manual",
+  "completeness": "partial",
+  "capturedAt": "2026-10-07T05:55:00.000Z",
+  "sourceMetadata": {
+    "provider": "chatgpt",
+    "captureSource": "current-chat-manual-persistence",
+    "note": "Partial current-conversation evidence; not a platform export and not a full transcript."
+  },
+  "relatedAssetPaths": [
+    "packages/asset-core/src/index.ts",
+    "server/assetService.ts",
+    "packages/starter/src/index.ts",
+    "src/components/FrameworkPage.tsx",
+    "src/i18n/translations.ts",
+    "02-design/decisions/0003-adopt-asset-core-as-00-05-single-source-of-truth.md",
+    "02-design/decisions/0004-persist-substantive-conversation-discoveries-as-project-assets.md"
+  ]
+}
