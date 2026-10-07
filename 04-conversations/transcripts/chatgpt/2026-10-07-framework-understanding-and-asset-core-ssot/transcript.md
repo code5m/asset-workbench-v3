@@ -231,3 +231,33 @@ This became the formal **Visual-First Framework Management** rule.
 
 A persistent runtime identity card is added to the left navigation so the user can
 visually confirm the active mode and exact framework revision on every page.
+
+
+## Visual management must expose the running framework identity
+
+### User
+
+> 页面我没有看到变化，我的水平只能通过可视化进行管理
+
+### Resulting insight
+
+The page running at `127.0.0.1:5173` comes from the user's local checkout. A
+GitHub merge does not automatically update that already-running local checkout.
+This means the product cannot expect the user to inspect Git, terminal commands,
+or source files to know whether the UI is actually running the latest framework.
+
+Visual management therefore needs a persistent runtime identity:
+
+- Framework Self mode vs Business Project mode;
+- the bound business project, or an explicit "not bound" state;
+- framework version;
+- actual running Git revision.
+
+This is part of the user's learning and management model, not merely developer
+diagnostics.
+
+### Implementation direction
+
+Add the runtime identity to the persistent left navigation so every page visibly
+answers: "What mode am I in, what project am I studying, and what framework code
+is actually running?"
