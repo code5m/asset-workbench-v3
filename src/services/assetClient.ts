@@ -96,6 +96,8 @@ export const assetClient = {
     appRoot: string;
     mode: 'framework-self' | 'business-project';
     hasExternalProject: boolean;
+    frameworkVersion: string;
+    frameworkRevision: string;
     configurable: boolean;
   }> {
     return getJson(`${BASE}/config`);
