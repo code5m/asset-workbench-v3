@@ -209,6 +209,40 @@ A conversation that discovers a defect is valuable project evidence even when th
 final code change is small. Trivial chat, typo fixes, and mechanical edits can
 still be skipped with an explicit reason.
 
+## Framework Learning vs Business Project Mode
+
+Asset Workbench has two explicit meanings of "project" and they must never be
+collapsed in the UI or implementation:
+
+1. **Framework self mode** — the `asset-workbench-v3` repository is being viewed
+   to learn, inspect, test, and improve the framework itself.
+2. **Business project mode** — one Workbench instance is bound to one external
+   real business system that the user wants to study.
+
+Hard rules:
+
+- The framework repository may be scanned for self-learning / self-check assets,
+  but business workflow pages must not present it as though it were the managed
+  business project.
+- At the current product stage, one Workbench instance should bind **one business
+  system**. Do not introduce multi-project aggregation UI as the default model.
+- Framework-learning pages are first-class product surfaces. Their explanatory
+  diagrams, plain-language architecture, and teaching copy are not disposable
+  documentation clutter; they are how the user understands and improves the
+  framework.
+- Technical package names (Asset Core, Language Core, protocol, Provider SDK,
+  starter) are second-layer implementation details. Beginner understanding starts
+  from product roles: Framework -> Instance/CLI -> One Project Binding ->
+  Knowledge -> Provider -> Evolution.
+- The current `packages/starter` capability is a **project knowledge structure
+  initializer**. It is not Spring Boot Starter, not Maven POM, not a business-code
+  generator, and not yet a full Workbench instance generator.
+- A future full instance/CLI/scaffold capability must preserve the one-instance /
+  one-business-system mental model and must be version-aware so framework upgrades
+  can later be distributed safely.
+- Long-term RSI remains an advanced objective; current UI may explain and prepare
+  the boundaries, but must never claim autonomous RSI is implemented.
+
 ## Evidence-Driven Framework Evolution (governance)
 
 Asset Workbench evolves from real project practice, but **project-specific behavior
