@@ -3760,3 +3760,121 @@ code {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ---- Workspace view switcher / Creator Workbench ----------------------- */
+.console-view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.console-view-tabs button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid #d7dee7;
+  border-radius: 8px;
+  background: #fff;
+  color: #475467;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.console-view-tabs button.active {
+  border-color: #176b87;
+  background: #f0f8fa;
+  color: #176b87;
+}
+
+.creator-workbench {
+  display: grid;
+  gap: 14px;
+}
+
+.creator-workbench-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.creator-workbench-hero h2 {
+  margin: 0;
+}
+
+.creator-workbench-hero > svg {
+  color: #176b87;
+}
+
+.creator-capability-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.creator-capability-card {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.creator-capability-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.creator-capability-card p {
+  margin: 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.creator-workbench-boundary,
+.framework-creator-cta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.creator-workbench-boundary > svg,
+.framework-creator-cta > div > svg {
+  color: #176b87;
+}
+
+.creator-workbench-boundary p,
+.framework-creator-cta p {
+  margin: 4px 0 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.framework-creator-cta > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .creator-capability-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .creator-capability-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .creator-workbench-boundary,
+  .framework-creator-cta {
+    grid-template-columns: 1fr;
+  }
+}
