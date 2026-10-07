@@ -361,6 +361,7 @@ export function AssetExplorer({ deepLink, onOpenFramework }: { deepLink: { path:
             <div>
               <p className="eyebrow">{t('directoryExplorer')}</p>
               <h2>{t('everythingEnterable')}</h2>
+              <p className="tree-help-hint">{t('assetTreeHelpHint')}</p>
             </div>
             <FolderOpen size={26} />
           </div>
