@@ -21,6 +21,15 @@ const SKELETON_DESCRIPTION_KEYS: Record<string, string> = {
   '05-derived': 'frameworkSkeletonDerived',
 };
 
+
+const BEGINNER_LEARNING_ORDER = [
+  ['asset-core', 'frameworkLearnAssetTitle', 'frameworkLearnAssetBody'],
+  ['starter', 'frameworkLearnStarterTitle', 'frameworkLearnStarterBody'],
+  ['language-core', 'frameworkLearnLanguageTitle', 'frameworkLearnLanguageBody'],
+  ['protocol', 'frameworkLearnProtocolTitle', 'frameworkLearnProtocolBody'],
+  ['provider-sdk', 'frameworkLearnProviderTitle', 'frameworkLearnProviderBody'],
+] as const;
+
 const PACKAGE_CARDS = [
   ['protocol', 'frameworkPackageProtocolTitle', 'frameworkPackageProtocolBody'],
   ['provider-sdk', 'frameworkPackageProviderTitle', 'frameworkPackageProviderBody'],
@@ -87,6 +96,128 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
           <article><strong>{t('frameworkBeginnerAssetsTitle')}</strong><p>{t('frameworkBeginnerAssetsBody')}</p></article>
           <article><strong>{t('frameworkBeginnerAiTitle')}</strong><p>{t('frameworkBeginnerAiBody')}</p></article>
           <article><strong>{t('frameworkBeginnerBaseTitle')}</strong><p>{t('frameworkBeginnerBaseBody')}</p></article>
+        </div>
+      </section>
+
+      <section className="panel framework-runtime-map">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">{t('frameworkRuntimeEyebrow')}</p>
+            <h2>{t('frameworkRuntimeTitle')}</h2>
+            <p className="framework-section-lead">{t('frameworkRuntimeLead')}</p>
+          </div>
+        </div>
+
+        <div className="framework-runtime-lanes">
+          <article className="framework-runtime-lane">
+            <strong>{t('frameworkRuntimeUserLane')}</strong>
+            <div className="framework-runtime-steps">
+              <div><span>1</span><b>{t('frameworkRuntimeUser')}</b><small>{t('frameworkRuntimeUserNote')}</small></div>
+              <i>→</i>
+              <div><span>2</span><b>{t('frameworkRuntimeFrontend')}</b><small>{t('frameworkRuntimeFrontendNote')}</small></div>
+              <i>→</i>
+              <div><span>3</span><b>{t('frameworkRuntimeBackend')}</b><small>{t('frameworkRuntimeBackendNote')}</small></div>
+              <i>→</i>
+              <div><span>4</span><b>{t('frameworkRuntimeCore')}</b><small>{t('frameworkRuntimeCoreNote')}</small></div>
+              <i>→</i>
+              <div><span>5</span><b>{t('frameworkRuntimeAssets')}</b><small>{t('frameworkRuntimeAssetsNote')}</small></div>
+            </div>
+          </article>
+
+          <article className="framework-runtime-lane">
+            <strong>{t('frameworkRuntimeAiLane')}</strong>
+            <div className="framework-runtime-steps">
+              <div><span>1</span><b>{t('frameworkRuntimeAiTool')}</b><small>{t('frameworkRuntimeAiToolNote')}</small></div>
+              <i>→</i>
+              <div><span>2</span><b>{t('frameworkRuntimeProvider')}</b><small>{t('frameworkRuntimeProviderNote')}</small></div>
+              <i>→</i>
+              <div><span>3</span><b>{t('frameworkRuntimeCapture')}</b><small>{t('frameworkRuntimeCaptureNote')}</small></div>
+              <i>→</i>
+              <div><span>4</span><b>{t('frameworkRuntimeTranscript')}</b><small>{t('frameworkRuntimeTranscriptNote')}</small></div>
+              <i>→</i>
+              <div><span>5</span><b>{t('frameworkRuntimeKnowledge')}</b><small>{t('frameworkRuntimeKnowledgeNote')}</small></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section className="framework-project-compare">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">{t('frameworkVsProjectEyebrow')}</p>
+            <h2>{t('frameworkVsProjectTitle')}</h2>
+            <p className="framework-section-lead">{t('frameworkVsProjectLead')}</p>
+          </div>
+        </div>
+        <div className="framework-project-compare-grid">
+          <article className="panel">
+            <span className="framework-role-badge">{t('frameworkSelfBadge')}</span>
+            <h3>{t('frameworkSelfTitle')}</h3>
+            <p>{t('frameworkSelfBody')}</p>
+            <pre>{t('frameworkSelfTree')}</pre>
+          </article>
+          <article className="panel">
+            <span className="framework-role-badge">{t('frameworkManagedBadge')}</span>
+            <h3>{t('frameworkManagedTitle')}</h3>
+            <p>{t('frameworkManagedBody')}</p>
+            <pre>{t('frameworkManagedTree')}</pre>
+          </article>
+        </div>
+        <p className="framework-language-neutral">{t('frameworkVsProjectRule')}</p>
+      </section>
+
+      <section className="panel framework-learning-path">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">{t('frameworkLearningEyebrow')}</p>
+            <h2>{t('frameworkLearningTitle')}</h2>
+            <p className="framework-section-lead">{t('frameworkLearningLead')}</p>
+          </div>
+        </div>
+        <div className="framework-learning-list">
+          {BEGINNER_LEARNING_ORDER.map(([name, title, body], index) => (
+            <article key={name}>
+              <span>{index + 1}</span>
+              <div>
+                <code>packages/{name}</code>
+                <strong>{t(title)}</strong>
+                <p>{t(body)}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="framework-beginner-scope">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">{t('frameworkScopeEyebrow')}</p>
+            <h2>{t('frameworkScopeTitle')}</h2>
+            <p className="framework-section-lead">{t('frameworkScopeLead')}</p>
+          </div>
+        </div>
+        <div className="framework-scope-grid">
+          <article className="panel framework-scope-card primary">
+            <h3>{t('frameworkScopeKnowTitle')}</h3>
+            <ul>
+              <li>{t('frameworkScopeKnowProject')}</li>
+              <li>{t('frameworkScopeKnowAi')}</li>
+              <li>{t('frameworkScopeKnowAssets')}</li>
+              <li>{t('frameworkScopeKnowConversation')}</li>
+              <li>{t('frameworkScopeKnowSkeleton')}</li>
+            </ul>
+          </article>
+          <article className="panel framework-scope-card">
+            <h3>{t('frameworkScopeSkipTitle')}</h3>
+            <ul>
+              <li>{t('frameworkScopeSkipProtocol')}</li>
+              <li>{t('frameworkScopeSkipProviderSdk')}</li>
+              <li>{t('frameworkScopeSkipServer')}</li>
+              <li>{t('frameworkScopeSkipScripts')}</li>
+              <li>{t('frameworkScopeSkipCi')}</li>
+            </ul>
+            <p>{t('frameworkScopeSkipNote')}</p>
+          </article>
         </div>
       </section>
 
