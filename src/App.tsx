@@ -14,6 +14,7 @@ import './styles.css';
 export default function App() {
   const [activeSection, setActiveSection] = useState<AppSection>('welcome');
   const [activeStep, setActiveStep] = useState('repositories');
+  const [consoleView, setConsoleView] = useState<'project' | 'creator'>('project');
   const [assetDeepLink, setAssetDeepLink] = useState<{ path: string; token: number } | null>(null);
   const [frameworkFocus, setFrameworkFocus] = useState<{ focus: FrameworkFocus; token: number } | null>(null);
 
@@ -27,6 +28,11 @@ export default function App() {
     setActiveSection('framework');
   };
 
+  const openCreatorWorkbench = () => {
+    setConsoleView('creator');
+    setActiveSection('console');
+  };
+
   return (
     <div className="app-shell">
       <AppNavigation items={navigationItems} activeSection={activeSection} onSelect={setActiveSection} />
@@ -35,12 +41,12 @@ export default function App() {
       {activeSection === 'assets' ? <AssetExplorer deepLink={assetDeepLink} onOpenFramework={openFramework} /> : null}
       {activeSection === 'console' ? (
         <div className="console-shell">
-          <StepRail steps={wizardSteps} activeStep={activeStep} onSelect={setActiveStep} compact />
-          <WorkspaceConsole activeStep={activeStep} />
+          <StepRail steps={wizardSteps} activeStep={activeStep} onSelect={(step) => { setActiveStep(step); setConsoleView('project'); }} compact />
+          <WorkspaceConsole activeStep={activeStep} view={consoleView} onViewChange={setConsoleView} onActivated={() => setActiveSection('assets')} />
         </div>
       ) : null}
       {activeSection === 'providers' ? <ProviderManager onNavigate={setActiveSection} onOpenAsset={openAsset} /> : null}
-      {activeSection === 'framework' ? <FrameworkPage onNavigate={setActiveSection} focusRequest={frameworkFocus} /> : null}
+      {activeSection === 'framework' ? <FrameworkPage onNavigate={setActiveSection} onOpenCreator={openCreatorWorkbench} focusRequest={frameworkFocus} /> : null}
     </div>
   );
 }

@@ -3,7 +3,6 @@ import { AlertTriangle, CheckCircle2, ChevronRight, CircleDashed, FileCode2, Fol
 import { useI18n } from '../i18n/I18nProvider';
 import type { AppSection } from '../domain/workspace';
 import { assetClient } from '../services/assetClient';
-import { StarterCreator } from './StarterCreator';
 import {
   FRAMEWORK_DIRECTORY_GUIDES,
   FRAMEWORK_INSTANCE_CAPABILITIES,
@@ -34,7 +33,7 @@ type RuntimeIdentity = {
   frameworkRevision: string;
 };
 
-export function FrameworkLearningConsole({ onNavigate }: { onNavigate: (section: AppSection) => void }) {
+export function FrameworkLearningConsole({ onNavigate, onOpenCreator }: { onNavigate: (section: AppSection) => void; onOpenCreator: () => void }) {
   const { t, loc } = useI18n();
   const [tab, setTab] = useState<Tab>('directories');
   const [runtime, setRuntime] = useState<RuntimeIdentity | null>(null);
@@ -134,7 +133,7 @@ export function FrameworkLearningConsole({ onNavigate }: { onNavigate: (section:
         </div>
       ) : null}
 
-      {tab === 'instances' ? <InstanceManager runtime={runtime} onNavigate={onNavigate} /> : null}
+      {tab === 'instances' ? <InstanceManager runtime={runtime} onNavigate={onNavigate} onOpenCreator={onOpenCreator} /> : null}
       {tab === 'versions' ? <VersionMap runtime={runtime} /> : null}
     </section>
   );
@@ -215,7 +214,7 @@ function FileDetail({ item }: { item: FrameworkKeyFileGuide }) {
   );
 }
 
-function InstanceManager({ runtime, onNavigate }: { runtime: RuntimeIdentity | null; onNavigate: (section: AppSection) => void }) {
+function InstanceManager({ runtime, onNavigate, onOpenCreator }: { runtime: RuntimeIdentity | null; onNavigate: (section: AppSection) => void; onOpenCreator: () => void }) {
   const { t, loc } = useI18n();
   return (
     <div className="framework-instance-manager">
@@ -267,7 +266,16 @@ function InstanceManager({ runtime, onNavigate }: { runtime: RuntimeIdentity | n
         <button className="primary-button" onClick={() => onNavigate('guide')}>{t('frameworkInstanceBindAction')}</button>
       </section>
 
-      <StarterCreator compact />
+      <section className="panel framework-creator-cta">
+        <div>
+          <Wrench size={20} />
+          <div>
+            <strong>{t('frameworkCreatorWorkbenchTitle')}</strong>
+            <p>{t('frameworkCreatorWorkbenchBody')}</p>
+          </div>
+        </div>
+        <button className="primary-button" onClick={onOpenCreator}>{t('frameworkCreatorWorkbenchAction')}</button>
+      </section>
 
       <section className="panel framework-instance-actions">
         <div>

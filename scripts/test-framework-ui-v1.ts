@@ -533,8 +533,11 @@ test('Instance / CLI UI is visual-first and honest about implemented vs planned 
   assert.match(learning, /status: 'planned'/);
 });
 
-test('Creator Knowledge is executable from UI and shares its core with CLI and Local API', () => {
+test('Creator Knowledge is executable from Workbench and shares its core with CLI and Local API', () => {
   const creator = read('src/components/StarterCreator.tsx');
+  const workbench = read('src/components/CreatorWorkbench.tsx');
+  const workspace = read('src/components/WorkspaceConsole.tsx');
+  const app = read('src/App.tsx');
   const client = read('src/services/assetClient.ts');
   const plugin = read('server/assetPlugin.ts');
   const core = read('packages/starter/src/index.ts');
@@ -546,20 +549,47 @@ test('Creator Knowledge is executable from UI and shares its core with CLI and L
   assert.match(creator, /assetClient\.verifyKnowledge/);
   assert.match(creator, /starterVerificationTitle/);
   assert.match(creator, /starter-cli-map/);
+  assert.match(workbench, /<StarterCreator/);
+  assert.match(workbench, /creatorCapabilityKnowledge/);
+  assert.match(workbench, /creatorCapabilityInstance/);
+  assert.match(workbench, /status: 'planned'/);
+  assert.doesNotMatch(workbench, /child_process|exec\(|spawn\(/);
+  assert.match(workspace, /<CreatorWorkbench/);
+  assert.match(workspace, /consoleModeCreator/);
+  assert.match(app, /openCreatorWorkbench/);
+  assert.match(app, /setConsoleView\('creator'\)/);
   assert.match(client, /\/creator\/knowledge\/create/);
   assert.match(client, /\/creator\/knowledge\/verify/);
   assert.match(plugin, /createKnowledge/);
   assert.match(plugin, /verifyKnowledge/);
-  assert.match(plugin, /\/creator\/knowledge\/create/);
-  assert.match(plugin, /\/creator\/knowledge\/verify/);
   assert.match(core, /export function createKnowledge/);
   assert.match(core, /export function verifyKnowledge/);
   assert.match(cli, /creator knowledge/);
   assert.equal(packageJson.scripts.creator, 'node --experimental-strip-types scripts/creator-cli.ts');
-  assert.match(framework, /<StarterCreator compact/);
+  assert.doesNotMatch(framework, /<StarterCreator/);
+  assert.match(framework, /frameworkCreatorWorkbenchAction/);
   assert.match(framework, /npm run creator -- knowledge create/);
   assert.match(framework, /asset-workbench creator instance create/);
   assert.match(framework, /frameworkInstanceCliPlanned/);
+});
+
+test('Framework Learning is slimmed to learning while operational Creator lives in Workbench', () => {
+  const page = read('src/components/FrameworkPage.tsx');
+  const frameworkConsole = read('src/components/FrameworkLearningConsole.tsx');
+  const workspace = read('src/components/WorkspaceConsole.tsx');
+  const creatorWorkbench = read('src/components/CreatorWorkbench.tsx');
+
+  assert.doesNotMatch(page, /<StarterCreator/);
+  assert.doesNotMatch(frameworkConsole, /<StarterCreator/);
+  assert.match(page, /onOpenCreator/);
+  assert.match(page, /frameworkOpenCreatorWorkbench/);
+  assert.match(frameworkConsole, /frameworkCreatorWorkbenchAction/);
+  assert.match(workspace, /view === 'creator'/);
+  assert.match(workspace, /CreatorWorkbench/);
+  assert.match(creatorWorkbench, /Knowledge Creator|creatorCapabilityKnowledge/);
+
+  const collapsedSections = page.match(/<details className="panel framework-technical-details/g) ?? [];
+  assert.ok(collapsedSections.length >= 4, 'technical/reference sections should be progressively disclosed');
 });
 
 test('version view keeps Framework, Instance, and Business Project identities separate', () => {
@@ -595,6 +625,15 @@ test('visual framework console copy exists in zh-CN and en', () => {
     'frameworkInstanceCurrentMode',
     'frameworkInstanceBindAction',
     'frameworkCreatorCliAvailable',
+    'frameworkCreatorWorkbenchTitle',
+    'frameworkCreatorWorkbenchAction',
+    'frameworkOpenCreatorWorkbench',
+    'consoleModeProject',
+    'consoleModeCreator',
+    'creatorWorkbenchTitle',
+    'creatorCapabilityKnowledge',
+    'creatorCapabilityInstance',
+    'creatorWorkbenchBoundaryTitle',
     'frameworkInstanceCliFuture',
     'starterVerify',
     'starterVerificationTitle',

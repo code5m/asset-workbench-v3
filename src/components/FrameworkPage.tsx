@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { ArrowRight, Box, Code2, FolderPlus, Plug } from 'lucide-react';
 import type { AppSection, FrameworkFocus } from '../domain/workspace';
 import { useI18n } from '../i18n/I18nProvider';
-import { StarterCreator } from './StarterCreator';
 import { FrameworkLearningConsole } from './FrameworkLearningConsole';
 import { DEFAULT_ASSET_SKELETON } from '../../packages/asset-core/src/index.ts';
 import { LANGUAGE_DESCRIPTORS } from '../../packages/language-core/src/index.ts';
@@ -10,6 +9,7 @@ import { BUILTIN_PROVIDER_DEFINITIONS } from '../../packages/provider-sdk/src/in
 
 interface FrameworkPageProps {
   onNavigate: (section: AppSection) => void;
+  onOpenCreator: () => void;
   focusRequest: { focus: FrameworkFocus; token: number } | null;
 }
 
@@ -31,26 +31,27 @@ const PACKAGE_CARDS = [
   ['provider-sdk', 'Provider SDK', 'frameworkPackageProviderTitle', 'frameworkPackageProviderBody', 'frameworkPackageBadgeProvider', 'provider'],
 ] as const;
 
-export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) {
+export function FrameworkPage({ onNavigate, onOpenCreator, focusRequest }: FrameworkPageProps) {
   const { t } = useI18n();
   const architectureRef = useRef<HTMLElement | null>(null);
   const packagesRef = useRef<HTMLDetailsElement | null>(null);
-  const providersRef = useRef<HTMLElement | null>(null);
-  const starterRef = useRef<HTMLDivElement | null>(null);
-  const skeletonRef = useRef<HTMLElement | null>(null);
+  const providersRef = useRef<HTMLDetailsElement | null>(null);
+  const skeletonRef = useRef<HTMLDetailsElement | null>(null);
 
   useEffect(() => {
     if (!focusRequest) return;
+    if (focusRequest.focus === 'starter') {
+      onOpenCreator();
+      return;
+    }
     const target =
       focusRequest.focus === 'packages'
         ? packagesRef.current
         : focusRequest.focus === 'providers'
           ? providersRef.current
-          : focusRequest.focus === 'starter'
-            ? starterRef.current
-            : focusRequest.focus === 'skeleton'
-              ? skeletonRef.current
-              : architectureRef.current;
+          : focusRequest.focus === 'skeleton'
+            ? skeletonRef.current
+            : architectureRef.current;
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [focusRequest?.token]);
 
@@ -65,6 +66,10 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
             <button className="primary-button" onClick={() => onNavigate('providers')}>
               <Plug size={17} />
               {t('frameworkManageProviders')}
+            </button>
+            <button className="secondary-button" onClick={onOpenCreator}>
+              <FolderPlus size={17} />
+              {t('frameworkOpenCreatorWorkbench')}
             </button>
             <button className="secondary-button" onClick={() => onNavigate('guide')}>
               <ArrowRight size={17} />
@@ -111,7 +116,7 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
         </div>
       </section>
 
-      <FrameworkLearningConsole onNavigate={onNavigate} />
+      <FrameworkLearningConsole onNavigate={onNavigate} onOpenCreator={onOpenCreator} />
 
       <section className="panel framework-beginner-map">
         <div>
@@ -319,32 +324,42 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
         </div>
       </details>
 
-      <section>
-        <div className="section-heading">
+      <details className="panel framework-technical-details">
+        <summary>
           <div>
             <p className="eyebrow">{t('frameworkLanguagesEyebrow')}</p>
-            <h2>{t('frameworkLanguagesTitle')}</h2>
+            <strong>{t('frameworkLanguagesTitle')}</strong>
+            <span>{t('frameworkLanguagesScope')}</span>
           </div>
-          <span className="framework-scope-note">{t('frameworkLanguagesScope')}</span>
+        </summary>
+        <div className="framework-technical-details-body">
+          <div className="framework-language-grid">
+            {LANGUAGE_DESCRIPTORS.map((language) => (
+              <article className="panel framework-language-card" key={language.id}>
+                <strong>{language.displayName}</strong>
+                <div>
+                  <span>{t('frameworkSourceFiles')}</span>
+                  <code>{language.extensions.map((extension) => `.${extension}`).join(' · ')}</code>
+                </div>
+                <div>
+                  <span>{t('frameworkManifests')}</span>
+                  <code>{language.manifests.join(' · ')}</code>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
-        <div className="framework-language-grid">
-          {LANGUAGE_DESCRIPTORS.map((language) => (
-            <article className="panel framework-language-card" key={language.id}>
-              <strong>{language.displayName}</strong>
-              <div>
-                <span>{t('frameworkSourceFiles')}</span>
-                <code>{language.extensions.map((extension) => `.${extension}`).join(' · ')}</code>
-              </div>
-              <div>
-                <span>{t('frameworkManifests')}</span>
-                <code>{language.manifests.join(' · ')}</code>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+      </details>
 
-      <section className="framework-provider-section" ref={providersRef}>
+      <details className="panel framework-technical-details framework-provider-section" ref={providersRef}>
+        <summary>
+          <div>
+            <p className="eyebrow">{t('frameworkProviderEyebrow')}</p>
+            <strong>{t('frameworkProviderTitle')}</strong>
+            <span>{t('frameworkProviderSdkLead')}</span>
+          </div>
+        </summary>
+        <div className="framework-technical-details-body">
         <div className="section-heading">
           <div>
             <p className="eyebrow">{t('frameworkProviderEyebrow')}</p>
@@ -364,11 +379,18 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
           ))}
         </div>
         <p className="detail-summary">{t('frameworkProviderSdkLead')}</p>
-      </section>
+        </div>
+      </details>
 
-      <div ref={starterRef}><StarterCreator onActivated={() => onNavigate('assets')} /></div>
-
-      <section className="panel framework-skeleton" ref={skeletonRef}>
+      <details className="panel framework-technical-details framework-skeleton" ref={skeletonRef}>
+        <summary>
+          <div>
+            <p className="eyebrow">{t('frameworkSkeletonEyebrow')}</p>
+            <strong>{t('frameworkSkeletonTitle')}</strong>
+            <span>{t('frameworkSkeletonAreas')} · 00–05</span>
+          </div>
+        </summary>
+        <div className="framework-technical-details-body">
         <div className="section-heading">
           <div>
             <p className="eyebrow">{t('frameworkSkeletonEyebrow')}</p>
@@ -384,7 +406,8 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
             </article>
           ))}
         </div>
-      </section>
+        </div>
+      </details>
     </main>
   );
 }

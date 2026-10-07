@@ -6,9 +6,13 @@ import { assetClient } from '../services/assetClient';
 import type { RepositoryRevision } from '../domain/asset';
 import { useI18n } from '../i18n/I18nProvider';
 import { StatusBadge } from './StatusBadge';
+import { CreatorWorkbench } from './CreatorWorkbench';
 
 interface WorkspaceConsoleProps {
   activeStep: string;
+  view: 'project' | 'creator';
+  onViewChange: (view: 'project' | 'creator') => void;
+  onActivated?: () => void;
 }
 
 function formatDate(iso: string): string {
@@ -17,7 +21,7 @@ function formatDate(iso: string): string {
   return d.toLocaleString();
 }
 
-export function WorkspaceConsole({ activeStep }: WorkspaceConsoleProps) {
+export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated }: WorkspaceConsoleProps) {
   const { t, loc } = useI18n();
   const [repos, setRepos] = useState<RepositoryRevision[]>([]);
   const [projectRoot, setProjectRoot] = useState('');
@@ -78,6 +82,19 @@ export function WorkspaceConsole({ activeStep }: WorkspaceConsoleProps) {
         </div>
       </section>
 
+      <div className="console-view-tabs" role="tablist" aria-label={t('consoleModeTitle')}>
+        <button className={view === 'project' ? 'active' : ''} onClick={() => onViewChange('project')}>
+          {t('consoleModeProject')}
+        </button>
+        <button className={view === 'creator' ? 'active' : ''} onClick={() => onViewChange('creator')}>
+          {t('consoleModeCreator')}
+        </button>
+      </div>
+
+      {view === 'creator' ? <CreatorWorkbench onActivated={onActivated} /> : null}
+
+      {view === 'project' ? (
+      <>
       {runtimeMode === 'framework-self' ? (
         <section className="panel runtime-mode-notice framework-self-notice">
           <div>
@@ -243,6 +260,8 @@ export function WorkspaceConsole({ activeStep }: WorkspaceConsoleProps) {
       </section>
       </>
       )}
+      </>
+      ) : null}
     </main>
   );
 }
