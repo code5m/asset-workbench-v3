@@ -69,3 +69,31 @@ This question exposed a misleading product term and a code duplication:
 ## Durable takeaway
 
 Substantive conversations that reveal hidden assumptions, terminology problems, architectural duplication, or changed decisions are themselves useful project evidence. They should be persisted honestly as Conversation evidence, while accepted conclusions are promoted separately into Decision assets.
+
+
+## Page audit: where should the new knowledge lifecycle appear?
+
+### User
+
+> 审核下有没有相关的页面遗漏的的并进行，页面有没有需要新增或者调整的
+
+### Audit result
+
+The existing six-page information architecture is sufficient. Adding a seventh
+“Knowledge” page would duplicate Asset Space and make the product harder to
+learn.
+
+The missing piece was cross-page continuity:
+
+- **Intro** should explain that valuable conversations can become durable project knowledge.
+- **Guide** should explain what happens after a project is connected.
+- **Asset Space** should be the main place to review Conversation evidence, Work Records, Designs, and Decisions, and to promote knowledge when appropriate.
+- **AI Connect** should make it explicit that successful capture does not automatically mean a Design or Decision exists.
+- **Console** remains focused on workspace/version facts.
+- **Framework** remains focused on implementation/extension understanding.
+
+### Implemented product rule
+
+Do not add a duplicate knowledge-management page. Reuse the existing navigation
+and make the knowledge lifecycle visible at the points where users naturally
+need it.
