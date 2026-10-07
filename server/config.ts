@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 /**
  * Runtime configuration for the Local Asset Engine.
@@ -29,9 +30,26 @@ export interface WorkbenchConfig {
   appRoot: string;
   mode: WorkbenchRuntimeMode;
   hasExternalProject: boolean;
+  frameworkVersion: string;
+  frameworkRevision: string;
 }
 
 let currentRoot = APP_ROOT;
+
+function frameworkRevision(): string {
+  try {
+    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], {
+      cwd: APP_ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim() || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+const FRAMEWORK_VERSION = '0.1.0';
+
 
 export function ensureDataDir(): void {
   const dir = getDataDir();
@@ -60,6 +78,8 @@ export function loadConfig(): WorkbenchConfig {
     appRoot: APP_ROOT,
     mode: runtimeMode(currentRoot),
     hasExternalProject: runtimeMode(currentRoot) === 'business-project',
+    frameworkVersion: FRAMEWORK_VERSION,
+    frameworkRevision: frameworkRevision(),
   };
 }
 
@@ -83,5 +103,7 @@ export function setProjectRoot(root: string): WorkbenchConfig {
     appRoot: APP_ROOT,
     mode: runtimeMode(currentRoot),
     hasExternalProject: runtimeMode(currentRoot) === 'business-project',
+    frameworkVersion: FRAMEWORK_VERSION,
+    frameworkRevision: frameworkRevision(),
   };
 }
