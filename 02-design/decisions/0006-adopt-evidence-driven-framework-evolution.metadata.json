@@ -7,7 +7,8 @@
   "createdAt": "2026-10-07T06:58:00.000Z",
   "updatedAt": "2026-10-07T06:58:00.000Z",
   "sourceConversations": [
-    "transcript_chatgpt_20261007_framework_asset_core_ssot"
+    "transcript_chatgpt_20261007_framework_asset_core_ssot",
+    "conv_chatgpt_20261007_evidence_driven_framework_evolution"
   ],
   "sourceDesigns": [
     "02-design/framework-evolution/evidence-driven-framework-evolution-v1.md"
@@ -15,6 +16,7 @@
   "relatedAssetPaths": [
     "AGENTS.md",
     "src/components/FrameworkPage.tsx",
-    "02-design/framework-evolution/evidence-driven-framework-evolution-v1.md"
+    "02-design/framework-evolution/evidence-driven-framework-evolution-v1.md",
+    "04-conversations/work-records/chatgpt/2026-10-07-evidence-driven-framework-evolution/conversation.md"
   ]
 }
