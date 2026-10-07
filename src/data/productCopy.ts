@@ -110,6 +110,11 @@ export const keyDocuments: KeyDocument[] = [
     description: { 'zh-CN': '核心决策记录：Project Workspace 的边界与来源模型。', en: 'Core decision record: Project Workspace boundaries and source model.' },
   },
   {
+    name: '0004-persist-conversation-discoveries.md',
+    path: '02-design/decisions/0004-persist-substantive-conversation-discoveries-as-project-assets.md',
+    description: { 'zh-CN': '知识沉淀决策：什么样的聊天值得保存，以及证据、工作记录、设计、决策如何分层。', en: 'Knowledge-capture decision: which conversations deserve persistence and how evidence, work records, designs, and decisions stay separated.' },
+  },
+  {
     name: 'product-skeleton.md',
     path: 'docs/product-skeleton.md',
     description: { 'zh-CN': '产品与架构设计：分层、Runtime 与页面结构。', en: 'Product and architecture design: layering, runtime, and page structure.' },
