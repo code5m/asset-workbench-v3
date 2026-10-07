@@ -209,6 +209,25 @@ A conversation that discovers a defect is valuable project evidence even when th
 final code change is small. Trivial chat, typo fixes, and mechanical edits can
 still be skipped with an explicit reason.
 
+## Visual-First Framework Management
+
+Important framework/runtime state must be visible in the product before the user
+is expected to infer it from source code, Git, logs, configuration, or CLI output.
+
+At minimum, keep the following visible in the normal UI:
+
+- current runtime mode;
+- current framework version;
+- current framework revision;
+- current bound business project, or an explicit unbound state.
+
+Use diagrams, status cards, badges, matrices, and visible relationships for
+framework learning, upgrade/adoption state, Provider readiness, and evolution
+history whenever those visuals reduce cognitive load.
+
+Documentation remains the precision/archive layer; the UI is the primary
+management and learning layer.
+
 ## Framework Learning vs Business Project Mode
 
 Asset Workbench has two explicit meanings of "project" and they must never be
