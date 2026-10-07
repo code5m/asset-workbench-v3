@@ -12,6 +12,25 @@ export interface StarterResult {
   created: string[];
 }
 
+export type KnowledgeEntryKind = 'file' | 'directory';
+
+export interface KnowledgeVerificationCheck {
+  path: string;
+  kind: KnowledgeEntryKind;
+  ok: boolean;
+  detail: string;
+}
+
+export interface KnowledgeVerificationResult {
+  target: string;
+  ok: boolean;
+  checks: KnowledgeVerificationCheck[];
+}
+
+export interface KnowledgeCreateResult extends StarterResult {
+  verification: KnowledgeVerificationResult;
+}
+
 function ensureEmptyOrMissing(target: string): void {
   if (!fs.existsSync(target)) return;
   const entries = fs.readdirSync(target);
@@ -25,6 +44,23 @@ function write(target: string, rel: string, content: string, created: string[]):
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, content, 'utf8');
   created.push(rel);
+}
+
+function expectedKnowledgeEntries(): Array<{ path: string; kind: KnowledgeEntryKind }> {
+  return [
+    { path: 'README.md', kind: 'file' },
+    { path: 'AGENTS.md', kind: 'file' },
+    ...DEFAULT_ASSET_SKELETON.flatMap((entry) => [
+      { path: entry.path, kind: 'directory' as const },
+      { path: `${entry.path}/README.md`, kind: 'file' as const },
+    ]),
+    { path: '04-conversations/transcripts', kind: 'directory' },
+    { path: '04-conversations/transcripts/README.md', kind: 'file' },
+    { path: '04-conversations/work-records', kind: 'directory' },
+    { path: '04-conversations/work-records/README.md', kind: 'file' },
+    { path: '02-design/decisions', kind: 'directory' },
+    { path: '02-design/decisions/README.md', kind: 'file' },
+  ];
 }
 
 export function createStarter(options: StarterOptions): StarterResult {
@@ -72,4 +108,39 @@ ${entry.description}.
   write(target, '02-design/decisions/README.md', '# Decisions\n\nAccepted or proposed project decisions live here.\n', created);
 
   return { target, created };
+}
+
+export function verifyKnowledge(targetInput: string): KnowledgeVerificationResult {
+  const target = path.resolve(targetInput);
+  const checks = expectedKnowledgeEntries().map((entry): KnowledgeVerificationCheck => {
+    const absolute = path.join(target, ...entry.path.split('/'));
+    let ok = false;
+    try {
+      const stat = fs.statSync(absolute);
+      ok = entry.kind === 'directory' ? stat.isDirectory() : stat.isFile();
+    } catch {
+      ok = false;
+    }
+    return {
+      path: entry.path,
+      kind: entry.kind,
+      ok,
+      detail: ok ? `${entry.kind} exists` : `missing ${entry.kind}`,
+    };
+  });
+
+  return {
+    target,
+    ok: checks.every((check) => check.ok),
+    checks,
+  };
+}
+
+export function createKnowledge(options: StarterOptions): KnowledgeCreateResult {
+  const created = createStarter(options);
+  const verification = verifyKnowledge(created.target);
+  if (!verification.ok) {
+    throw new Error(`knowledge verification failed: ${created.target}`);
+  }
+  return { ...created, verification };
 }
