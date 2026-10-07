@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "decision_knowledge_lifecycle_existing_pages_20261007",
+  "type": "decision",
+  "title": "Keep the knowledge lifecycle in existing product pages",
+  "status": "Accepted",
+  "createdAt": "2026-10-07T06:18:00.000Z",
+  "updatedAt": "2026-10-07T06:18:00.000Z",
+  "sourceConversations": [
+    "transcript_chatgpt_20261007_framework_asset_core_ssot",
+    "conv_chatgpt_20261007_knowledge_lifecycle_page_audit"
+  ],
+  "sourceDesigns": [],
+  "relatedAssetPaths": [
+    "src/components/KnowledgeLifecycle.tsx",
+    "src/components/WelcomePage.tsx",
+    "src/components/GuidePage.tsx",
+    "src/components/AssetExplorer.tsx",
+    "src/components/ProviderManager.tsx",
+    "src/data/navigation.ts"
+  ]
+}
