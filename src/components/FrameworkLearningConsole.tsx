@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2, ChevronRight, CircleDashed, FileCode2, Fol
 import { useI18n } from '../i18n/I18nProvider';
 import type { AppSection } from '../domain/workspace';
 import { assetClient } from '../services/assetClient';
+import { StarterCreator } from './StarterCreator';
 import {
   FRAMEWORK_DIRECTORY_GUIDES,
   FRAMEWORK_INSTANCE_CAPABILITIES,
@@ -266,6 +267,8 @@ function InstanceManager({ runtime, onNavigate }: { runtime: RuntimeIdentity | n
         <button className="primary-button" onClick={() => onNavigate('guide')}>{t('frameworkInstanceBindAction')}</button>
       </section>
 
+      <StarterCreator compact />
+
       <section className="panel framework-instance-actions">
         <div>
           <Wrench size={20} />
@@ -276,7 +279,11 @@ function InstanceManager({ runtime, onNavigate }: { runtime: RuntimeIdentity | n
         </div>
         <div className="framework-cli-example">
           <span>{t('frameworkInstanceCliUnderlying')}</span>
-          <code>asset-workbench instance create --project ./my-service</code>
+          <code>npm run creator -- knowledge create --target ./my-service-knowledge</code>
+          <code>npm run creator -- knowledge verify --target ./my-service-knowledge</code>
+          <small>{t('frameworkCreatorCliAvailable')}</small>
+          <span>{t('frameworkInstanceCliFuture')}</span>
+          <code>asset-workbench creator instance create --project ./my-service</code>
           <small>{t('frameworkInstanceCliPlanned')}</small>
         </div>
       </section>
