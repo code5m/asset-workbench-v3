@@ -11,7 +11,7 @@ import type {
   RepositoryRevision,
 } from '../domain/asset';
 import { useI18n } from '../i18n/I18nProvider';
-import { ROOT_TREE_GROUP_ORDER, rootTreeGroupHintKey, rootTreeGroupKey, rootTreePresentation } from '../domain/rootTreePresentation';
+import { ROOT_TREE_GROUP_ORDER, assetTreePurposeKey, nestedTreeEntryHelp, rootTreeGroupHintKey, rootTreeGroupKey, rootTreePresentation } from '../domain/rootTreePresentation';
 import { CreateAssetDialog, type CreateMode, type PromoteFrom } from './CreateAssetDialog';
 
 function formatSize(bytes: number): string {
@@ -420,6 +420,7 @@ export function AssetExplorer({ deepLink, onOpenFramework }: { deepLink: { path:
               contentError={contentError}
               managedMeta={managedMeta}
               onPromote={(mode, from) => openCreate(mode, from)}
+              purposeKey={assetTreePurposeKey(selected.relativePath)}
             />
           ) : (
             <p className="detail-summary">{t('selectFileOrDirHint')}</p>
@@ -461,6 +462,9 @@ function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, 
   const isOpen = expanded.has(node.relativePath);
   const kids = isOpen ? childrenCache[node.relativePath] : undefined;
   const Icon = isDir ? (isOpen ? FolderOpen : Folder) : FileText;
+  const nestedHelp = depth > 0 ? nestedTreeEntryHelp(node.relativePath) : undefined;
+  const effectivePurposeKey = purposeKey ?? (nestedHelp?.showInTree ? nestedHelp.purposeKey : undefined);
+  const effectiveLearnMoreFocus = learnMoreFocus ?? (nestedHelp?.showInTree ? nestedHelp.learnMoreFocus : undefined);
 
   return (
     <div className="tree-node" style={{ marginLeft: depth === 0 ? 0 : 16 }}>
@@ -478,13 +482,13 @@ function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, 
           <div>
             <strong>{node.name}</strong>
             <small>{node.relativePath || '/'}</small>
-            {depth === 0 && purposeKey ? <em className="tree-purpose">{t(purposeKey)}</em> : null}
+            {effectivePurposeKey ? <em className="tree-purpose">{t(effectivePurposeKey)}</em> : null}
           </div>
         </button>
-        {depth === 0 && learnMoreFocus && onLearnMore ? (
+        {effectiveLearnMoreFocus && onLearnMore ? (
           <button
             className="tree-learn-more"
-            onClick={() => onLearnMore(learnMoreFocus)}
+            onClick={() => onLearnMore(effectiveLearnMoreFocus)}
           >
             {t('rootLearnMore')}
           </button>
@@ -524,15 +528,22 @@ interface DetailPanelProps {
   contentError: string;
   managedMeta: ManagedAssetMetadata | null;
   onPromote: (mode: CreateMode, from: PromoteFrom) => void;
+  purposeKey?: string;
 }
 
-function DetailPanel({ node, content, contentLoading, contentError, managedMeta, onPromote }: DetailPanelProps) {
+function DetailPanel({ node, content, contentLoading, contentError, managedMeta, onPromote, purposeKey }: DetailPanelProps) {
   const { t } = useI18n();
   const kindLabel = useMemo(() => t(`type_${node.assetType ?? 'other'}`), [t, node.assetType]);
   const showManaged = !!managedMeta && node.kind === 'file';
 
   return (
     <div className="detail-body">
+      {purposeKey ? (
+        <div className="asset-purpose-note">
+          <span>{t('assetPurpose')}</span>
+          <strong>{t(purposeKey)}</strong>
+        </div>
+      ) : null}
       <div className="detail-grid">
         <Field label={t('assetType')} value={kindLabel} />
         {node.managedType ? (
