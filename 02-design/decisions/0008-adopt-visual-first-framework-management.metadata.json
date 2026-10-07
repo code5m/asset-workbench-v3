@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "decision_visual_first_framework_management_20261007",
+  "type": "decision",
+  "title": "Adopt visual-first framework management",
+  "status": "Accepted",
+  "createdAt": "2026-10-07T08:05:00.000Z",
+  "updatedAt": "2026-10-07T08:05:00.000Z",
+  "sourceConversations": [
+    "transcript_chatgpt_20261007_framework_asset_core_ssot"
+  ],
+  "relatedAssetPaths": [
+    "src/components/AppNavigation.tsx",
+    "server/config.ts",
+    "src/services/assetClient.ts",
+    "src/styles.css"
+  ]
+}
