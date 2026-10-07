@@ -121,8 +121,6 @@ export function WorkspaceConsole({ activeStep }: WorkspaceConsoleProps) {
           <small>{t('lastScan')}</small>
         </article>
       </section>
-
-      </section>
       )}
 
       {runtimeMode === 'framework-self' ? null : (
