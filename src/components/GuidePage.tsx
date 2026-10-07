@@ -22,8 +22,8 @@ export function GuidePage({ onNavigate, onOpenAsset }: GuidePageProps) {
     assetClient
       .config()
       .then((cfg) => {
-        setCurrentRoot(cfg.projectRoot);
-        setRootPath(cfg.projectRoot);
+        setCurrentRoot(cfg.mode === 'business-project' ? cfg.projectRoot : '');
+        setRootPath(cfg.mode === 'business-project' ? cfg.projectRoot : '');
       })
       .catch(() => undefined);
   }, []);
@@ -51,6 +51,12 @@ export function GuidePage({ onNavigate, onOpenAsset }: GuidePageProps) {
           <ArrowRight size={17} />
           {t('enterConsole')}
         </button>
+      </section>
+
+      <section className="panel guide-binding-principle">
+        <p className="eyebrow">{t('guideBindingEyebrow')}</p>
+        <h2>{t('guideBindingTitle')}</h2>
+        <p className="detail-summary">{t('guideBindingBody')}</p>
       </section>
 
       <section className="guide-list">

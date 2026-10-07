@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "conv_chatgpt_20261007_framework_learning_one_project_instance",
+  "type": "agent-work-record",
+  "title": "Framework learning and one-project instance model",
+  "source": "chatgpt",
+  "createdAt": "2026-10-07T07:30:00.000Z",
+  "updatedAt": "2026-10-07T07:30:00.000Z",
+  "captureMode": "agent-work-record",
+  "sourceTranscriptId": "transcript_chatgpt_20261007_framework_asset_core_ssot",
+  "transcriptCaptureStatus": "partial",
+  "relatedAssetPaths": [
+    "02-design/workbench-instance-model/framework-learning-and-one-project-instance-v1.md",
+    "02-design/decisions/0007-separate-framework-learning-from-business-project-mode.md",
+    "server/config.ts",
+    "src/components/FrameworkPage.tsx",
+    "src/components/WorkspaceConsole.tsx",
+    "src/components/AssetExplorer.tsx",
+    "src/components/GuidePage.tsx",
+    "src/i18n/translations.ts"
+  ],
+  "promotedTo": [
+    {
+      "type": "design",
+      "id": "02-design/workbench-instance-model/framework-learning-and-one-project-instance-v1.md"
+    },
+    {
+      "type": "decision",
+      "id": "decision_framework_learning_business_project_modes_20261007"
+    }
+  ]
+}

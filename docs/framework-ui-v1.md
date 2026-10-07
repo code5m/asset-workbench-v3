@@ -157,3 +157,41 @@ Discover -> Propose -> Prove -> Promote -> Propagate -> Observe
 The current implementation documents and governs the model; it does not yet claim
 automatic cross-project pattern mining, release distribution, migration
 orchestration, or RSI execution.
+
+
+## Framework learning surface and one-project instance model
+
+The Framework page is a first-class **visual learning surface**. It is not only
+developer documentation and it should not be reduced to package names.
+
+Primary mental model:
+
+```text
+Central Framework
+-> Instance / CLI (future full capability)
+-> One Business Project Binding
+-> Knowledge
+<-> Provider / Capture
+-> Framework Evolution
+```
+
+The current implementation exposes two runtime modes:
+
+- `framework-self`: the Workbench source repository is available for learning,
+  self-checking, and framework iteration.
+- `business-project`: the Workbench is bound to one external real business
+  system.
+
+In framework-self mode, Asset Space may show framework files for learning, but the
+business Console must not present the framework repository as a normal managed
+business project.
+
+### Current Starter semantics
+
+`packages/starter` currently initializes the **project knowledge structure**
+(00–05, README, AGENTS, Transcript / Work Record, Decisions). It does not generate
+business code and it is not equivalent to Spring Boot Starter, Maven POM, or a
+full Workbench instance generator.
+
+A full Workbench Instance / CLI / scaffold is a future capability and must remain
+visibly marked as such until implemented.

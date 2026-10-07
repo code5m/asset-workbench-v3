@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "decision_framework_learning_business_project_modes_20261007",
+  "type": "decision",
+  "title": "Separate framework learning from business project mode",
+  "status": "Accepted",
+  "createdAt": "2026-10-07T07:30:00.000Z",
+  "updatedAt": "2026-10-07T07:30:00.000Z",
+  "sourceConversations": [
+    "transcript_chatgpt_20261007_framework_asset_core_ssot",
+    "conv_chatgpt_20261007_framework_learning_one_project_instance"
+  ],
+  "sourceDesigns": [
+    "02-design/workbench-instance-model/framework-learning-and-one-project-instance-v1.md"
+  ],
+  "relatedAssetPaths": [
+    "server/config.ts",
+    "src/components/WorkspaceConsole.tsx",
+    "src/components/AssetExplorer.tsx",
+    "src/components/GuidePage.tsx",
+    "src/components/FrameworkPage.tsx",
+    "src/components/StarterCreator.tsx",
+    "04-conversations/work-records/chatgpt/2026-10-07-framework-learning-and-one-project-instance/conversation.md"
+  ]
+}

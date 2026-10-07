@@ -157,3 +157,49 @@ The advanced evolution model is being persisted as:
 - AGENTS governance rules;
 - an advanced, collapsed section in the Framework page;
 - this partial ChatGPT evidence plus a separate Work Record.
+
+
+## Framework source vs business project: visual learning becomes a product boundary
+
+### User
+
+> 另外，怎么我自己的项目本身还在里面加载了呢？这不大好吧？本身是框架，目前的页面是为了我自己理解AI的框架和原理，方便我进行迭代和优化和改进它，除此之外更重要的是项目，我需要用它来研究学习公司或者自己的项目的，我之前说的RSI是终极目标，当然现在不用实现，但是需要考虑，还有刚才一个重要的点，就是我这个框架本身要我自己能理解，能starter/cli/手脚架的方式应用分化，然后再加载其它的公司项目（我的理想场景是一个框架加载一个业务系统，太多，我自己也看不明白，更无法迭代，多个项目用一个workbench的我目前能力做不到）；1.框架/目录结构 2.手脚架/starter/cli 3.Provider 还有什么？你看我说了这么多废话，你能理解我的处境和需求吗
+
+### Resulting insight
+
+The product had conflated three distinct layers:
+
+- the central Asset Workbench framework source;
+- a Workbench instance / future CLI-scaffold boundary;
+- the real business system being studied.
+
+The user's current explanatory pages are not decorative documentation. They are a
+primary learning surface that makes the framework understandable enough to
+inspect, question, and improve.
+
+The preferred current operating model is **one Workbench instance -> one business
+system**, not one Workbench aggregating many projects.
+
+The discussion also corrected `Starter` semantics: the current implementation is
+a project knowledge initializer, not a Spring Boot Starter, Maven POM, business
+project generator, or complete Workbench instance generator.
+
+### User
+
+> 1.你说的很好你可以进行实施；但是我不知道你最终实施的是不是和我想的是一致，你看我当前我还有很重要的一点，我要学习，如果写出来的东西，没有我现在的页面我看不懂，更谈不上优化和改进我的框架了，我当前的很多页面都是解释和介绍和说我我的框架，这样你能理解吗？如果有变化优化的你的设计方案并实施，如果一致就直接进行实施，我看下页面效果再和你进一步沟通
+
+### Accepted implementation direction
+
+- Preserve and strengthen explanatory/visual framework pages.
+- Add an explicit Framework Self Mode vs Business Project Mode.
+- Do not show framework Git/repository facts as normal business-project facts in
+  the Workspace Console.
+- Keep framework files available in Asset Space for self-learning, but label the
+  mode explicitly.
+- Teach six product roles before package names:
+  Framework -> Instance/CLI -> One Project Binding -> Knowledge -> Provider ->
+  Evolution.
+- Demote technical package cards into a collapsed second layer.
+- Rename the current Starter UI to Knowledge Init / 项目知识初始化器 while
+  preserving the package name for compatibility.
+- Record the discussion and resulting Decision as durable project assets.

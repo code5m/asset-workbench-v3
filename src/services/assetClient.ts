@@ -91,7 +91,13 @@ export const assetClient = {
   skeleton(): Promise<ExpectedSkeletonEntry[]> {
     return getJson<ExpectedSkeletonEntry[]>(`${BASE}/workspace/skeleton`);
   },
-  config(): Promise<{ projectRoot: string; configurable: boolean }> {
+  config(): Promise<{
+    projectRoot: string;
+    appRoot: string;
+    mode: 'framework-self' | 'business-project';
+    hasExternalProject: boolean;
+    configurable: boolean;
+  }> {
     return getJson(`${BASE}/config`);
   },
   async createStarter(target: string, name?: string): Promise<{ target: string; created: string[] }> {

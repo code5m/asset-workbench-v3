@@ -22,14 +22,6 @@ const SKELETON_DESCRIPTION_KEYS: Record<string, string> = {
 };
 
 
-const BEGINNER_LEARNING_ORDER = [
-  ['asset-core', 'frameworkLearnAssetTitle', 'frameworkLearnAssetBody'],
-  ['starter', 'frameworkLearnStarterTitle', 'frameworkLearnStarterBody'],
-  ['language-core', 'frameworkLearnLanguageTitle', 'frameworkLearnLanguageBody'],
-  ['protocol', 'frameworkLearnProtocolTitle', 'frameworkLearnProtocolBody'],
-  ['provider-sdk', 'frameworkLearnProviderTitle', 'frameworkLearnProviderBody'],
-] as const;
-
 const PACKAGE_CARDS = [
   ['asset-core', 'Asset Core', 'frameworkPackageAssetTitle', 'frameworkPackageAssetBody', 'frameworkPackageBadgeStart', 'start'],
   ['starter', 'Starter', 'frameworkPackageStarterTitle', 'frameworkPackageStarterBody', 'frameworkPackageBadgeStart', 'start'],
@@ -41,7 +33,7 @@ const PACKAGE_CARDS = [
 export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) {
   const { t } = useI18n();
   const architectureRef = useRef<HTMLElement | null>(null);
-  const packagesRef = useRef<HTMLElement | null>(null);
+  const packagesRef = useRef<HTMLDetailsElement | null>(null);
   const providersRef = useRef<HTMLElement | null>(null);
   const starterRef = useRef<HTMLDivElement | null>(null);
   const skeletonRef = useRef<HTMLElement | null>(null);
@@ -83,6 +75,38 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
           <span><strong>{BUILTIN_PROVIDER_DEFINITIONS.length}</strong>{t('frameworkBuiltinProviders')}</span>
           <span><strong>{LANGUAGE_DESCRIPTORS.length}</strong>{t('frameworkLanguageEcosystems')}</span>
           <span><strong>{DEFAULT_ASSET_SKELETON.length}</strong>{t('frameworkSkeletonAreas')}</span>
+        </div>
+      </section>
+
+      <section className="panel framework-learning-purpose">
+        <p className="eyebrow">{t('frameworkLearningPurposeEyebrow')}</p>
+        <h2>{t('frameworkLearningPurposeTitle')}</h2>
+        <p className="framework-section-lead">{t('frameworkLearningPurposeBody')}</p>
+      </section>
+
+      <section className="framework-role-model">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">{t('frameworkModelEyebrow')}</p>
+            <h2>{t('frameworkModelTitle')}</h2>
+            <p className="framework-section-lead">{t('frameworkModelLead')}</p>
+          </div>
+        </div>
+        <div className="framework-role-grid">
+          <article className="panel"><span>01</span><strong>{t('frameworkRoleFrameworkTitle')}</strong><p>{t('frameworkRoleFrameworkBody')}</p></article>
+          <article className="panel"><span>02</span><strong>{t('frameworkRoleInstanceTitle')}</strong><p>{t('frameworkRoleInstanceBody')}</p></article>
+          <article className="panel"><span>03</span><strong>{t('frameworkRoleBindingTitle')}</strong><p>{t('frameworkRoleBindingBody')}</p></article>
+          <article className="panel"><span>04</span><strong>{t('frameworkRoleKnowledgeTitle')}</strong><p>{t('frameworkRoleKnowledgeBody')}</p></article>
+          <article className="panel"><span>05</span><strong>{t('frameworkRoleProviderTitle')}</strong><p>{t('frameworkRoleProviderBody')}</p></article>
+          <article className="panel"><span>06</span><strong>{t('frameworkRoleEvolutionTitle')}</strong><p>{t('frameworkRoleEvolutionBody')}</p></article>
+        </div>
+        <div className="framework-role-flow" aria-label={t('frameworkModelTitle')}>
+          <span>{t('frameworkRoleFrameworkTitle')}</span><i>→</i>
+          <span>{t('frameworkRoleInstanceTitle')}</span><i>→</i>
+          <span>{t('frameworkRoleBindingTitle')}</span><i>→</i>
+          <span>{t('frameworkRoleKnowledgeTitle')}</span><i>↔</i>
+          <span>{t('frameworkRoleProviderTitle')}</span><i>→</i>
+          <span>{t('frameworkRoleEvolutionTitle')}</span>
         </div>
       </section>
 
@@ -164,28 +188,6 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
           </article>
         </div>
         <p className="framework-language-neutral">{t('frameworkVsProjectRule')}</p>
-      </section>
-
-      <section className="panel framework-learning-path">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">{t('frameworkLearningEyebrow')}</p>
-            <h2>{t('frameworkLearningTitle')}</h2>
-            <p className="framework-section-lead">{t('frameworkLearningLead')}</p>
-          </div>
-        </div>
-        <div className="framework-learning-list">
-          {BEGINNER_LEARNING_ORDER.map(([name, title, body], index) => (
-            <article key={name}>
-              <span>{index + 1}</span>
-              <div>
-                <code>packages/{name}</code>
-                <strong>{t(title)}</strong>
-                <p>{t(body)}</p>
-              </div>
-            </article>
-          ))}
-        </div>
       </section>
 
       <section className="framework-beginner-scope">
@@ -286,15 +288,16 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
         <p className="framework-language-neutral">{t('frameworkLanguageNeutral')}</p>
       </section>
 
-      <section ref={packagesRef}>
-        <div className="section-heading">
+      <details className="panel framework-technical-details" ref={packagesRef}>
+        <summary>
           <div>
-            <p className="eyebrow">{t('frameworkPackagesEyebrow')}</p>
-            <h2>{t('frameworkPackagesTitle')}</h2>
-            <p className="framework-section-lead">{t('frameworkPackagesLead')}</p>
+            <p className="eyebrow">{t('frameworkTechnicalDetailsEyebrow')}</p>
+            <strong>{t('frameworkTechnicalDetailsTitle')}</strong>
+            <span>{t('frameworkTechnicalDetailsLead')}</span>
           </div>
-        </div>
-        <div className="framework-package-grid">
+        </summary>
+        <div className="framework-technical-details-body">
+          <div className="framework-package-grid">
           {PACKAGE_CARDS.map(([name, technicalName, title, body, badge, badgeTone], index) => (
             <article className="panel framework-package-card" key={name}>
               <div className="framework-package-card-top">
@@ -309,8 +312,9 @@ export function FrameworkPage({ onNavigate, focusRequest }: FrameworkPageProps) 
               <p>{t(body)}</p>
             </article>
           ))}
+          </div>
         </div>
-      </section>
+      </details>
 
       <section>
         <div className="section-heading">
