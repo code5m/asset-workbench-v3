@@ -73,7 +73,7 @@ test('Asset Space uses beginner language and deep-links technical explanations',
   assert.match(app, /openFramework/);
   assert.match(app, /onOpenFramework=\{openFramework\}/);
   assert.match(explorer, /rootLearnMore/);
-  assert.match(explorer, /onLearnMore\(learnMoreFocus\)/);
+  assert.match(explorer, /onLearnMore\(effectiveLearnMoreFocus\)/);
   assert.match(presentation, /learnMoreFocus/);
   assert.match(presentation, /name === 'providers' \? 'providers' : 'packages'/);
 });
