@@ -35,8 +35,8 @@ export function FrameworkPage({ onNavigate, onOpenCreator, focusRequest }: Frame
   const { t } = useI18n();
   const architectureRef = useRef<HTMLElement | null>(null);
   const packagesRef = useRef<HTMLDetailsElement | null>(null);
-  const providersRef = useRef<HTMLElement | null>(null);
-  const skeletonRef = useRef<HTMLElement | null>(null);
+  const providersRef = useRef<HTMLDetailsElement | null>(null);
+  const skeletonRef = useRef<HTMLDetailsElement | null>(null);
 
   useEffect(() => {
     if (!focusRequest) return;
