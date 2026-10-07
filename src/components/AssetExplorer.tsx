@@ -49,6 +49,7 @@ export function AssetExplorer({ deepLink, onOpenFramework }: { deepLink: { path:
   const [createMode, setCreateMode] = useState<CreateMode | null>(null);
   const [promoteFrom, setPromoteFrom] = useState<PromoteFrom | null>(null);
   const [managedMeta, setManagedMeta] = useState<ManagedAssetMetadata | null>(null);
+  const [runtimeMode, setRuntimeMode] = useState<'framework-self' | 'business-project'>('framework-self');
   const expandedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => { expandedRef.current = expanded; }, [expanded]);
@@ -89,6 +90,8 @@ export function AssetExplorer({ deepLink, onOpenFramework }: { deepLink: { path:
   const loadAll = useCallback(async () => {
     try {
       setStatus('loading');
+      const cfg = await assetClient.config();
+      setRuntimeMode(cfg.mode);
       await assetClient.workspace();
       await refreshTree(false);
       setStatus('ready');
@@ -324,6 +327,16 @@ export function AssetExplorer({ deepLink, onOpenFramework }: { deepLink: { path:
           </button>
         </div>
       </section>
+
+      {runtimeMode === 'framework-self' ? (
+        <section className="panel runtime-mode-notice framework-self-notice">
+          <div>
+            <p className="eyebrow">{t('runtimeModeFramework')}</p>
+            <h2>{t('assetFrameworkModeTitle')}</h2>
+            <p>{t('assetFrameworkModeBody')}</p>
+          </div>
+        </section>
+      ) : null}
 
       {status === 'error' ? (
         <div className="banner error">
