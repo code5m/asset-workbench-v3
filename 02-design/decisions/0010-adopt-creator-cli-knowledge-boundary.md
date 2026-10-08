@@ -1,3 +1,7 @@
+> Status update (2026-10-08): Decision 0012 implements the Instance lifecycle that
+> was still planned when this decision was written. This decision's architectural
+> boundary remains accepted; only its old capability-status statement is superseded.
+
 # Decision: Use Creator as the shared UI/CLI execution boundary and Knowledge as its first capability
 
 Status: accepted
