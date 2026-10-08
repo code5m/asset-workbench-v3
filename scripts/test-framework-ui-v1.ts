@@ -619,6 +619,40 @@ test('Instance lifecycle Workbench uses typed APIs and never exposes arbitrary s
   assert.match(cli, /instance rollback/);
 });
 
+test('Upgrade lifecycle cards show implemented truth and keep business-code migration explicitly planned', () => {
+  const component = read('src/components/FrameworkLearningConsole.tsx');
+  const zh = ui['zh-CN'];
+  const en = ui.en;
+
+  const upgradeSection = component.slice(component.indexOf('framework-upgrade-grid'), component.indexOf('framework-version-honesty'));
+  assert.equal((upgradeSection.match(/framework-capability-status available/g) ?? []).length, 4);
+  assert.equal((upgradeSection.match(/framework-capability-status planned/g) ?? []).length, 0);
+  assert.match(zh.frameworkVersionHonesty, /仍在规划.*业务代码 Migration.*数据库 Schema Migration.*源码跨版本改写/);
+  assert.match(en.frameworkVersionHonesty, /Still planned: automatic business-code migration, database schema migration, and automatic cross-version source rewriting/);
+});
+
+test('Creator Workbench exposes a typed one-click Instance self test without browser shell', () => {
+  const panel = read('src/components/InstanceLifecyclePanel.tsx');
+  const client = read('src/services/assetClient.ts');
+  const plugin = read('server/assetPlugin.ts');
+  const core = read('packages/creator-core/src/index.ts');
+  const cli = read('scripts/creator-cli.ts');
+
+  assert.match(panel, /assetClient\.runInstanceSelfTest/);
+  assert.match(panel, /instanceSelfTestAction/);
+  assert.match(panel, /SELF_TEST_PASS/);
+  assert.doesNotMatch(panel, /child_process|exec\(|spawn\(/);
+
+  assert.match(client, /\/creator\/instance\/self-test/);
+  assert.match(plugin, /runInstanceLifecycleSelfTest/);
+  assert.match(plugin, /\/creator\/instance\/self-test/);
+  assert.match(core, /export function runInstanceLifecycleSelfTest/);
+  assert.match(core, /business-file-unchanged/);
+  assert.match(core, /framework-self-isolation/);
+  assert.match(core, /cleanup/);
+  assert.match(cli, /instance self-test/);
+});
+
 test('Framework Learning is slimmed to learning while operational Creator lives in Workbench', () => {
   const page = read('src/components/FrameworkPage.tsx');
   const frameworkConsole = read('src/components/FrameworkLearningConsole.tsx');
@@ -692,6 +726,12 @@ test('visual framework console copy exists in zh-CN and en', () => {
     'instanceVerificationTitle',
     'instanceUpgradePlanTitle',
     'instanceMigrationEvidence',
+    'instanceSelfTestAction',
+    'instanceSelfTestRunning',
+    'instanceSelfTestPass',
+    'instanceSelfTestFail',
+    'instanceSelfTestTitle',
+    'instanceSelfTestCleanup',
     'starterVerify',
     'starterVerificationTitle',
     'starterCliCreateTitle',
