@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "work_record_creator_self_test_status_fix_20261009",
+  "type": "agent-work-record",
+  "title": "Creator lifecycle status fix + one-click self test",
+  "source": "chatgpt",
+  "createdAt": "2026-10-09T00:00:00.000Z",
+  "updatedAt": "2026-10-09T00:00:00.000Z",
+  "captureMode": "agent-work-record",
+  "transcriptCaptureStatus": "partial",
+  "relatedAssetPaths": [
+    "packages/creator-core/src/index.ts",
+    "src/components/FrameworkLearningConsole.tsx",
+    "src/components/InstanceLifecyclePanel.tsx",
+    "server/assetPlugin.ts",
+    "src/services/assetClient.ts",
+    "scripts/creator-cli.ts",
+    "scripts/test-creator-instance-lifecycle-v1.ts",
+    "scripts/test-framework-ui-v1.ts",
+    "02-design/framework-learning/creator-instance-lifecycle-v1.md"
+  ]
+}
