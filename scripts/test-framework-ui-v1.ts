@@ -434,11 +434,13 @@ test('Framework is primarily a visual learning page and technical packages are s
   }
 });
 
-test('Starter is presented honestly as current knowledge initialization, not a full instance generator', () => {
+test('Starter remains Knowledge-only while Instance lifecycle is a separate real capability', () => {
   assert.match(ui['zh-CN'].starterTitle, /初始化项目知识结构/);
   assert.match(ui['zh-CN'].starterLead, /不是 Spring Boot Starter/);
-  assert.match(ui['zh-CN'].frameworkRoleInstanceBody, /还没有完整实例生成器/);
-  assert.match(ui.en.frameworkRoleInstanceBody, /full instance generator does not exist yet/);
+  assert.match(ui['zh-CN'].frameworkRoleInstanceBody, /真实 Workbench Instance Manifest/);
+  assert.match(ui.en.frameworkRoleInstanceBody, /real Workbench Instance Manifest/);
+  assert.match(ui['zh-CN'].instanceSafety, /不自动重写业务代码/);
+  assert.match(ui.en.instanceSafety, /never rewrite business code automatically/);
 });
 
 
