@@ -75,6 +75,7 @@ try {
         name: arg('--name'),
         initializeKnowledge: flag('--init-knowledge'),
         framework,
+        frameworkRoot: loadConfig().appRoot,
       });
     } else if (action === 'status') {
       result = instanceStatus(projectRoot, framework);
