@@ -3,11 +3,7 @@ import { CheckCircle2, CircleX, GitCompareArrows, PackageCheck, RotateCcw, Shiel
 import { assetClient, type InstanceStatusView, type InstanceUpgradePlanView } from '../services/assetClient';
 import { useI18n } from '../i18n/I18nProvider';
 
-interface InstanceLifecyclePanelProps {
-  onActivated?: () => void;
-}
-
-export function InstanceLifecyclePanel({ onActivated }: InstanceLifecyclePanelProps) {
+export function InstanceLifecyclePanel() {
   const { t } = useI18n();
   const [projectRoot, setProjectRoot] = useState('');
   const [name, setName] = useState('');
@@ -65,8 +61,7 @@ export function InstanceLifecyclePanel({ onActivated }: InstanceLifecyclePanelPr
     await assetClient.setRoot(result.manifest.projectRoot);
     await refresh(result.manifest.projectRoot);
     setMessage(t('instanceCreated'));
-    onActivated?.();
-  });
+   });
 
   const verify = () => run(async () => {
     if (!projectRoot.trim()) {
