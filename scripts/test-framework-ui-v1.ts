@@ -234,11 +234,12 @@ test('framework package cards are beginner-first and follow the recommended lear
 
   const asset = page.indexOf("['asset-core', 'Asset Core'");
   const starter = page.indexOf("['starter', 'Starter'");
+  const creator = page.indexOf("['creator-core', 'Creator Core'");
   const language = page.indexOf("['language-core', 'Language Core'");
   const protocol = page.indexOf("['protocol', 'Protocol'");
   const provider = page.indexOf("['provider-sdk', 'Provider SDK'");
 
-  assert.ok(asset >= 0 && starter > asset && language > starter && protocol > language && provider > protocol);
+  assert.ok(asset >= 0 && starter > asset && creator > starter && language > creator && protocol > language && provider > protocol);
   assert.match(page, /framework-package-badge/);
   assert.match(page, /frameworkPackageBadgeStart/);
   assert.match(page, /frameworkPackageBadgeLater/);
@@ -247,9 +248,10 @@ test('framework package cards are beginner-first and follow the recommended lear
 
 test('framework package cards use plain-language primary titles and technical names second', () => {
   assert.equal(ui['zh-CN'].frameworkPackagesEyebrow, '底层能力');
-  assert.equal(ui['zh-CN'].frameworkPackagesTitle, '这 5 块分别负责什么');
+  assert.equal(ui['zh-CN'].frameworkPackagesTitle, '这 6 块分别负责什么');
   assert.equal(ui['zh-CN'].frameworkPackageAssetTitle, '项目知识结构');
   assert.equal(ui['zh-CN'].frameworkPackageStarterTitle, '项目知识初始化器');
+  assert.equal(ui['zh-CN'].frameworkPackageCreatorTitle, 'Instance 生命周期 Core');
   assert.equal(ui['zh-CN'].frameworkPackageLanguageTitle, '项目生态识别（内部能力）');
   assert.equal(ui['zh-CN'].frameworkPackageProtocolTitle, '共享数据契约');
   assert.equal(ui['zh-CN'].frameworkPackageProviderTitle, 'AI 接入工具箱');
