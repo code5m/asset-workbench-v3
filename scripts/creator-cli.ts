@@ -104,7 +104,7 @@ try {
     }
 
     console.log(JSON.stringify({ command: `creator instance ${action}`, ...(result as object) }, null, 2));
-    if (action === 'verify' && result && typeof result === 'object' && 'ok' in result && !(result as { ok: boolean }).ok) {
+    if ((action === 'verify' || action === 'self-test') && result && typeof result === 'object' && 'ok' in result && !(result as { ok: boolean }).ok) {
       process.exitCode = 1;
     }
   } else {
