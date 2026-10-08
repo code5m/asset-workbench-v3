@@ -316,25 +316,25 @@ export const FRAMEWORK_INSTANCE_CAPABILITIES: FrameworkInstanceCapability[] = [
   {
     id: 'instance-creator',
     title: { 'zh-CN': '完整 Workbench Instance Creator / CLI', en: 'Full Workbench Instance Creator / CLI' },
-    description: { 'zh-CN': '未来负责从中央 Framework 创建一个可独立运行、带版本身份的 Workbench 实例。', en: 'Future capability that creates an independently runnable, version-identified Workbench instance from the central framework.' },
-    status: 'planned',
+    description: { 'zh-CN': '当前可为一个外部业务项目创建带 Framework / capability 版本身份的 Workbench Instance Manifest。', en: 'Creates a version-identified Workbench Instance Manifest for one external business project.' },
+    status: 'available',
   },
   {
     id: 'instance-manifest',
     title: { 'zh-CN': 'Instance Manifest / Framework 版本锁定', en: 'Instance Manifest / framework version pinning' },
-    description: { 'zh-CN': '未来明确记录一个实例基于哪个 Framework 版本、哪些能力版本。', en: 'Future manifest recording which Framework/capability versions an instance uses.' },
-    status: 'planned',
+    description: { 'zh-CN': '当前真实记录实例基于哪个 Framework 版本、revision 与 Creator capability 版本。', en: 'Records the Framework version, revision, and Creator capability versions used by the instance.' },
+    status: 'available',
   },
   {
     id: 'upgrade',
     title: { 'zh-CN': '升级检查与适用能力判断', en: 'Upgrade checks and capability applicability' },
-    description: { 'zh-CN': '未来比较中央 Framework 和实例，判断哪些升级适用。', en: 'Future comparison of central Framework vs instance to decide applicable upgrades.' },
-    status: 'planned',
+    description: { 'zh-CN': '当前可比较中央 Framework 与 Instance Manifest，生成可审计、可应用的升级计划。', en: 'Compares the central Framework to the Instance Manifest and creates an auditable, applicable upgrade plan.' },
+    status: 'available',
   },
   {
     id: 'migration',
     title: { 'zh-CN': 'Migration / Rollback', en: 'Migration / rollback' },
-    description: { 'zh-CN': '未来对结构、Schema、规则变化提供迁移与回滚。', en: 'Future migrations and rollback for structure/schema/rule changes.' },
-    status: 'planned',
+    description: { 'zh-CN': '当前对 Instance 版本身份变更生成迁移记录、Manifest 备份、验证与最新迁移回滚；业务代码迁移仍需未来扩展。', en: 'Creates migration evidence, Manifest backups, verification, and latest-migration rollback for Instance identity changes; business-code migrations remain future extensions.' },
+    status: 'available',
   },
 ];
