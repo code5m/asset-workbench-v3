@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, CircleX, GitCompareArrows, PackageCheck, RotateCcw, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, CircleDashed, CircleX, GitCompareArrows, PackageCheck, RotateCcw, ShieldCheck } from 'lucide-react';
 import { assetClient, type InstanceSelfTestView, type InstanceStatusView, type InstanceUpgradePlanView } from '../services/assetClient';
 import { useI18n } from '../i18n/I18nProvider';
 
@@ -17,6 +17,129 @@ export function InstanceLifecyclePanel() {
   const manifest = status?.manifest ?? null;
   const canApply = plan?.status === 'ready' && plan.actions.length > 0;
   const canRollback = status?.latestMigration?.status === 'applied';
+
+  const selfTestFlow = [
+    {
+      id: 'instance-create',
+      number: '01',
+      phase: t('instanceSelfTestPhaseBaseline'),
+      title: t('instanceSelfTestStepCreateTitle'),
+      purpose: t('instanceSelfTestStepCreatePurpose'),
+      kind: 'command' as const,
+      action: t('instanceSelfTestStepCreateAction'),
+      pass: t('instanceSelfTestStepCreatePass'),
+    },
+    {
+      id: 'pre-upgrade-verify',
+      number: '02',
+      phase: t('instanceSelfTestPhaseBaseline'),
+      title: t('instanceSelfTestStepPreVerifyTitle'),
+      purpose: t('instanceSelfTestStepPreVerifyPurpose'),
+      kind: 'command' as const,
+      action: t('instanceSelfTestStepPreVerifyAction'),
+      pass: t('instanceSelfTestStepPreVerifyPass'),
+    },
+    {
+      id: 'upgrade-plan',
+      number: '03',
+      phase: t('instanceSelfTestPhaseUpgrade'),
+      title: t('instanceSelfTestStepPlanTitle'),
+      purpose: t('instanceSelfTestStepPlanPurpose'),
+      kind: 'command' as const,
+      action: t('instanceSelfTestStepPlanAction'),
+      pass: t('instanceSelfTestStepPlanPass'),
+    },
+    {
+      id: 'upgrade-apply',
+      number: '04',
+      phase: t('instanceSelfTestPhaseUpgrade'),
+      title: t('instanceSelfTestStepApplyTitle'),
+      purpose: t('instanceSelfTestStepApplyPurpose'),
+      kind: 'command' as const,
+      action: t('instanceSelfTestStepApplyAction'),
+      pass: t('instanceSelfTestStepApplyPass'),
+    },
+    {
+      id: 'migration-evidence',
+      number: '05',
+      phase: t('instanceSelfTestPhaseUpgrade'),
+      title: t('instanceSelfTestStepMigrationTitle'),
+      purpose: t('instanceSelfTestStepMigrationPurpose'),
+      kind: 'check' as const,
+      action: t('instanceSelfTestStepMigrationAction'),
+      pass: t('instanceSelfTestStepMigrationPass'),
+    },
+    {
+      id: 'backup-evidence',
+      number: '06',
+      phase: t('instanceSelfTestPhaseUpgrade'),
+      title: t('instanceSelfTestStepBackupTitle'),
+      purpose: t('instanceSelfTestStepBackupPurpose'),
+      kind: 'check' as const,
+      action: t('instanceSelfTestStepBackupAction'),
+      pass: t('instanceSelfTestStepBackupPass'),
+    },
+    {
+      id: 'post-upgrade-verify',
+      number: '07',
+      phase: t('instanceSelfTestPhaseVerify'),
+      title: t('instanceSelfTestStepPostVerifyTitle'),
+      purpose: t('instanceSelfTestStepPostVerifyPurpose'),
+      kind: 'command' as const,
+      action: t('instanceSelfTestStepPostVerifyAction'),
+      pass: t('instanceSelfTestStepPostVerifyPass'),
+    },
+    {
+      id: 'rollback',
+      number: '08',
+      phase: t('instanceSelfTestPhaseRollback'),
+      title: t('instanceSelfTestStepRollbackTitle'),
+      purpose: t('instanceSelfTestStepRollbackPurpose'),
+      kind: 'command' as const,
+      action: t('instanceSelfTestStepRollbackAction'),
+      pass: t('instanceSelfTestStepRollbackPass'),
+    },
+    {
+      id: 'post-rollback-verify',
+      number: '09',
+      phase: t('instanceSelfTestPhaseRollback'),
+      title: t('instanceSelfTestStepPostRollbackTitle'),
+      purpose: t('instanceSelfTestStepPostRollbackPurpose'),
+      kind: 'command' as const,
+      action: t('instanceSelfTestStepPostRollbackAction'),
+      pass: t('instanceSelfTestStepPostRollbackPass'),
+    },
+    {
+      id: 'business-file-unchanged',
+      number: '10',
+      phase: t('instanceSelfTestPhaseSafety'),
+      title: t('instanceSelfTestStepBusinessTitle'),
+      purpose: t('instanceSelfTestStepBusinessPurpose'),
+      kind: 'check' as const,
+      action: t('instanceSelfTestStepBusinessAction'),
+      pass: t('instanceSelfTestStepBusinessPass'),
+    },
+    {
+      id: 'framework-self-isolation',
+      number: '11',
+      phase: t('instanceSelfTestPhaseSafety'),
+      title: t('instanceSelfTestStepIsolationTitle'),
+      purpose: t('instanceSelfTestStepIsolationPurpose'),
+      kind: 'check' as const,
+      action: t('instanceSelfTestStepIsolationAction'),
+      pass: t('instanceSelfTestStepIsolationPass'),
+    },
+    {
+      id: 'cleanup',
+      number: '12',
+      phase: t('instanceSelfTestPhaseCleanup'),
+      title: t('instanceSelfTestStepCleanupTitle'),
+      purpose: t('instanceSelfTestStepCleanupPurpose'),
+      kind: 'check' as const,
+      action: t('instanceSelfTestStepCleanupAction'),
+      pass: t('instanceSelfTestStepCleanupPass'),
+    },
+  ];
 
   const capabilityRows = useMemo(() => {
     if (!manifest) return [];
@@ -235,26 +358,82 @@ export function InstanceLifecyclePanel() {
 
       {selfTest ? (
         <div className={selfTest.ok ? 'instance-self-test pass' : 'instance-self-test fail'}>
-          <div className="instance-manifest-head">
-            {selfTest.ok ? <CheckCircle2 size={18} /> : <CircleX size={18} />}
-            <strong>{t('instanceSelfTestTitle')}</strong>
-            <span className={`framework-capability-status ${selfTest.ok ? 'available' : 'partial'}`}>
-              {selfTest.ok ? 'SELF_TEST_PASS' : 'SELF_TEST_FAIL'}
-            </span>
+          <div className="instance-self-test-head">
+            <div className="instance-self-test-title">
+              {selfTest.ok ? <CheckCircle2 size={20} /> : <CircleX size={20} />}
+              <div>
+                <strong>{t('instanceSelfTestTitle')}</strong>
+                <span>{selfTest.ok ? t('instanceSelfTestPassHuman') : t('instanceSelfTestFailHuman')}</span>
+              </div>
+            </div>
+            <code className="instance-self-test-machine-status">{selfTest.ok ? 'SELF_TEST_PASS' : 'SELF_TEST_FAIL'}</code>
           </div>
+
+          <div className="instance-self-test-route">
+            <strong>{t('instanceSelfTestRouteTitle')}</strong>
+            <span>{t('instanceSelfTestRoute')}</span>
+          </div>
+
           <div className="instance-self-test-meta">
             <span>{t('instanceFrameworkVersion')}: <strong>{selfTest.framework.version}</strong></span>
             <span>{t('instanceFrameworkRevision')}: <strong>{selfTest.framework.revision}</strong></span>
           </div>
-          <div className="starter-verification-list">
-            {selfTest.steps.map((step) => (
-              <div key={step.id} className={step.ok ? 'pass' : 'fail'}>
-                {step.ok ? <CheckCircle2 size={14} /> : <CircleX size={14} />}
-                <code>{step.id}</code>
-                <small>{step.detail}</small>
-              </div>
-            ))}
+
+          <div className="instance-self-test-flow">
+            {selfTestFlow.map((item) => {
+              const result = selfTest.steps.find((step) => step.id === item.id);
+              const state = result?.ok ? 'pass' : result ? 'fail' : 'pending';
+              return (
+                <article className={`instance-self-test-flow-step ${state}`} key={item.id}>
+                  <div className="instance-self-test-step-index">{item.number}</div>
+                  <div className="instance-self-test-step-content">
+                    <div className="instance-self-test-step-heading">
+                      <div>
+                        <small>{item.phase}</small>
+                        <strong>{item.title}</strong>
+                      </div>
+                      <span className={`instance-self-test-step-status ${state}`}>
+                        {result?.ok ? <CheckCircle2 size={14} /> : result ? <CircleX size={14} /> : <CircleDashed size={14} />}
+                        {result?.ok ? t('instanceSelfTestStatusPass') : result ? t('instanceSelfTestStatusFail') : t('instanceSelfTestStatusPending')}
+                      </span>
+                    </div>
+                    <div className="instance-self-test-learning-row">
+                      <span>{t('instanceSelfTestPurposeLabel')}</span>
+                      <p>{item.purpose}</p>
+                    </div>
+                    <div className="instance-self-test-learning-row">
+                      <span>{item.kind === 'command' ? t('instanceSelfTestCommandLabel') : t('instanceSelfTestCheckLabel')}</span>
+                      <code>{item.action}</code>
+                    </div>
+                    <div className="instance-self-test-learning-row">
+                      <span>{t('instanceSelfTestPassCriteriaLabel')}</span>
+                      <p>{item.pass}</p>
+                    </div>
+                    {result && !result.ok ? (
+                      <div className="instance-self-test-failure">
+                        <strong>{t('instanceSelfTestFailureReason')}</strong>
+                        <code>{result.detail}</code>
+                      </div>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
           </div>
+
+          <details className="instance-self-test-technical">
+            <summary>{t('instanceSelfTestTechnicalDetails')}</summary>
+            <p>{t('instanceSelfTestTechnicalDetailsHint')}</p>
+            <div>
+              {selfTest.steps.map((step) => (
+                <div key={step.id}>
+                  <code>{step.id}</code>
+                  <span>{step.detail}</span>
+                </div>
+              ))}
+            </div>
+          </details>
+
           <p className="detail-summary">{t('instanceSelfTestCleanup')}</p>
         </div>
       ) : null}
