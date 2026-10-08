@@ -155,6 +155,14 @@ export interface InstanceStatusView {
   latestMigration: MigrationRecordView | null;
 }
 
+export interface InstanceSelfTestView {
+  ok: boolean;
+  startedAt: string;
+  finishedAt: string;
+  framework: { version: string; revision: string };
+  steps: Array<{ id: string; ok: boolean; detail: string }>;
+}
+
 export const assetClient = {
   workspace(): Promise<ProjectWorkspace> {
     return getJson<ProjectWorkspace>(`${BASE}/workspace`);
@@ -253,6 +261,16 @@ export const assetClient = {
     });
     const value = await res.json() as { applied: boolean; manifest: InstanceManifestView; plan: InstanceUpgradePlanView; migration: MigrationRecordView | null; error?: string };
     if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    return value;
+  },
+  async runInstanceSelfTest(): Promise<InstanceSelfTestView> {
+    const res = await fetch(`${BASE}/creator/instance/self-test`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const value = await res.json() as InstanceSelfTestView & { error?: string };
+    if (!res.ok && res.status !== 422) throw new ApiError(res.status, value.error ?? res.statusText);
     return value;
   },
   async rollbackInstance(projectRoot: string, migrationId?: string): Promise<MigrationRecordView> {
