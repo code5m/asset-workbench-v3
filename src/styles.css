@@ -3878,3 +3878,165 @@ code {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ---- Instance lifecycle ------------------------------------------------- */
+.instance-lifecycle-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.instance-lifecycle-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.instance-lifecycle-heading h2 {
+  margin: 0;
+}
+
+.instance-lifecycle-heading > svg {
+  color: #176b87;
+}
+
+.instance-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #475467;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.instance-manifest-card,
+.instance-upgrade-plan,
+.instance-migration-evidence {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #dbe3ec;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.instance-manifest-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.instance-manifest-head > svg {
+  color: #087a55;
+}
+
+.instance-manifest-head code {
+  margin-left: auto;
+  overflow: hidden;
+  color: #667085;
+  font-size: 10px;
+  text-overflow: ellipsis;
+}
+
+.instance-manifest-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.instance-manifest-grid > div {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.instance-manifest-grid span {
+  color: #667085;
+  font-size: 10px;
+}
+
+.instance-manifest-grid strong {
+  overflow: hidden;
+  color: #17202a;
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+
+.instance-capability-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.instance-capability-list > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid #dbe3ec;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 10px;
+}
+
+.instance-plan-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.instance-plan-actions > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.instance-plan-actions code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.instance-migration-evidence {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.instance-migration-evidence small {
+  grid-column: 1 / -1;
+  color: #667085;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .instance-manifest-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .instance-manifest-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .instance-plan-actions > div,
+  .instance-migration-evidence {
+    grid-template-columns: 1fr;
+  }
+
+  .instance-manifest-head {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .instance-manifest-head code {
+    width: 100%;
+    margin-left: 0;
+  }
+}
