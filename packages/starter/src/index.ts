@@ -33,7 +33,7 @@ export interface KnowledgeCreateResult extends StarterResult {
 
 function ensureEmptyOrMissing(target: string): void {
   if (!fs.existsSync(target)) return;
-  const entries = fs.readdirSync(target);
+  const entries = fs.readdirSync(target).filter((entry) => entry !== '.asset-workbench-data');
   if (entries.length > 0) {
     throw new Error(`starter target must be empty: ${target}`);
   }

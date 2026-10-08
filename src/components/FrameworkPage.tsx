@@ -26,6 +26,7 @@ const SKELETON_DESCRIPTION_KEYS: Record<string, string> = {
 const PACKAGE_CARDS = [
   ['asset-core', 'Asset Core', 'frameworkPackageAssetTitle', 'frameworkPackageAssetBody', 'frameworkPackageBadgeStart', 'start'],
   ['starter', 'Starter', 'frameworkPackageStarterTitle', 'frameworkPackageStarterBody', 'frameworkPackageBadgeStart', 'start'],
+  ['creator-core', 'Creator Core', 'frameworkPackageCreatorTitle', 'frameworkPackageCreatorBody', 'frameworkPackageBadgeStart', 'start'],
   ['language-core', 'Language Core', 'frameworkPackageLanguageTitle', 'frameworkPackageLanguageBody', 'frameworkPackageBadgeStart', 'start'],
   ['protocol', 'Protocol', 'frameworkPackageProtocolTitle', 'frameworkPackageProtocolBody', 'frameworkPackageBadgeLater', 'later'],
   ['provider-sdk', 'Provider SDK', 'frameworkPackageProviderTitle', 'frameworkPackageProviderBody', 'frameworkPackageBadgeProvider', 'provider'],

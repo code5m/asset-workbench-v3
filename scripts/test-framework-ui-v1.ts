@@ -234,11 +234,12 @@ test('framework package cards are beginner-first and follow the recommended lear
 
   const asset = page.indexOf("['asset-core', 'Asset Core'");
   const starter = page.indexOf("['starter', 'Starter'");
+  const creator = page.indexOf("['creator-core', 'Creator Core'");
   const language = page.indexOf("['language-core', 'Language Core'");
   const protocol = page.indexOf("['protocol', 'Protocol'");
   const provider = page.indexOf("['provider-sdk', 'Provider SDK'");
 
-  assert.ok(asset >= 0 && starter > asset && language > starter && protocol > language && provider > protocol);
+  assert.ok(asset >= 0 && starter > asset && creator > starter && language > creator && protocol > language && provider > protocol);
   assert.match(page, /framework-package-badge/);
   assert.match(page, /frameworkPackageBadgeStart/);
   assert.match(page, /frameworkPackageBadgeLater/);
@@ -247,9 +248,10 @@ test('framework package cards are beginner-first and follow the recommended lear
 
 test('framework package cards use plain-language primary titles and technical names second', () => {
   assert.equal(ui['zh-CN'].frameworkPackagesEyebrow, '底层能力');
-  assert.equal(ui['zh-CN'].frameworkPackagesTitle, '这 5 块分别负责什么');
+  assert.equal(ui['zh-CN'].frameworkPackagesTitle, '这 6 块分别负责什么');
   assert.equal(ui['zh-CN'].frameworkPackageAssetTitle, '项目知识结构');
   assert.equal(ui['zh-CN'].frameworkPackageStarterTitle, '项目知识初始化器');
+  assert.equal(ui['zh-CN'].frameworkPackageCreatorTitle, 'Instance 生命周期 Core');
   assert.equal(ui['zh-CN'].frameworkPackageLanguageTitle, '项目生态识别（内部能力）');
   assert.equal(ui['zh-CN'].frameworkPackageProtocolTitle, '共享数据契约');
   assert.equal(ui['zh-CN'].frameworkPackageProviderTitle, 'AI 接入工具箱');
@@ -434,11 +436,13 @@ test('Framework is primarily a visual learning page and technical packages are s
   }
 });
 
-test('Starter is presented honestly as current knowledge initialization, not a full instance generator', () => {
+test('Starter remains Knowledge-only while Instance lifecycle is a separate real capability', () => {
   assert.match(ui['zh-CN'].starterTitle, /初始化项目知识结构/);
   assert.match(ui['zh-CN'].starterLead, /不是 Spring Boot Starter/);
-  assert.match(ui['zh-CN'].frameworkRoleInstanceBody, /还没有完整实例生成器/);
-  assert.match(ui.en.frameworkRoleInstanceBody, /full instance generator does not exist yet/);
+  assert.match(ui['zh-CN'].frameworkRoleInstanceBody, /真实 Workbench Instance Manifest/);
+  assert.match(ui.en.frameworkRoleInstanceBody, /real Workbench Instance Manifest/);
+  assert.match(ui['zh-CN'].instanceSafety, /不自动重写业务代码/);
+  assert.match(ui.en.instanceSafety, /never rewrite business code automatically/);
 });
 
 
@@ -516,21 +520,21 @@ test('key file explanations answer the five beginner questions without documenti
   assert.match(learning, /AGENTS\.md/);
 });
 
-test('Instance / CLI UI is visual-first and honest about implemented vs planned capabilities', () => {
+test('Instance / CLI UI is visual-first and exposes the implemented lifecycle honestly', () => {
   const component = read('src/components/FrameworkLearningConsole.tsx');
   const learning = read('src/data/frameworkLearning.ts');
 
   assert.match(component, /assetClient\.config\(\)/);
+  assert.match(component, /assetClient\.instanceStatus/);
   assert.match(component, /framework-instance-current/);
   assert.match(component, /onNavigate\('guide'\)/);
-  assert.match(component, /frameworkInstanceCliPlanned/);
-  assert.match(learning, /id: 'knowledge-init'/);
-  assert.match(learning, /status: 'available'/);
-  assert.match(learning, /id: 'instance-creator'/);
-  assert.match(learning, /id: 'instance-manifest'/);
-  assert.match(learning, /id: 'upgrade'/);
-  assert.match(learning, /id: 'migration'/);
-  assert.match(learning, /status: 'planned'/);
+  assert.match(component, /frameworkInstanceCliAvailable/);
+  assert.doesNotMatch(component, /frameworkInstanceCliPlanned/);
+  for (const id of ['knowledge-init', 'instance-creator', 'instance-manifest', 'upgrade', 'migration']) {
+    const block = learning.slice(learning.indexOf(`id: '${id}'`), learning.indexOf(`id: '${id}'`) + 700);
+    assert.match(block, /status: 'available'/, `${id} should be available`);
+  }
+  assert.match(learning, /packages\/creator-core\/src\/index\.ts/);
 });
 
 test('Creator Knowledge is executable from Workbench and shares its core with CLI and Local API', () => {
@@ -552,7 +556,8 @@ test('Creator Knowledge is executable from Workbench and shares its core with CL
   assert.match(workbench, /<StarterCreator/);
   assert.match(workbench, /creatorCapabilityKnowledge/);
   assert.match(workbench, /creatorCapabilityInstance/);
-  assert.match(workbench, /status: 'planned'/);
+  assert.match(workbench, /<InstanceLifecyclePanel/);
+  assert.doesNotMatch(workbench, /status: 'planned'/);
   assert.doesNotMatch(workbench, /child_process|exec\(|spawn\(/);
   assert.match(workspace, /<CreatorWorkbench/);
   assert.match(workspace, /consoleModeCreator/);
@@ -569,8 +574,49 @@ test('Creator Knowledge is executable from Workbench and shares its core with CL
   assert.doesNotMatch(framework, /<StarterCreator/);
   assert.match(framework, /frameworkCreatorWorkbenchAction/);
   assert.match(framework, /npm run creator -- knowledge create/);
-  assert.match(framework, /asset-workbench creator instance create/);
-  assert.match(framework, /frameworkInstanceCliPlanned/);
+  assert.match(framework, /npm run creator -- instance create/);
+  assert.match(framework, /npm run creator -- instance upgrade-plan/);
+  assert.match(framework, /npm run creator -- instance rollback/);
+  assert.match(framework, /frameworkInstanceCliAvailable/);
+});
+
+test('Instance lifecycle Workbench uses typed APIs and never exposes arbitrary shell', () => {
+  const panel = read('src/components/InstanceLifecyclePanel.tsx');
+  const client = read('src/services/assetClient.ts');
+  const plugin = read('server/assetPlugin.ts');
+  const core = read('packages/creator-core/src/index.ts');
+  const cli = read('scripts/creator-cli.ts');
+
+  assert.match(panel, /assetClient\.createInstance/);
+  assert.match(panel, /assetClient\.verifyInstance/);
+  assert.match(panel, /assetClient\.planInstanceUpgrade/);
+  assert.match(panel, /assetClient\.applyInstanceUpgrade/);
+  assert.match(panel, /assetClient\.rollbackInstance/);
+  assert.doesNotMatch(panel, /child_process|exec\(|spawn\(/);
+
+  assert.match(client, /\/creator\/instance\/create/);
+  assert.match(client, /\/creator\/instance\/status/);
+  assert.match(client, /\/creator\/instance\/verify/);
+  assert.match(client, /\/creator\/instance\/upgrade\/plan/);
+  assert.match(client, /\/creator\/instance\/upgrade\/apply/);
+  assert.match(client, /\/creator\/instance\/rollback/);
+
+  assert.match(plugin, /createInstance/);
+  assert.match(plugin, /planInstanceUpgrade/);
+  assert.match(plugin, /applyInstanceUpgrade/);
+  assert.match(plugin, /rollbackInstance/);
+
+  assert.match(core, /InstanceManifest/);
+  assert.match(core, /InstanceUpgradePlan/);
+  assert.match(core, /MigrationRecord/);
+  assert.match(core, /backupPath/);
+  assert.match(core, /only the latest applied migration can be rolled back safely/);
+  assert.match(core, /external business project/);
+
+  assert.match(cli, /instance create/);
+  assert.match(cli, /instance upgrade-plan/);
+  assert.match(cli, /instance upgrade-apply/);
+  assert.match(cli, /instance rollback/);
 });
 
 test('Framework Learning is slimmed to learning while operational Creator lives in Workbench', () => {
@@ -634,7 +680,18 @@ test('visual framework console copy exists in zh-CN and en', () => {
     'creatorCapabilityKnowledge',
     'creatorCapabilityInstance',
     'creatorWorkbenchBoundaryTitle',
-    'frameworkInstanceCliFuture',
+    'frameworkInstanceCliCurrent',
+    'frameworkInstanceCliAvailable',
+    'instanceLifecycleTitle',
+    'instanceCreateAction',
+    'instanceVerifyAction',
+    'instancePlanAction',
+    'instanceApplyAction',
+    'instanceRollbackAction',
+    'instanceManifestTitle',
+    'instanceVerificationTitle',
+    'instanceUpgradePlanTitle',
+    'instanceMigrationEvidence',
     'starterVerify',
     'starterVerificationTitle',
     'starterCliCreateTitle',

@@ -168,7 +168,7 @@ Primary mental model:
 
 ```text
 Central Framework
--> Instance / CLI (future full capability)
+-> Instance / CLI (available v1)
 -> One Business Project Binding
 -> Knowledge
 <-> Provider / Capture
@@ -193,8 +193,10 @@ business project.
 business code and it is not equivalent to Spring Boot Starter, Maven POM, or a
 full Workbench instance generator.
 
-A full Workbench Instance / CLI / scaffold is a future capability and must remain
-visibly marked as such until implemented.
+A Workbench Instance / CLI lifecycle is implemented as a version-aware logical
+instance bound to one external business project. It writes lifecycle state under
+`.asset-workbench-data/instance/`; it does not copy the Framework repository into
+the business project and it does not generate business code.
 
 
 ## Visual Framework Console
@@ -208,10 +210,10 @@ It has four views:
    important children.
 2. **Key Files** — explains only architecture-bearing files through
    responsibility / consumers / dependencies / impact / learning depth.
-3. **Instance / CLI** — shows current runtime identity, current available
-   capabilities, and planned full Instance Creator / CLI capabilities.
+3. **Instance / CLI** — shows current runtime identity and the real Creator
+   lifecycle commands/capabilities.
 4. **Versions & Upgrades** — keeps Central Framework, Workbench Instance, and
-   Business Project identities separate and shows the future upgrade lifecycle.
+   Business Project identities separate and reads real Instance Manifest state.
 
 ### Honesty boundary
 
@@ -221,17 +223,23 @@ Available now:
 
 - Framework Self mode;
 - one external business-project binding;
-- Knowledge Init.
+- Knowledge Init;
+- Instance Creator / CLI v1;
+- Instance Manifest with Framework version, revision, capability versions, and generation;
+- upgrade plan / apply;
+- migration evidence + Manifest backup;
+- verification;
+- rollback of the latest applied migration.
 
-Planned:
+Still not implemented:
 
-- full Workbench Instance Creator / CLI / Scaffold;
-- Instance Manifest / framework-version pin;
-- capability-aware upgrade checks;
-- migration and rollback.
+- automatic business-code/schema migration;
+- arbitrary shell execution from the browser;
+- multi-project aggregation as the default model;
+- autonomous RSI.
 
-A sample CLI command may be shown only as a future target interface and must be
-visibly labeled as not implemented.
+The UI must distinguish lifecycle metadata migration from any future business-code
+migration. Upgrade/apply must never imply that business code was rewritten.
 
 ### Learning metadata
 

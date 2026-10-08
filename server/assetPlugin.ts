@@ -30,6 +30,15 @@ import { detectProviders } from './providerAdapterService.ts';
 import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, listProviderStatuses, redetectProviderStatuses, runProviderVerification, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { createKnowledge, verifyKnowledge } from '../packages/starter/src/index.ts';
+import {
+  applyInstanceUpgrade,
+  createInstance,
+  frameworkIdentity,
+  instanceStatus,
+  planInstanceUpgrade,
+  rollbackInstance,
+  verifyInstance,
+} from '../packages/creator-core/src/index.ts';
 
 /**
  * Vite plugin that mounts the Local Asset API under /api.
@@ -164,6 +173,113 @@ function createHandler() {
           }
           const result = verifyKnowledge(target);
           sendJson(res, result.ok ? 200 : 422, result);
+        } catch (e) {
+          sendJson(res, 400, { error: (e as Error).message });
+        }
+        return;
+      }
+
+      if (req.method === 'POST' && pathPart === '/creator/instance/create') {
+        try {
+          const body = await readBody(req);
+          const projectRoot = typeof body.projectRoot === 'string' ? body.projectRoot.trim() : '';
+          const name = typeof body.name === 'string' ? body.name.trim() : undefined;
+          const initializeKnowledge = body.initializeKnowledge === true;
+          if (!projectRoot) {
+            sendJson(res, 400, { error: 'projectRoot is required' });
+            return;
+          }
+          const cfg = loadConfig();
+          const result = createInstance({
+            projectRoot,
+            name,
+            initializeKnowledge,
+            framework: frameworkIdentity(cfg.frameworkVersion, cfg.frameworkRevision),
+            frameworkRoot: cfg.appRoot,
+          });
+          sendJson(res, 201, result);
+        } catch (e) {
+          sendJson(res, 400, { error: (e as Error).message });
+        }
+        return;
+      }
+
+      if (req.method === 'POST' && pathPart === '/creator/instance/status') {
+        try {
+          const body = await readBody(req);
+          const projectRoot = typeof body.projectRoot === 'string' ? body.projectRoot.trim() : '';
+          if (!projectRoot) {
+            sendJson(res, 400, { error: 'projectRoot is required' });
+            return;
+          }
+          const cfg = loadConfig();
+          sendJson(res, 200, instanceStatus(projectRoot, frameworkIdentity(cfg.frameworkVersion, cfg.frameworkRevision)));
+        } catch (e) {
+          sendJson(res, 400, { error: (e as Error).message });
+        }
+        return;
+      }
+
+      if (req.method === 'POST' && pathPart === '/creator/instance/verify') {
+        try {
+          const body = await readBody(req);
+          const projectRoot = typeof body.projectRoot === 'string' ? body.projectRoot.trim() : '';
+          if (!projectRoot) {
+            sendJson(res, 400, { error: 'projectRoot is required' });
+            return;
+          }
+          const cfg = loadConfig();
+          const result = verifyInstance(projectRoot, frameworkIdentity(cfg.frameworkVersion, cfg.frameworkRevision));
+          sendJson(res, result.ok ? 200 : 422, result);
+        } catch (e) {
+          sendJson(res, 400, { error: (e as Error).message });
+        }
+        return;
+      }
+
+      if (req.method === 'POST' && pathPart === '/creator/instance/upgrade/plan') {
+        try {
+          const body = await readBody(req);
+          const projectRoot = typeof body.projectRoot === 'string' ? body.projectRoot.trim() : '';
+          if (!projectRoot) {
+            sendJson(res, 400, { error: 'projectRoot is required' });
+            return;
+          }
+          const cfg = loadConfig();
+          sendJson(res, 201, planInstanceUpgrade(projectRoot, frameworkIdentity(cfg.frameworkVersion, cfg.frameworkRevision)));
+        } catch (e) {
+          sendJson(res, 400, { error: (e as Error).message });
+        }
+        return;
+      }
+
+      if (req.method === 'POST' && pathPart === '/creator/instance/upgrade/apply') {
+        try {
+          const body = await readBody(req);
+          const projectRoot = typeof body.projectRoot === 'string' ? body.projectRoot.trim() : '';
+          const planId = typeof body.planId === 'string' ? body.planId.trim() : '';
+          if (!projectRoot || !planId) {
+            sendJson(res, 400, { error: 'projectRoot and planId are required' });
+            return;
+          }
+          const result = applyInstanceUpgrade(projectRoot, planId);
+          sendJson(res, 200, result);
+        } catch (e) {
+          sendJson(res, 400, { error: (e as Error).message });
+        }
+        return;
+      }
+
+      if (req.method === 'POST' && pathPart === '/creator/instance/rollback') {
+        try {
+          const body = await readBody(req);
+          const projectRoot = typeof body.projectRoot === 'string' ? body.projectRoot.trim() : '';
+          const migrationId = typeof body.migrationId === 'string' ? body.migrationId.trim() : undefined;
+          if (!projectRoot) {
+            sendJson(res, 400, { error: 'projectRoot is required' });
+            return;
+          }
+          sendJson(res, 200, rollbackInstance(projectRoot, migrationId));
         } catch (e) {
           sendJson(res, 400, { error: (e as Error).message });
         }

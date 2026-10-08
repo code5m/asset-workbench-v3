@@ -1,6 +1,7 @@
 import { CheckCircle2, CircleDashed, TerminalSquare, Wrench } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { StarterCreator } from './StarterCreator';
+import { InstanceLifecyclePanel } from './InstanceLifecyclePanel';
 
 interface CreatorWorkbenchProps {
   onActivated?: () => void;
@@ -11,9 +12,9 @@ export function CreatorWorkbench({ onActivated }: CreatorWorkbenchProps) {
 
   const capabilities = [
     { id: 'knowledge', title: t('creatorCapabilityKnowledge'), body: t('creatorCapabilityKnowledgeBody'), status: 'available' as const },
-    { id: 'instance', title: t('creatorCapabilityInstance'), body: t('creatorCapabilityInstanceBody'), status: 'planned' as const },
-    { id: 'upgrade', title: t('creatorCapabilityUpgrade'), body: t('creatorCapabilityUpgradeBody'), status: 'planned' as const },
-    { id: 'migration', title: t('creatorCapabilityMigration'), body: t('creatorCapabilityMigrationBody'), status: 'planned' as const },
+    { id: 'instance', title: t('creatorCapabilityInstance'), body: t('creatorCapabilityInstanceBody'), status: 'available' as const },
+    { id: 'upgrade', title: t('creatorCapabilityUpgrade'), body: t('creatorCapabilityUpgradeBody'), status: 'available' as const },
+    { id: 'migration', title: t('creatorCapabilityMigration'), body: t('creatorCapabilityMigrationBody'), status: 'available' as const },
   ];
 
   return (
@@ -43,6 +44,7 @@ export function CreatorWorkbench({ onActivated }: CreatorWorkbenchProps) {
       </section>
 
       <StarterCreator onActivated={onActivated} />
+      <InstanceLifecyclePanel />
 
       <section className="panel creator-workbench-boundary">
         <Wrench size={20} />

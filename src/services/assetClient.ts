@@ -94,6 +94,67 @@ export interface KnowledgeCreateView {
   verification: KnowledgeVerificationView;
 }
 
+export type CreatorCapabilityIdView = 'knowledge' | 'instance' | 'upgrade' | 'migration';
+
+export interface InstanceManifestView {
+  schemaVersion: 1;
+  instanceId: string;
+  projectRoot: string;
+  projectName: string;
+  createdAt: string;
+  updatedAt: string;
+  generation: number;
+  state: 'ready';
+  framework: { version: string; revision: string };
+  capabilities: Record<CreatorCapabilityIdView, string>;
+  knowledge: { status: 'verified' | 'not-initialized'; verified: boolean };
+  lastMigrationId?: string;
+}
+
+export interface InstanceVerificationView {
+  projectRoot: string;
+  ok: boolean;
+  upToDate: boolean;
+  checks: Array<{ id: string; ok: boolean; detail: string }>;
+  manifest: InstanceManifestView | null;
+}
+
+export interface InstanceUpgradePlanView {
+  schemaVersion: 1;
+  planId: string;
+  instanceId: string;
+  projectRoot: string;
+  createdAt: string;
+  actions: Array<{
+    id: string;
+    kind: 'framework-version' | 'framework-revision' | 'capability-version';
+    capability?: CreatorCapabilityIdView;
+    from: string;
+    to: string;
+  }>;
+  status: 'noop' | 'ready' | 'applied';
+  appliedMigrationId?: string;
+}
+
+export interface MigrationRecordView {
+  schemaVersion: 1;
+  migrationId: string;
+  planId: string;
+  instanceId: string;
+  projectRoot: string;
+  createdAt: string;
+  appliedAt?: string;
+  rolledBackAt?: string;
+  status: 'prepared' | 'applied' | 'rolled-back';
+  backupPath: string;
+}
+
+export interface InstanceStatusView {
+  manifest: InstanceManifestView | null;
+  verification: InstanceVerificationView;
+  latestMigration: MigrationRecordView | null;
+}
+
 export const assetClient = {
   workspace(): Promise<ProjectWorkspace> {
     return getJson<ProjectWorkspace>(`${BASE}/workspace`);
@@ -143,6 +204,66 @@ export const assetClient = {
   },
   async createStarter(target: string, name?: string): Promise<KnowledgeCreateView> {
     return this.createKnowledge(target, name);
+  },
+  async createInstance(projectRoot: string, name?: string, initializeKnowledge = false): Promise<{ manifest: InstanceManifestView; knowledgeVerification: KnowledgeVerificationView; manifestPath: string }> {
+    const res = await fetch(`${BASE}/creator/instance/create`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ projectRoot, name, initializeKnowledge }),
+    });
+    const value = await res.json() as { manifest: InstanceManifestView; knowledgeVerification: KnowledgeVerificationView; manifestPath: string; error?: string };
+    if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    return value;
+  },
+  async instanceStatus(projectRoot: string): Promise<InstanceStatusView> {
+    const res = await fetch(`${BASE}/creator/instance/status`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ projectRoot }),
+    });
+    const value = await res.json() as InstanceStatusView & { error?: string };
+    if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    return value;
+  },
+  async verifyInstance(projectRoot: string): Promise<InstanceVerificationView> {
+    const res = await fetch(`${BASE}/creator/instance/verify`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ projectRoot }),
+    });
+    const value = await res.json() as InstanceVerificationView & { error?: string };
+    if (!res.ok && res.status !== 422) throw new ApiError(res.status, value.error ?? res.statusText);
+    return value;
+  },
+  async planInstanceUpgrade(projectRoot: string): Promise<InstanceUpgradePlanView> {
+    const res = await fetch(`${BASE}/creator/instance/upgrade/plan`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ projectRoot }),
+    });
+    const value = await res.json() as InstanceUpgradePlanView & { error?: string };
+    if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    return value;
+  },
+  async applyInstanceUpgrade(projectRoot: string, planId: string): Promise<{ applied: boolean; manifest: InstanceManifestView; plan: InstanceUpgradePlanView; migration: MigrationRecordView | null }> {
+    const res = await fetch(`${BASE}/creator/instance/upgrade/apply`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ projectRoot, planId }),
+    });
+    const value = await res.json() as { applied: boolean; manifest: InstanceManifestView; plan: InstanceUpgradePlanView; migration: MigrationRecordView | null; error?: string };
+    if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    return value;
+  },
+  async rollbackInstance(projectRoot: string, migrationId?: string): Promise<MigrationRecordView> {
+    const res = await fetch(`${BASE}/creator/instance/rollback`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ projectRoot, migrationId }),
+    });
+    const value = await res.json() as MigrationRecordView & { error?: string };
+    if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    return value;
   },
   async providerOverview(force = false): Promise<{ providers: ProviderStatusView[]; detectedAt: string }> {
     const now = Date.now();
