@@ -263,9 +263,10 @@ The current capability truth is:
 - Framework Self mode: available;
 - one external business-project binding: available;
 - Knowledge Init: available;
-- full Workbench Instance Creator / CLI: planned;
-- Instance Manifest / framework-version pinning: planned;
-- upgrade applicability / migration / rollback: planned.
+- full Workbench Instance Creator / CLI: available (v1);
+- Instance Manifest / framework-version + revision + capability identity: available;
+- upgrade plan/apply + migration evidence + latest-migration rollback: available;
+- automatic business-code migration: not implemented; any future code/schema migration must be an explicit versioned capability.
 
 ## Framework Learning vs Business Project Mode
 
@@ -292,12 +293,14 @@ Hard rules:
   starter) are second-layer implementation details. Beginner understanding starts
   from product roles: Framework -> Instance/CLI -> One Project Binding ->
   Knowledge -> Provider -> Evolution.
-- The current `packages/starter` capability is a **project knowledge structure
-  initializer**. It is not Spring Boot Starter, not Maven POM, not a business-code
-  generator, and not yet a full Workbench instance generator.
-- A future full instance/CLI/scaffold capability must preserve the one-instance /
-  one-business-system mental model and must be version-aware so framework upgrades
-  can later be distributed safely.
+- The current `packages/starter` capability remains a **project knowledge structure
+  initializer**. It is not Spring Boot Starter, Maven POM, or a business-code generator.
+- Full Instance lifecycle now lives in `packages/creator-core`: one external business
+  project -> one Instance Manifest -> version-aware upgrade plan/apply -> migration
+  evidence/Manifest backup -> verify -> latest-migration rollback.
+- Instance creation is forbidden on Framework Self. Lifecycle upgrades never rewrite
+  business code automatically. Future business-code/schema migrations must be explicit,
+  versioned capabilities with their own verification and rollback evidence.
 - Long-term RSI remains an advanced objective; current UI may explain and prepare
   the boundaries, but must never claim autonomous RSI is implemented.
 
