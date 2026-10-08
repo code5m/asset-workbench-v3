@@ -45,6 +45,7 @@ export interface InstanceCreateOptions {
   projectRoot: string;
   name?: string;
   framework: FrameworkIdentity;
+  frameworkRoot?: string;
   initializeKnowledge?: boolean;
 }
 
@@ -190,6 +191,9 @@ export function readInstanceManifest(projectRootInput: string): InstanceManifest
 
 export function createInstance(options: InstanceCreateOptions): InstanceCreateResult {
   const projectRoot = resolveProjectRoot(options.projectRoot);
+  if (options.frameworkRoot && path.resolve(options.frameworkRoot) === projectRoot) {
+    throw new Error('Workbench Instance must bind an external business project, not Framework Self');
+  }
   const file = manifestFile(projectRoot);
   if (fs.existsSync(file)) throw new Error(`instance already exists: ${file}`);
 
