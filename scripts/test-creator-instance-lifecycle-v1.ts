@@ -13,6 +13,7 @@ import {
   planInstanceUpgrade,
   readInstanceManifest,
   rollbackInstance,
+  runInstanceLifecycleSelfTest,
   verifyInstance,
   type FrameworkIdentity,
 } from '../packages/creator-core/src/index.ts';
@@ -127,6 +128,53 @@ test('Upgrade plan detects no-op when Instance already matches Framework', () =>
   } finally {
     fs.rmSync(parent, { recursive: true, force: true });
   }
+});
+
+test('Instance lifecycle one-click self test covers the full isolated flow and cleans up', () => {
+  const frameworkRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-self-test-framework-'));
+  try {
+    const result = runInstanceLifecycleSelfTest({
+      framework: frameworkIdentity('0.3.0', 'self-test-target-rev'),
+      frameworkRoot,
+    });
+    assert.equal(result.ok, true);
+    const ids = new Set(result.steps.filter((step) => step.ok).map((step) => step.id));
+    for (const id of [
+      'instance-create',
+      'pre-upgrade-verify',
+      'upgrade-plan',
+      'upgrade-apply',
+      'migration-evidence',
+      'backup-evidence',
+      'post-upgrade-verify',
+      'rollback',
+      'post-rollback-verify',
+      'business-file-unchanged',
+      'framework-self-isolation',
+      'cleanup',
+    ]) {
+      assert.ok(ids.has(id), `missing passing self-test step: ${id}`);
+    }
+  } finally {
+    fs.rmSync(frameworkRoot, { recursive: true, force: true });
+  }
+});
+
+test('Creator CLI exposes the same Instance self test', () => {
+  const output = execFileSync(process.execPath, [
+    '--experimental-strip-types',
+    'scripts/creator-cli.ts',
+    'instance',
+    'self-test',
+    '--framework-version',
+    '0.4.0',
+    '--framework-revision',
+    'self-test-cli-rev',
+  ], { cwd: process.cwd(), encoding: 'utf8' });
+  const result = JSON.parse(output) as { command: string; ok: boolean; steps: Array<{ id: string; ok: boolean }> };
+  assert.equal(result.command, 'creator instance self-test');
+  assert.equal(result.ok, true);
+  assert.ok(result.steps.some((step) => step.id === 'cleanup' && step.ok));
 });
 
 test('Creator CLI performs Instance create, plan, apply, verify and rollback E2E', () => {
