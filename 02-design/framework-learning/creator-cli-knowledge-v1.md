@@ -1,3 +1,8 @@
+> Status update (2026-10-08): the original scope below described the state at the time.
+> Decision 0012 subsequently implemented the Instance / Manifest / Upgrade /
+> Migration-evidence / Rollback lifecycle. Historical non-goals in this document
+> should be read as v1 scope boundaries, not current capability truth.
+
 # Creator CLI / Knowledge v1
 
 Status: implemented design
