@@ -345,25 +345,25 @@ function VersionMap({ runtime, instanceStatus }: { runtime: RuntimeIdentity | nu
           <Route size={20} />
           <strong>{t('frameworkUpgradeDiscoverTitle')}</strong>
           <p>{t('frameworkUpgradeDiscoverBody')}</p>
-          <span className="framework-capability-status planned">{t('frameworkCapabilityPlanned')}</span>
+          <span className="framework-capability-status available">{t('frameworkCapabilityAvailable')}</span>
         </article>
         <article className="panel">
           <Route size={20} />
           <strong>{t('frameworkUpgradePlanTitle')}</strong>
           <p>{t('frameworkUpgradePlanBody')}</p>
-          <span className="framework-capability-status planned">{t('frameworkCapabilityPlanned')}</span>
+          <span className="framework-capability-status available">{t('frameworkCapabilityAvailable')}</span>
         </article>
         <article className="panel">
           <Route size={20} />
           <strong>{t('frameworkUpgradeVerifyTitle')}</strong>
           <p>{t('frameworkUpgradeVerifyBody')}</p>
-          <span className="framework-capability-status planned">{t('frameworkCapabilityPlanned')}</span>
+          <span className="framework-capability-status available">{t('frameworkCapabilityAvailable')}</span>
         </article>
         <article className="panel">
           <Route size={20} />
           <strong>{t('frameworkUpgradeRollbackTitle')}</strong>
           <p>{t('frameworkUpgradeRollbackBody')}</p>
-          <span className="framework-capability-status planned">{t('frameworkCapabilityPlanned')}</span>
+          <span className="framework-capability-status available">{t('frameworkCapabilityAvailable')}</span>
         </article>
       </section>
 
