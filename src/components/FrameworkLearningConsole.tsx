@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ChevronRight, CircleDashed, FileCode2, FolderTree, GitBranch, PackageOpen, Route, Wrench } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import type { AppSection } from '../domain/workspace';
-import { assetClient } from '../services/assetClient';
+import { assetClient, type InstanceStatusView } from '../services/assetClient';
 import {
   FRAMEWORK_DIRECTORY_GUIDES,
   FRAMEWORK_INSTANCE_CAPABILITIES,
@@ -37,6 +37,7 @@ export function FrameworkLearningConsole({ onNavigate, onOpenCreator }: { onNavi
   const { t, loc } = useI18n();
   const [tab, setTab] = useState<Tab>('directories');
   const [runtime, setRuntime] = useState<RuntimeIdentity | null>(null);
+  const [instanceStatus, setInstanceStatus] = useState<InstanceStatusView | null>(null);
   const [directoryId, setDirectoryId] = useState(FRAMEWORK_DIRECTORY_GUIDES[0]?.id ?? 'src');
   const [filePath, setFilePath] = useState(FRAMEWORK_KEY_FILE_GUIDES[0]?.path ?? 'src/App.tsx');
 
@@ -52,12 +53,19 @@ export function FrameworkLearningConsole({ onNavigate, onOpenCreator }: { onNavi
 
   useEffect(() => {
     assetClient.config()
-      .then((cfg) => setRuntime({
-        projectRoot: cfg.projectRoot,
-        mode: cfg.mode,
-        frameworkVersion: cfg.frameworkVersion,
-        frameworkRevision: cfg.frameworkRevision,
-      }))
+      .then(async (cfg) => {
+        setRuntime({
+          projectRoot: cfg.projectRoot,
+          mode: cfg.mode,
+          frameworkVersion: cfg.frameworkVersion,
+          frameworkRevision: cfg.frameworkRevision,
+        });
+        if (cfg.mode === 'business-project') {
+          setInstanceStatus(await assetClient.instanceStatus(cfg.projectRoot).catch(() => null));
+        } else {
+          setInstanceStatus(null);
+        }
+      })
       .catch(() => undefined);
   }, []);
 
@@ -134,7 +142,7 @@ export function FrameworkLearningConsole({ onNavigate, onOpenCreator }: { onNavi
       ) : null}
 
       {tab === 'instances' ? <InstanceManager runtime={runtime} onNavigate={onNavigate} onOpenCreator={onOpenCreator} /> : null}
-      {tab === 'versions' ? <VersionMap runtime={runtime} /> : null}
+      {tab === 'versions' ? <VersionMap runtime={runtime} instanceStatus={instanceStatus} /> : null}
     </section>
   );
 }
@@ -301,7 +309,7 @@ function InstanceManager({ runtime, onNavigate, onOpenCreator }: { runtime: Runt
   );
 }
 
-function VersionMap({ runtime }: { runtime: RuntimeIdentity | null }) {
+function VersionMap({ runtime, instanceStatus }: { runtime: RuntimeIdentity | null; instanceStatus: InstanceStatusView | null }) {
   const { t } = useI18n();
   return (
     <div className="framework-version-map">
@@ -316,7 +324,17 @@ function VersionMap({ runtime }: { runtime: RuntimeIdentity | null }) {
         <div className="framework-version-flow">
           <div><span>{t('frameworkVersionCentral')}</span><strong>{runtime ? `Framework v${runtime.frameworkVersion} · ${runtime.frameworkRevision}` : 'Framework —'}</strong><small>{t('frameworkVersionCentralNote')}</small></div>
           <i>→</i>
-          <div><span>{t('frameworkVersionInstance')}</span><strong>{runtime?.mode === 'business-project' ? t('frameworkVersionInstanceCurrentBound') : t('frameworkVersionInstanceUnbound')}</strong><small>{t('frameworkVersionInstanceNote')}</small></div>
+          <div>
+            <span>{t('frameworkVersionInstance')}</span>
+            <strong>
+              {instanceStatus?.manifest
+                ? `v${instanceStatus.manifest.framework.version} · ${instanceStatus.manifest.framework.revision} · gen ${instanceStatus.manifest.generation}`
+                : runtime?.mode === 'business-project'
+                  ? t('frameworkVersionInstanceCurrentBound')
+                  : t('frameworkVersionInstanceUnbound')}
+            </strong>
+            <small>{instanceStatus?.manifest ? (instanceStatus.verification.upToDate ? t('instanceUpToDate') : t('instanceNeedsUpgrade')) : t('frameworkVersionInstanceNote')}</small>
+          </div>
           <i>→</i>
           <div><span>{t('frameworkVersionProject')}</span><strong>{t('frameworkVersionProjectValue')}</strong><small>{t('frameworkVersionProjectNote')}</small></div>
         </div>
