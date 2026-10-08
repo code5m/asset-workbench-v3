@@ -91,8 +91,9 @@ export const FRAMEWORK_DIRECTORY_GUIDES: FrameworkDirectoryGuide[] = [
       { path: 'packages/protocol', label: { 'zh-CN': '共享数据契约（代码包名仍为 protocol）', en: 'Shared data contracts (package still named protocol)' } },
       { path: 'packages/provider-sdk', label: { 'zh-CN': 'Provider 定义与扩展边界', en: 'Provider definitions and extension boundary' } },
       { path: 'packages/starter', label: { 'zh-CN': 'Knowledge Init 当前实现', en: 'Current Knowledge Init implementation' } },
+      { path: 'packages/creator-core', label: { 'zh-CN': 'Instance / Upgrade / Migration 生命周期 Core', en: 'Instance / Upgrade / Migration lifecycle Core' } },
     ],
-    keyFiles: ['packages/asset-core/src/index.ts', 'packages/protocol/src/index.ts', 'packages/provider-sdk/src/index.ts', 'packages/starter/src/index.ts'],
+    keyFiles: ['packages/asset-core/src/index.ts', 'packages/protocol/src/index.ts', 'packages/provider-sdk/src/index.ts', 'packages/starter/src/index.ts', 'packages/creator-core/src/index.ts'],
   },
   {
     id: 'providers',
@@ -270,6 +271,16 @@ export const FRAMEWORK_KEY_FILE_GUIDES: FrameworkKeyFileGuide[] = [
     dependsOn: { 'zh-CN': 'Asset Core 的标准结构。', en: 'The standard structure from Asset Core.' },
     impact: { 'zh-CN': '中：不会生成业务代码，也不是完整 Workbench Instance Creator。', en: 'Medium: it does not generate business code and is not a full Workbench Instance Creator.' },
     learning: { 'zh-CN': '理解当前能力边界，避免和 Spring Boot Starter / Maven 混淆。', en: 'Understand its current boundary to avoid Spring Boot Starter/Maven confusion.' },
+    level: 'must-understand',
+  },
+  {
+    path: 'packages/creator-core/src/index.ts',
+    title: { 'zh-CN': 'Creator Instance 生命周期 Core', en: 'Creator Instance lifecycle Core' },
+    responsibility: { 'zh-CN': '创建 Instance Manifest、验证版本身份、生成升级计划、应用迁移、记录备份并执行安全回滚。', en: 'Creates Instance Manifests, verifies version identity, plans upgrades, applies migrations, records backups, and performs safe rollback.' },
+    usedBy: { 'zh-CN': 'Creator CLI、Local API、Creator Workbench 与生命周期测试。', en: 'Creator CLI, Local API, Creator Workbench, and lifecycle tests.' },
+    dependsOn: { 'zh-CN': 'Knowledge Init、文件系统与 Framework identity。', en: 'Knowledge Init, filesystem state, and Framework identity.' },
+    impact: { 'zh-CN': '很高：这里定义 Instance 版本、升级和回滚的真实安全边界。', en: 'Very high: this defines the real safety boundary for Instance versioning, upgrades, and rollback.' },
+    learning: { 'zh-CN': '理解 Manifest / Plan / Migration 三个对象及“只回滚最新迁移”规则即可。', en: 'Understand Manifest / Plan / Migration plus the latest-migration-only rollback rule.' },
     level: 'must-understand',
   },
   {
