@@ -4073,3 +4073,261 @@ code {
   overflow-wrap: anywhere;
   text-transform: none;
 }
+
+
+/* ---- Self Test learning flow ------------------------------------------- */
+.instance-self-test-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.instance-self-test-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.instance-self-test-title > svg {
+  color: #087a55;
+  flex: 0 0 auto;
+}
+
+.instance-self-test-title > div {
+  display: grid;
+  gap: 3px;
+}
+
+.instance-self-test-title strong {
+  color: #17202a;
+  font-size: 14px;
+}
+
+.instance-self-test-title span {
+  color: #475467;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.instance-self-test-machine-status {
+  padding: 5px 8px;
+  border: 1px solid #bfe0d3;
+  border-radius: 999px;
+  background: #fff;
+  color: #087a55;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.instance-self-test-route {
+  display: grid;
+  gap: 5px;
+  padding: 10px 12px;
+  border-left: 3px solid #176b87;
+  border-radius: 0 8px 8px 0;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.instance-self-test-route strong {
+  color: #17202a;
+  font-size: 12px;
+}
+
+.instance-self-test-route span {
+  color: #475467;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.instance-self-test-flow {
+  display: grid;
+  gap: 8px;
+}
+
+.instance-self-test-flow-step {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid #dbe3ec;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.instance-self-test-flow-step.pass {
+  border-color: #cfe8dd;
+}
+
+.instance-self-test-flow-step.fail {
+  border-color: #efc7b0;
+  background: #fffaf5;
+}
+
+.instance-self-test-step-index {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #eef5f7;
+  color: #176b87;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.instance-self-test-step-content {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.instance-self-test-step-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.instance-self-test-step-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.instance-self-test-step-heading small {
+  color: #98a2b3;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.instance-self-test-step-heading strong {
+  color: #17202a;
+  font-size: 13px;
+}
+
+.instance-self-test-step-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.instance-self-test-step-status.pass {
+  color: #087a55;
+}
+
+.instance-self-test-step-status.fail {
+  color: #b54708;
+}
+
+.instance-self-test-step-status.pending {
+  color: #667085;
+}
+
+.instance-self-test-learning-row {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.instance-self-test-learning-row > span {
+  color: #667085;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.instance-self-test-learning-row p,
+.instance-self-test-learning-row code {
+  margin: 0;
+  min-width: 0;
+  color: #344054;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.instance-self-test-learning-row code {
+  display: block;
+  overflow-x: auto;
+  padding: 7px 8px;
+  border-radius: 6px;
+  background: #101828;
+  color: #f2f4f7;
+  white-space: nowrap;
+}
+
+.instance-self-test-failure {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border-radius: 7px;
+  background: #fff1e8;
+}
+
+.instance-self-test-failure strong {
+  color: #9a3412;
+  font-size: 10px;
+}
+
+.instance-self-test-failure code {
+  overflow-wrap: anywhere;
+  color: #7c2d12;
+  font-size: 10px;
+}
+
+.instance-self-test-technical {
+  border-top: 1px dashed #cdd5df;
+  padding-top: 8px;
+}
+
+.instance-self-test-technical summary {
+  cursor: pointer;
+  color: #475467;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.instance-self-test-technical > p {
+  margin: 8px 0;
+  color: #667085;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.instance-self-test-technical > div {
+  display: grid;
+  gap: 5px;
+}
+
+.instance-self-test-technical > div > div {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.4fr) minmax(0, 1fr);
+  gap: 8px;
+  padding: 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.instance-self-test-technical code,
+.instance-self-test-technical span {
+  overflow-wrap: anywhere;
+  font-size: 9px;
+}
+
+@media (max-width: 680px) {
+  .instance-self-test-head,
+  .instance-self-test-step-heading {
+    flex-direction: column;
+  }
+
+  .instance-self-test-flow-step {
+    grid-template-columns: 1fr;
+  }
+
+  .instance-self-test-learning-row,
+  .instance-self-test-technical > div > div {
+    grid-template-columns: 1fr;
+  }
+}
