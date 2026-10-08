@@ -195,6 +195,7 @@ function createHandler() {
             name,
             initializeKnowledge,
             framework: frameworkIdentity(cfg.frameworkVersion, cfg.frameworkRevision),
+            frameworkRoot: cfg.appRoot,
           });
           sendJson(res, 201, result);
         } catch (e) {
