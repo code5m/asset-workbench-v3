@@ -37,6 +37,7 @@ import {
   instanceStatus,
   planInstanceUpgrade,
   rollbackInstance,
+  runInstanceLifecycleSelfTest,
   verifyInstance,
 } from '../packages/creator-core/src/index.ts';
 
@@ -266,6 +267,20 @@ function createHandler() {
           sendJson(res, 200, result);
         } catch (e) {
           sendJson(res, 400, { error: (e as Error).message });
+        }
+        return;
+      }
+
+      if (req.method === 'POST' && pathPart === '/creator/instance/self-test') {
+        try {
+          const cfg = loadConfig();
+          const result = runInstanceLifecycleSelfTest({
+            framework: frameworkIdentity(cfg.frameworkVersion, cfg.frameworkRevision),
+            frameworkRoot: cfg.appRoot,
+          });
+          sendJson(res, result.ok ? 200 : 422, result);
+        } catch (e) {
+          sendJson(res, 500, { error: (e as Error).message });
         }
         return;
       }
