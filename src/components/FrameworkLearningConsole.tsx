@@ -290,9 +290,11 @@ function InstanceManager({ runtime, onNavigate, onOpenCreator }: { runtime: Runt
           <code>npm run creator -- knowledge create --target ./my-service-knowledge</code>
           <code>npm run creator -- knowledge verify --target ./my-service-knowledge</code>
           <small>{t('frameworkCreatorCliAvailable')}</small>
-          <span>{t('frameworkInstanceCliFuture')}</span>
-          <code>asset-workbench creator instance create --project ./my-service</code>
-          <small>{t('frameworkInstanceCliPlanned')}</small>
+          <span>{t('frameworkInstanceCliCurrent')}</span>
+          <code>npm run creator -- instance create --project ./my-service</code>
+          <code>npm run creator -- instance upgrade-plan --project ./my-service</code>
+          <code>npm run creator -- instance rollback --project ./my-service</code>
+          <small>{t('frameworkInstanceCliAvailable')}</small>
         </div>
       </section>
     </div>
