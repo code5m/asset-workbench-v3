@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "work_record_creator_instance_lifecycle_20261008",
+  "type": "agent-work-record",
+  "title": "Creator Instance Lifecycle v1 implementation",
+  "source": "chatgpt",
+  "createdAt": "2026-10-08T00:00:00.000Z",
+  "updatedAt": "2026-10-08T00:00:00.000Z",
+  "captureMode": "agent-work-record",
+  "transcriptCaptureStatus": "partial",
+  "relatedAssetPaths": [
+    "02-design/framework-learning/creator-instance-lifecycle-v1.md",
+    "02-design/decisions/0012-implement-creator-instance-lifecycle.md",
+    "packages/creator-core/src/index.ts",
+    "src/components/InstanceLifecyclePanel.tsx",
+    "scripts/test-creator-instance-lifecycle-v1.ts"
+  ]
+}
