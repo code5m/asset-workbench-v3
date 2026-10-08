@@ -653,6 +653,53 @@ test('Creator Workbench exposes a typed one-click Instance self test without bro
   assert.match(cli, /instance self-test/);
 });
 
+test('Instance Self Test is presented as an ordered learning flow with purpose, action, and pass criteria', () => {
+  const panel = read('src/components/InstanceLifecyclePanel.tsx');
+  const zh = ui['zh-CN'];
+  const en = ui.en;
+
+  const orderedIds = [
+    'instance-create',
+    'pre-upgrade-verify',
+    'upgrade-plan',
+    'upgrade-apply',
+    'migration-evidence',
+    'backup-evidence',
+    'post-upgrade-verify',
+    'rollback',
+    'post-rollback-verify',
+    'business-file-unchanged',
+    'framework-self-isolation',
+    'cleanup',
+  ];
+
+  let previous = -1;
+  for (const id of orderedIds) {
+    const index = panel.indexOf(`id: '${id}'`);
+    assert.ok(index > previous, `Self Test step should appear in order: ${id}`);
+    previous = index;
+  }
+
+  assert.match(panel, /number: '01'/);
+  assert.match(panel, /number: '12'/);
+  assert.match(panel, /instanceSelfTestPurposeLabel/);
+  assert.match(panel, /instanceSelfTestCommandLabel/);
+  assert.match(panel, /instanceSelfTestCheckLabel/);
+  assert.match(panel, /instanceSelfTestPassCriteriaLabel/);
+  assert.match(panel, /instance-self-test-technical/);
+  assert.match(panel, /<details className="instance-self-test-technical">/);
+
+  assert.match(zh.instanceSelfTestRoute, /创建旧版本 Instance.*升级前验证.*生成升级计划.*应用升级.*回滚.*清理临时数据/);
+  assert.match(zh.instanceSelfTestStepPlanPurpose, /比较旧 Instance 与当前 Framework/);
+  assert.match(zh.instanceSelfTestStepPlanAction, /npm run creator -- instance upgrade-plan/);
+  assert.match(zh.instanceSelfTestStepPlanPass, /Upgrade Plan/);
+  assert.match(zh.instanceSelfTestStepBusinessPurpose, /不偷偷修改业务源码/);
+  assert.match(zh.instanceSelfTestStepIsolationPass, /外部业务项目/);
+
+  assert.match(en.instanceSelfTestRoute, /Create old Instance.*upgrade plan.*rollback.*cleanup/i);
+  assert.match(en.instanceSelfTestStepPlanAction, /npm run creator -- instance upgrade-plan/);
+});
+
 test('Framework Learning is slimmed to learning while operational Creator lives in Workbench', () => {
   const page = read('src/components/FrameworkPage.tsx');
   const frameworkConsole = read('src/components/FrameworkLearningConsole.tsx');
@@ -732,6 +779,74 @@ test('visual framework console copy exists in zh-CN and en', () => {
     'instanceSelfTestFail',
     'instanceSelfTestTitle',
     'instanceSelfTestCleanup',
+    'instanceSelfTestPassHuman',
+    'instanceSelfTestFailHuman',
+    'instanceSelfTestRouteTitle',
+    'instanceSelfTestRoute',
+    'instanceSelfTestPurposeLabel',
+    'instanceSelfTestCommandLabel',
+    'instanceSelfTestCheckLabel',
+    'instanceSelfTestPassCriteriaLabel',
+    'instanceSelfTestFailureReason',
+    'instanceSelfTestStatusPass',
+    'instanceSelfTestStatusFail',
+    'instanceSelfTestStatusPending',
+    'instanceSelfTestTechnicalDetails',
+    'instanceSelfTestTechnicalDetailsHint',
+    'instanceSelfTestPhaseBaseline',
+    'instanceSelfTestPhaseUpgrade',
+    'instanceSelfTestPhaseVerify',
+    'instanceSelfTestPhaseRollback',
+    'instanceSelfTestPhaseSafety',
+    'instanceSelfTestPhaseCleanup',
+    'instanceSelfTestStepCreateTitle',
+    'instanceSelfTestStepCreatePurpose',
+    'instanceSelfTestStepCreateAction',
+    'instanceSelfTestStepCreatePass',
+    'instanceSelfTestStepPreVerifyTitle',
+    'instanceSelfTestStepPreVerifyPurpose',
+    'instanceSelfTestStepPreVerifyAction',
+    'instanceSelfTestStepPreVerifyPass',
+    'instanceSelfTestStepPlanTitle',
+    'instanceSelfTestStepPlanPurpose',
+    'instanceSelfTestStepPlanAction',
+    'instanceSelfTestStepPlanPass',
+    'instanceSelfTestStepApplyTitle',
+    'instanceSelfTestStepApplyPurpose',
+    'instanceSelfTestStepApplyAction',
+    'instanceSelfTestStepApplyPass',
+    'instanceSelfTestStepMigrationTitle',
+    'instanceSelfTestStepMigrationPurpose',
+    'instanceSelfTestStepMigrationAction',
+    'instanceSelfTestStepMigrationPass',
+    'instanceSelfTestStepBackupTitle',
+    'instanceSelfTestStepBackupPurpose',
+    'instanceSelfTestStepBackupAction',
+    'instanceSelfTestStepBackupPass',
+    'instanceSelfTestStepPostVerifyTitle',
+    'instanceSelfTestStepPostVerifyPurpose',
+    'instanceSelfTestStepPostVerifyAction',
+    'instanceSelfTestStepPostVerifyPass',
+    'instanceSelfTestStepRollbackTitle',
+    'instanceSelfTestStepRollbackPurpose',
+    'instanceSelfTestStepRollbackAction',
+    'instanceSelfTestStepRollbackPass',
+    'instanceSelfTestStepPostRollbackTitle',
+    'instanceSelfTestStepPostRollbackPurpose',
+    'instanceSelfTestStepPostRollbackAction',
+    'instanceSelfTestStepPostRollbackPass',
+    'instanceSelfTestStepBusinessTitle',
+    'instanceSelfTestStepBusinessPurpose',
+    'instanceSelfTestStepBusinessAction',
+    'instanceSelfTestStepBusinessPass',
+    'instanceSelfTestStepIsolationTitle',
+    'instanceSelfTestStepIsolationPurpose',
+    'instanceSelfTestStepIsolationAction',
+    'instanceSelfTestStepIsolationPass',
+    'instanceSelfTestStepCleanupTitle',
+    'instanceSelfTestStepCleanupPurpose',
+    'instanceSelfTestStepCleanupAction',
+    'instanceSelfTestStepCleanupPass',
     'starterVerify',
     'starterVerificationTitle',
     'starterCliCreateTitle',
