@@ -1,3 +1,8 @@
+> Status update (2026-10-08): the original scope below described the state at the time.
+> Decision 0012 subsequently implemented the Instance / Manifest / Upgrade /
+> Migration-evidence / Rollback lifecycle. Historical non-goals in this document
+> should be read as v1 scope boundaries, not current capability truth.
+
 # Framework Learning Slim + Creator Workbench v1
 
 Status: implemented design
@@ -30,9 +35,9 @@ Workbench
 ├── Project status
 └── Creator
     ├── Knowledge       available
-    ├── Instance        planned
-    ├── Upgrade         planned
-    └── Migration       planned
+    ├── Instance        available
+    ├── Upgrade         available
+    └── Migration       available
 ```
 
 ## Learning page rules
@@ -60,11 +65,10 @@ The existing Workbench gets two top-level views:
 
 Creator Workbench is the operational surface.
 
-Knowledge Creator remains the first implemented capability and reuses the existing
-`StarterCreator`, Local API, Creator Core, and CLI.
-
-Planned capabilities are shown as status cards only. They do not expose fake action
-buttons.
+Knowledge Creator remains implemented. Creator Workbench now also exposes the real
+Instance lifecycle implemented by Decision 0012: create/verify, version-aware upgrade
+plan/apply, migration evidence, and rollback. Browser actions remain typed capabilities
+and never become arbitrary shell execution.
 
 ## Navigation
 
