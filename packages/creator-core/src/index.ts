@@ -279,6 +279,14 @@ export function verifyInstance(projectRootInput: string, target?: FrameworkIdent
       detail: manifest.capabilities[capability] || 'missing',
     });
   }
+  if (manifest.knowledge.verified) {
+    const knowledge = verifyKnowledge(projectRoot);
+    checks.push({
+      id: 'knowledge',
+      ok: knowledge.ok,
+      detail: knowledge.ok ? 'verified knowledge structure is still present' : 'manifest says knowledge is verified but the structure drifted',
+    });
+  }
 
   const structuralOk = checks.every((check) => check.ok);
   const upToDate = target
