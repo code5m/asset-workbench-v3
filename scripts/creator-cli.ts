@@ -6,6 +6,7 @@ import {
   instanceStatus,
   planInstanceUpgrade,
   rollbackInstance,
+  runInstanceLifecycleSelfTest,
   verifyInstance,
 } from '../packages/creator-core/src/index.ts';
 import { loadConfig } from '../server/config.ts';
@@ -36,6 +37,7 @@ function usage(): never {
     '  npm run creator -- instance upgrade-plan --project <directory>',
     '  npm run creator -- instance upgrade-apply --project <directory> --plan <plan-id>',
     '  npm run creator -- instance rollback --project <directory> [--migration <migration-id>]',
+    '  npm run creator -- instance self-test',
     '',
     'Advanced test/automation override:',
     '  --framework-version <version> --framework-revision <revision>',
@@ -64,12 +66,19 @@ try {
     console.log(JSON.stringify({ command: `creator knowledge ${action}`, ...result }, null, 2));
     if ('ok' in result && !result.ok) process.exitCode = 1;
   } else if (subject === 'instance') {
-    const projectRoot = arg('--project');
-    if (!projectRoot) usage();
     const framework = currentFramework();
     let result: unknown;
 
-    if (action === 'create') {
+    if (action === 'self-test') {
+      result = runInstanceLifecycleSelfTest({
+        framework,
+        frameworkRoot: loadConfig().appRoot,
+      });
+    } else {
+      const projectRoot = arg('--project');
+      if (!projectRoot) usage();
+
+      if (action === 'create') {
       result = createInstance({
         projectRoot,
         name: arg('--name'),
@@ -89,12 +98,13 @@ try {
       result = applyInstanceUpgrade(projectRoot, planId);
     } else if (action === 'rollback') {
       result = rollbackInstance(projectRoot, arg('--migration'));
-    } else {
-      usage();
+      } else {
+        usage();
+      }
     }
 
     console.log(JSON.stringify({ command: `creator instance ${action}`, ...(result as object) }, null, 2));
-    if (action === 'verify' && result && typeof result === 'object' && 'ok' in result && !(result as { ok: boolean }).ok) {
+    if ((action === 'verify' || action === 'self-test') && result && typeof result === 'object' && 'ok' in result && !(result as { ok: boolean }).ok) {
       process.exitCode = 1;
     }
   } else {

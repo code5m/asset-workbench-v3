@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { createHash, randomUUID } from 'node:crypto';
 import { createKnowledge, verifyKnowledge, type KnowledgeVerificationResult } from '../../starter/src/index.ts';
 
@@ -120,6 +121,23 @@ export interface InstanceUpgradeApplyResult {
   manifest: InstanceManifest;
   plan: InstanceUpgradePlan;
   migration: MigrationRecord | null;
+}
+
+export interface InstanceSelfTestStep {
+  id: string;
+  ok: boolean;
+  detail: string;
+}
+
+export interface InstanceSelfTestResult {
+  ok: boolean;
+  startedAt: string;
+  finishedAt: string;
+  framework: {
+    version: string;
+    revision: string;
+  };
+  steps: InstanceSelfTestStep[];
 }
 
 function resolveProjectRoot(input: string): string {
@@ -486,5 +504,162 @@ export function instanceStatus(projectRootInput: string, target: FrameworkIdenti
     manifest: readInstanceManifest(projectRoot),
     verification: verifyInstance(projectRoot, target),
     latestMigration: latestMigration(projectRoot),
+  };
+}
+
+
+export function runInstanceLifecycleSelfTest(options: {
+  framework: FrameworkIdentity;
+  frameworkRoot: string;
+}): InstanceSelfTestResult {
+  const startedAt = new Date().toISOString();
+  const steps: InstanceSelfTestStep[] = [];
+  const requiredSteps = [
+    'instance-create',
+    'pre-upgrade-verify',
+    'upgrade-plan',
+    'upgrade-apply',
+    'migration-evidence',
+    'backup-evidence',
+    'post-upgrade-verify',
+    'rollback',
+    'post-rollback-verify',
+    'business-file-unchanged',
+    'framework-self-isolation',
+    'cleanup',
+  ];
+
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-instance-self-test-'));
+  const projectRoot = path.join(parent, 'business-project');
+  const businessFile = path.join(projectRoot, 'package.json');
+  const businessFileContent = '{"name":"awb-instance-self-test"}\n';
+  const oldFramework: FrameworkIdentity = {
+    version: `${options.framework.version}-self-test-old-${randomUUID().slice(0, 8)}`,
+    revision: `self-test-old-${randomUUID().slice(0, 8)}`,
+    capabilities: { ...options.framework.capabilities },
+  };
+
+  const pass = (id: string, detail: string) => {
+    steps.push({ id, ok: true, detail });
+  };
+  const fail = (id: string, error: unknown) => {
+    steps.push({
+      id,
+      ok: false,
+      detail: error instanceof Error ? error.message : String(error),
+    });
+  };
+  const assert = (condition: unknown, message: string) => {
+    if (!condition) throw new Error(message);
+  };
+
+  let currentStep = 'instance-create';
+
+  try {
+    fs.mkdirSync(projectRoot, { recursive: true });
+    fs.writeFileSync(businessFile, businessFileContent, 'utf8');
+
+    currentStep = 'instance-create';
+    const created = createInstance({
+      projectRoot,
+      name: 'awb-instance-self-test',
+      framework: oldFramework,
+      frameworkRoot: options.frameworkRoot,
+    });
+    assert(created.manifest.generation === 1, 'expected generation 1 after create');
+    assert(created.manifest.framework.version === oldFramework.version, 'old Framework version was not persisted');
+    pass(currentStep, `generation=1 · ${oldFramework.version} · ${oldFramework.revision}`);
+
+    currentStep = 'pre-upgrade-verify';
+    const beforeVerify = verifyInstance(projectRoot, options.framework);
+    assert(beforeVerify.ok, 'pre-upgrade Instance structure should be valid');
+    assert(!beforeVerify.upToDate, 'pre-upgrade Instance should require upgrade');
+    pass(currentStep, 'ok=true · upToDate=false');
+
+    currentStep = 'upgrade-plan';
+    const plan = planInstanceUpgrade(projectRoot, options.framework);
+    assert(plan.status === 'ready', `expected ready plan, got ${plan.status}`);
+    assert(plan.actions.some((action) => action.kind === 'framework-version'), 'Framework version action missing');
+    assert(plan.actions.some((action) => action.kind === 'framework-revision'), 'Framework revision action missing');
+    pass(currentStep, `${plan.actions.length} action(s) · plan=${plan.planId}`);
+
+    currentStep = 'upgrade-apply';
+    const applied = applyInstanceUpgrade(projectRoot, plan.planId);
+    assert(applied.applied, 'upgrade was not applied');
+    assert(applied.manifest.generation === 2, 'expected generation 2 after apply');
+    assert(applied.manifest.framework.version === options.framework.version, 'Framework version did not upgrade');
+    assert(applied.manifest.framework.revision === options.framework.revision, 'Framework revision did not upgrade');
+    pass(currentStep, `generation=2 · ${options.framework.version} · ${options.framework.revision}`);
+
+    currentStep = 'migration-evidence';
+    assert(applied.migration?.status === 'applied', 'applied migration evidence is missing');
+    assert(Boolean(applied.migration?.beforeDigest && applied.migration?.afterDigest), 'migration digests are missing');
+    pass(currentStep, `migration=${applied.migration?.migrationId}`);
+
+    currentStep = 'backup-evidence';
+    assert(Boolean(applied.migration?.backupPath && fs.existsSync(applied.migration.backupPath)), 'Manifest backup file is missing');
+    pass(currentStep, applied.migration?.backupPath ?? 'backup present');
+
+    currentStep = 'post-upgrade-verify';
+    const afterVerify = verifyInstance(projectRoot, options.framework);
+    assert(afterVerify.ok, 'post-upgrade Instance structure should be valid');
+    assert(afterVerify.upToDate, 'post-upgrade Instance should match the current Framework');
+    pass(currentStep, 'ok=true · upToDate=true');
+
+    currentStep = 'rollback';
+    const rolledBack = rollbackInstance(projectRoot, applied.migration?.migrationId);
+    assert(rolledBack.status === 'rolled-back', 'migration did not enter rolled-back state');
+    const restored = readInstanceManifest(projectRoot);
+    assert(restored?.generation === 1, 'rollback did not restore generation 1');
+    assert(restored?.framework.version === oldFramework.version, 'rollback did not restore old Framework version');
+    assert(restored?.framework.revision === oldFramework.revision, 'rollback did not restore old Framework revision');
+    pass(currentStep, 'generation restored to 1 · old Framework identity restored');
+
+    currentStep = 'post-rollback-verify';
+    const rollbackVerify = verifyInstance(projectRoot, options.framework);
+    assert(rollbackVerify.ok, 'rolled-back Instance structure should remain valid');
+    assert(!rollbackVerify.upToDate, 'rolled-back Instance should require upgrade again');
+    pass(currentStep, 'ok=true · upToDate=false');
+
+    currentStep = 'business-file-unchanged';
+    assert(fs.readFileSync(businessFile, 'utf8') === businessFileContent, 'business file changed during lifecycle test');
+    pass(currentStep, 'package.json unchanged across create / upgrade / rollback');
+
+    currentStep = 'framework-self-isolation';
+    try {
+      createInstance({
+        projectRoot: options.frameworkRoot,
+        name: 'framework-self-should-fail',
+        framework: options.framework,
+        frameworkRoot: options.frameworkRoot,
+      });
+      throw new Error('Framework Self unexpectedly accepted as an Instance target');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      assert(message.includes('external business project'), `unexpected isolation error: ${message}`);
+      pass(currentStep, 'configured Framework Self rejected before Instance state is written');
+    }
+  } catch (error) {
+    fail(currentStep, error);
+  } finally {
+    try {
+      fs.rmSync(parent, { recursive: true, force: true });
+      if (fs.existsSync(parent)) throw new Error('temporary self-test directory still exists');
+      pass('cleanup', 'temporary project and all lifecycle evidence removed');
+    } catch (error) {
+      fail('cleanup', error);
+    }
+  }
+
+  const ok = requiredSteps.every((id) => steps.some((step) => step.id === id && step.ok));
+  return {
+    ok,
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    framework: {
+      version: options.framework.version,
+      revision: options.framework.revision,
+    },
+    steps,
   };
 }

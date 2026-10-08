@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, CircleX, GitCompareArrows, PackageCheck, RotateCcw, ShieldCheck } from 'lucide-react';
-import { assetClient, type InstanceStatusView, type InstanceUpgradePlanView } from '../services/assetClient';
+import { assetClient, type InstanceSelfTestView, type InstanceStatusView, type InstanceUpgradePlanView } from '../services/assetClient';
 import { useI18n } from '../i18n/I18nProvider';
 
 export function InstanceLifecyclePanel() {
@@ -12,6 +12,7 @@ export function InstanceLifecyclePanel() {
   const [plan, setPlan] = useState<InstanceUpgradePlanView | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [selfTest, setSelfTest] = useState<InstanceSelfTestView | null>(null);
 
   const manifest = status?.manifest ?? null;
   const canApply = plan?.status === 'ready' && plan.actions.length > 0;
@@ -102,6 +103,14 @@ export function InstanceLifecyclePanel() {
     setMessage(t('instanceRollbackDone'));
   });
 
+  const runSelfTest = () => run(async () => {
+    setSelfTest(null);
+    setMessage(t('instanceSelfTestRunning'));
+    const result = await assetClient.runInstanceSelfTest();
+    setSelfTest(result);
+    setMessage(result.ok ? t('instanceSelfTestPass') : t('instanceSelfTestFail'));
+  });
+
   return (
     <section className="panel instance-lifecycle-panel">
       <div className="instance-lifecycle-heading">
@@ -136,6 +145,7 @@ export function InstanceLifecyclePanel() {
         <button className="secondary-button" disabled={busy || !manifest} onClick={() => void planUpgrade()}><GitCompareArrows size={16} /> {t('instancePlanAction')}</button>
         <button className="secondary-button" disabled={busy || !canApply} onClick={() => void applyUpgrade()}>{t('instanceApplyAction')}</button>
         <button className="secondary-button" disabled={busy || !canRollback} onClick={() => void rollback()}><RotateCcw size={16} /> {t('instanceRollbackAction')}</button>
+        <button className="secondary-button" disabled={busy} onClick={() => void runSelfTest()}><ShieldCheck size={16} /> {t('instanceSelfTestAction')}</button>
       </div>
 
       <div className="starter-cli-map">
@@ -220,6 +230,32 @@ export function InstanceLifecyclePanel() {
           <code>{status.latestMigration.migrationId}</code>
           <span>{status.latestMigration.status}</span>
           <small>{status.latestMigration.backupPath}</small>
+        </div>
+      ) : null}
+
+      {selfTest ? (
+        <div className={selfTest.ok ? 'instance-self-test pass' : 'instance-self-test fail'}>
+          <div className="instance-manifest-head">
+            {selfTest.ok ? <CheckCircle2 size={18} /> : <CircleX size={18} />}
+            <strong>{t('instanceSelfTestTitle')}</strong>
+            <span className={`framework-capability-status ${selfTest.ok ? 'available' : 'partial'}`}>
+              {selfTest.ok ? 'SELF_TEST_PASS' : 'SELF_TEST_FAIL'}
+            </span>
+          </div>
+          <div className="instance-self-test-meta">
+            <span>{t('instanceFrameworkVersion')}: <strong>{selfTest.framework.version}</strong></span>
+            <span>{t('instanceFrameworkRevision')}: <strong>{selfTest.framework.revision}</strong></span>
+          </div>
+          <div className="starter-verification-list">
+            {selfTest.steps.map((step) => (
+              <div key={step.id} className={step.ok ? 'pass' : 'fail'}>
+                {step.ok ? <CheckCircle2 size={14} /> : <CircleX size={14} />}
+                <code>{step.id}</code>
+                <small>{step.detail}</small>
+              </div>
+            ))}
+          </div>
+          <p className="detail-summary">{t('instanceSelfTestCleanup')}</p>
         </div>
       ) : null}
 

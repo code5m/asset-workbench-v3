@@ -4040,3 +4040,36 @@ code {
     margin-left: 0;
   }
 }
+
+
+/* ---- Instance self test ------------------------------------------------- */
+.instance-self-test {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #dbe3ec;
+  border-radius: 10px;
+}
+
+.instance-self-test.pass {
+  border-color: #bfe0d3;
+  background: #f3fbf7;
+}
+
+.instance-self-test.fail {
+  border-color: #ead9b6;
+  background: #fff9ec;
+}
+
+.instance-self-test-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  color: #667085;
+  font-size: 11px;
+}
+
+.instance-self-test .starter-verification-list small {
+  overflow-wrap: anywhere;
+  text-transform: none;
+}

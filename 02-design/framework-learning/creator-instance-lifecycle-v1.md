@@ -233,3 +233,54 @@ Automated tests cover:
 - CLI create -> plan -> apply -> verify -> rollback E2E;
 - UI/API/Core wiring;
 - no arbitrary shell in browser UI.
+
+
+## Self Test acceptance surface
+
+Creator Workbench exposes a one-click **Instance Lifecycle Self Test**.
+
+The browser does not execute shell commands. The button calls the typed Local API,
+which invokes `runInstanceLifecycleSelfTest()` in Creator Core.
+
+The self test creates an isolated OS temporary business project and automatically
+checks:
+
+1. Instance create with deliberately old Framework identity;
+2. pre-upgrade verify is valid but `upToDate=false`;
+3. Upgrade Plan contains real version/revision differences;
+4. Upgrade Apply moves generation 1 -> 2;
+5. migration evidence contains before/after digests;
+6. Manifest backup exists;
+7. post-upgrade verify becomes `upToDate=true`;
+8. rollback restores generation 1 and the old Framework identity;
+9. post-rollback verify returns `upToDate=false`;
+10. a sentinel business file is unchanged;
+11. the configured Framework Self root is rejected as an Instance target;
+12. all temporary project/lifecycle state is removed.
+
+The UI renders every step as PASS/FAIL and emits `SELF_TEST_PASS` only when all
+required steps pass.
+
+The same Core is available for automation through:
+
+```bash
+npm run creator -- instance self-test
+```
+
+The self test never binds or mutates the user's current real business project.
+
+## Capability-status truth
+
+The four Version & Upgrade teaching cards now describe already implemented v1
+behavior and therefore render as **available**:
+
+- discover version differences;
+- create upgrade plan;
+- verify lifecycle state;
+- rollback latest applied migration.
+
+The following remain explicitly planned and must not be represented as implemented:
+
+- automatic business-code migration;
+- database Schema migration;
+- automatic cross-version source rewriting.
