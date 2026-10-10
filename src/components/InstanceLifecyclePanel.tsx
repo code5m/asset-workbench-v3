@@ -254,7 +254,7 @@ export function InstanceLifecyclePanel() {
     if (!active) {
       const created = await assetClient.createInstance(projectRoot.trim(), name.trim() || undefined, initializeKnowledge);
       active = created.manifest;
-      setStatus({ manifest: created.manifest, verification: null, latestMigration: null } as InstanceStatusView);
+      setStatus(await assetClient.instanceStatus(projectRoot.trim()));
     }
     const release = (await assetClient.frameworkRelease('publish')).release;
     if (!release) throw new Error('Framework release publication returned no build');
