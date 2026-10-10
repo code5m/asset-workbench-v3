@@ -221,6 +221,12 @@ export const assetClient = {
     if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
     return value;
   },
+  async listInstanceRuntimes(): Promise<Array<{ projectRoot: string; status: 'running' | 'stopped'; url: string | null }>> {
+    const res = await fetch(`${BASE}/creator/runtime/list`);
+    const value = await res.json() as Array<{ projectRoot: string; status: 'running' | 'stopped'; url: string | null }> | { error: string };
+    if (!res.ok) throw new ApiError(res.status, 'error' in value ? value.error : res.statusText);
+    return value as Array<{ projectRoot: string; status: 'running' | 'stopped'; url: string | null }>;
+  },
   async instanceRuntime(projectRoot: string, action: 'status' | 'start' | 'stop' | 'adopt' | 'rollback-release', releaseId?: string): Promise<{
     projectRoot: string; instanceId: string; status: 'running' | 'stopped';
     url: string | null; port: number | null; pid: number | null;
