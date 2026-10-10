@@ -87,7 +87,7 @@ export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated, 
         </div>
       </section>
 
-      <div className="console-view-tabs" role="tablist" aria-label={t('consoleModeTitle')}>
+      {!isManagedInstance ? <div className="console-view-tabs" role="tablist" aria-label={t('consoleModeTitle')}>
         <button className={view === 'project' ? 'active' : ''} onClick={() => onViewChange('project')}>
           {t('consoleModeProject')}
         </button>
