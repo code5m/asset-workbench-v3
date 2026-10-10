@@ -361,3 +361,23 @@ guarantee of restoration from hardware failure.
 Safety: one shared source, no copying code to business repositories; runtime
 state remains in the user-selected project. Verify behavior with real end-to-end
 tests, not documentation-only assertions.
+
+## Workbench startup UX: one daily action, explicit advanced lifecycle (2026-10-10)
+
+**Product rule:** a business user chooses the project directory once, then creates/starts the Workbench, then opens it. The everyday action must never silently adopt a new runtime build or change business source files.
+
+| Scenario | Normal user action | System behavior |
+| --- | --- | --- |
+| New business project with no Instance | Create or start Workbench | Create Manifest, publish shared Framework release only if none exists, start pinned runtime; show Open link |
+| Existing stopped Instance | Start Workbench | Read existing Manifest, reuse the pinned release and start without publishing or adopting a newer release |
+| Existing running Instance | Open Workbench | Open its local URL in a new tab without a second launch |
+| No published central release | First-time start | Publish and verify a release automatically, then start |
+| Framework source changed | Advanced: Publish Framework release | Produce a new immutable central release; running Instances are not automatically changed |
+| Intentional upgrade | Advanced: Adopt latest release | Explicitly switch selected Instance, verify health and preserve rollback evidence |
+| Recovery | Advanced: Rollback app release | Switch only when an actual previous release is recorded |
+
+**UI information architecture:** list existing Workbenches first; one guided project path → prepare/start → Open sequence; optional Instance name and 00–05 knowledge initialization collapsed; advanced lifecycle controls and CLI collapsed separately. The standalone sandbox self-test remains separate from real-project actions.
+
+**Precise terminology:** `Publish Framework release` builds a shared application release, `Create Instance` writes only the Instance identity, `Start Workbench` launches a process without navigating the browser, and `Open Workbench` navigates to the running Instance. For nontechnical users, only the guided Create/Start and Open steps are the primary call to action.
+
+**Acceptance requirement:** frontend static checks plus the existing real independent-process E2E. Screenshot/browser usability checks should be recorded separately; automated CI is not a substitute for manual GUI evidence.

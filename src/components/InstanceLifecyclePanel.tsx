@@ -26,9 +26,21 @@ export function InstanceLifecyclePanel() {
       setInventoryError('');
     } catch (error) { setInventoryError(error instanceof Error ? error.message : String(error)); }
   };
-  useEffect(() => { void loadInventory(); }, []);
+  useEffect(() => {
+    void loadInventory();
+    void assetClient.frameworkRelease('current')
+      .then(({ release }) => setPublished(release))
+      .catch(() => undefined);
+  }, []);
 
-  const [runtime, setRuntime] = useState<{ status: 'running' | 'stopped'; url: string | null; pid: number | null } | null>(null);
+  const [runtime, setRuntime] = useState<Awaited<ReturnType<typeof assetClient.instanceRuntime>> | null>(null);
+  const selectProject = (root: string) => {
+    setProjectRoot(root);
+    setStatus(null);
+    setRuntime(null);
+    setPlan(null);
+    setMessage('');
+  };
 
   const manifest = status?.manifest ?? null;
   const canApply = plan?.status === 'ready' && plan.actions.length > 0;
@@ -254,25 +266,33 @@ export function InstanceLifecyclePanel() {
     const release = action === 'adopt' ? (await assetClient.frameworkRelease('current')).release : null;
     const next = await assetClient.instanceRuntime(projectRoot.trim(), action, release?.releaseId);
     setRuntime(next);
+    await loadInventory();
     setMessage(lang === 'zh-CN'
-      ? (next.status === 'running' ? '独立工作台运行中，可点击打开。' : '独立工作台未运行。')
+      ? (next.status === 'running' ? '工作台已启动。点击「打开工作台」即可进入。' : '工作台目前未运行。')
       : (next.status === 'running' ? 'Independent workbench is running.' : 'Independent workbench is stopped.'));
   });
 
+  // Starting an existing Instance must not silently publish or adopt a newer build.
   const deployAndStart = () => run(async () => {
-    if (!projectRoot.trim()) { setMessage(t('instanceTargetRequired')); return; }
-    if (!manifest) {
-      const created = await assetClient.createInstance(projectRoot.trim(), name.trim() || undefined, initializeKnowledge);
-      setStatus(await assetClient.instanceStatus(projectRoot.trim()));
+    const root = projectRoot.trim();
+    if (!root) { setMessage(t('instanceTargetRequired')); return; }
+    let current = await assetClient.instanceStatus(root);
+    const wasExisting = Boolean(current.manifest);
+    if (!current.manifest) {
+      await assetClient.createInstance(root, name.trim() || undefined, initializeKnowledge);
+      current = await assetClient.instanceStatus(root);
     }
-    const release = (await assetClient.frameworkRelease('publish')).release;
-    if (!release) throw new Error('Framework release publication returned no build');
+    setStatus(current);
+    let release = (await assetClient.frameworkRelease('current')).release;
+    if (!release) release = (await assetClient.frameworkRelease('publish')).release;
+    if (!release) throw new Error('No verified Framework release available');
     setPublished(release);
-    await assetClient.instanceRuntime(projectRoot.trim(), 'adopt', release.releaseId);
-    const next = await assetClient.instanceRuntime(projectRoot.trim(), 'start');
+    const next = await assetClient.instanceRuntime(root, 'start');
     setRuntime(next);
     await loadInventory();
-    setMessage(lang === 'zh-CN' ? '独立工作台部署成功，已启动。' : 'Independent Workbench deployed and running.');
+    setMessage(lang === 'zh-CN'
+      ? (wasExisting ? '工作台已启动。点击「打开工作台」进入原来的项目。' : '独立工作台已创建并启动，点击「打开工作台」进入。')
+      : (wasExisting ? 'Workbench started. Choose Open to continue.' : 'Workbench created and started. Choose Open to enter.'));
   });
   const launchExisting = (root: string) => run(async () => {
     setProjectRoot(root);
@@ -327,7 +347,7 @@ export function InstanceLifecyclePanel() {
         <div className="instance-inventory-list">
           {knownInstances.map((item) => (
             <div className="instance-inventory-item" key={item.projectRoot}>
-              <button type="button" className="instance-inventory-select" disabled={busy} onClick={() => { setProjectRoot(item.projectRoot); setStatus(null); setRuntime(null); setStage('status'); void refresh(item.projectRoot); }}>
+              <button type="button" className="instance-inventory-select" disabled={busy} onClick={() => { selectProject(item.projectRoot); setStage('status'); void refresh(item.projectRoot); }}>
                 <strong>{item.projectRoot.split(/[\\/]/).filter(Boolean).at(-1) ?? item.projectRoot}</strong>
                 <span>{item.status === 'running' ? (lang === 'zh-CN' ? '运行中' : 'Running') : (lang === 'zh-CN' ? '未运行' : 'Stopped')}</span>
                 <span>{item.projectRoot}</span>
@@ -336,7 +356,7 @@ export function InstanceLifecyclePanel() {
                 {item.status === 'running' && item.url
                   ? <a className="primary-button" href={item.url} target="_blank" rel="noopener noreferrer">{lang === 'zh-CN' ? '打开工作台 ↗' : 'Open ↗'}</a>
                   : <button className="primary-button" disabled={busy} onClick={() => void launchExisting(item.projectRoot)}>{lang === 'zh-CN' ? '启动' : 'Start'}</button>}
-                <button className="secondary-button" disabled={busy} onClick={() => { setProjectRoot(item.projectRoot); setStatus(null); setRuntime(null); setStage('status'); void refresh(item.projectRoot); }}>{lang === 'zh-CN' ? '管理' : 'Manage'}</button>
+                <button className="secondary-button" disabled={busy} onClick={() => { selectProject(item.projectRoot); setStage('status'); void refresh(item.projectRoot); }}>{lang === 'zh-CN' ? '管理' : 'Manage'}</button>
               </div>
             </div>
           ))}
@@ -350,92 +370,126 @@ export function InstanceLifecyclePanel() {
           <code>04-conversations/transcripts · 04-conversations/work-records · .asset-workbench-data/capture</code>
         </div>
       </section>
-      <div className="instance-stage-nav" role="group" aria-label="Instance lifecycle">
-        {([
-          ['create', '① 创建实例', 'Create'],
-          ['status', '② 状态与验证', 'Status / Verify'],
-          ['upgrade', '③ 实例升级', 'Upgrade'],
-          ['migration', '④ 迁移与回滚', 'Migration / Rollback'],
-        ] as const).map(([id, zh, en]) => (
-          <button type="button" key={id} className={`secondary-button instance-stage-button ${stage === id ? 'selected' : ''}`}
-            aria-pressed={stage === id} onClick={() => setStage(id)}>
-            {lang === 'zh-CN' ? zh : en}
-          </button>
-        ))}
-      </div>
-      <p className="detail-summary">{stage === 'create' ? '绑定一个业务项目，选择是否同时初始化 00–05 知识目录。'
-        : stage === 'status' ? '查看当前实例的真实 Manifest 和验证结果。'
-        : stage === 'upgrade' ? '先生成版本差异计划，确认可执行后应用；不会自动改写业务代码。'
-        : '查看迁移证据及备份，只在存在可回滚记录时允许回滚。'}</p>
-      <div className="starter-form">
-        <label>
-          <span>{t('instanceProjectRoot')}</span>
-          <input className="root-input" value={projectRoot} onChange={(event) => setProjectRoot(event.target.value)} placeholder="/path/to/business-project" spellCheck={false} />
-        </label>
-        <label>
-          <span>{t('instanceProjectName')}</span>
-          <input className="root-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="payment-service" spellCheck={false} />
-        </label>
-      </div>
-
-      {stage === 'create' ? <label className="instance-checkbox">
-        <input type="checkbox" checked={initializeKnowledge} onChange={(event) => setInitializeKnowledge(event.target.checked)} />
-        <span>{t('instanceInitializeKnowledge')}</span>
-      </label> : null}
-
-      <div className="hero-actions">
-        {stage === 'create' ? <button className="primary-button" disabled={busy} onClick={() => void create()}>{t('instanceCreateAction')}</button> : null}
-        <button className="secondary-button" disabled={busy || !projectRoot.trim()} onClick={() => void run(() => refresh())}>{t('instanceLoadAction')}</button>
-        {stage === 'status' ? <button className="secondary-button" disabled={busy || !manifest} onClick={() => void verify()}><ShieldCheck size={16} /> {t('instanceVerifyAction')}</button> : null}
-        {stage === 'upgrade' ? <button className="secondary-button" disabled={busy || !manifest} onClick={() => void planUpgrade()}><GitCompareArrows size={16} /> {t('instancePlanAction')}</button> : null}
-        {stage === 'upgrade' ? <button className="secondary-button" disabled={busy || !canApply} onClick={() => void applyUpgrade()}>{t('instanceApplyAction')}</button> : null}
-        {stage === 'migration' ? <button className="secondary-button" disabled={busy || !canRollback} onClick={() => void rollback()}><RotateCcw size={16} /> {t('instanceRollbackAction')}</button> : null}
-      </div>
-
-      <section className="instance-runtime-controls">
-        <div>
-          <strong>{lang === 'zh-CN' ? '独立工作台 · 运行管理' : 'Independent Workbench · Runtime'}</strong>
-          <p className="detail-summary">{lang === 'zh-CN'
-            ? '复用中央 V3 功能，但使用专属进程、入口地址和项目数据。无需复制整套源码；先点击“发布运行版本”，系统自动构建和校验；每个实例无需独立安装依赖。'
-            : 'Shares the central V3 implementation with a dedicated process, local URL and project data. Publish and verify the shared runtime once; no per-instance installation.'}</p>
+      <section className="instance-guided-flow" aria-label={lang === 'zh-CN' ? '创建并打开独立工作台' : 'Create and open workbench'}>
+        <div className="instance-guided-head">
+          <div>
+            <h3>{lang === 'zh-CN' ? '创建或打开独立工作台' : 'Create or open a Workbench'}</h3>
+            <p className="detail-summary">{lang === 'zh-CN'
+              ? '新项目只需选择路径并点击一次；已有工作台可以直接启动。系统会自动检查运行版本，不必先手动发布。'
+              : 'Select a project and click once. Existing workbenches restart without republishing or upgrading.'}</p>
+          </div>
+          <span role="status" className={`instance-guided-status ${runtime?.status === 'running' ? 'running' : ''}`}>
+            {runtime?.status === 'running' ? (lang === 'zh-CN' ? '运行中' : 'Running')
+              : runtime?.status === 'stopped' ? (lang === 'zh-CN' ? '未启动' : 'Stopped')
+                : (lang === 'zh-CN' ? '等待选择项目' : 'Choose a project')}
+          </span>
         </div>
-        <div className="hero-actions">
-          <button className="primary-button" disabled={busy || !projectRoot.trim()} onClick={() => void deployAndStart()}>
-            {lang === 'zh-CN' ? '一键创建、部署并启动' : 'Create, deploy & start'}
-          </button>
-          <button className="secondary-button" disabled={busy} onClick={() => void publish()}>
-            {lang === 'zh-CN' ? '发布运行版本' : 'Publish runtime'}
-          </button>
-          <button className="secondary-button" disabled={busy || !projectRoot.trim() || !manifest} onClick={() => void manageRuntime('status')}>{lang === 'zh-CN' ? '检查运行状态' : 'Runtime status'}</button>
-          <button className="primary-button" disabled={busy || !manifest || runtime?.status === 'running'} onClick={() => void manageRuntime('start')}>{lang === 'zh-CN' ? '启动独立工作台' : 'Start Workbench'}</button>
-          <button className="secondary-button" disabled={busy || !manifest} onClick={() => void manageRuntime('adopt')}>
-            {lang === 'zh-CN' ? '采用最新运行版本' : 'Adopt latest release'}
-          </button>
-          <button className="secondary-button" disabled={busy || !manifest} onClick={() => void manageRuntime('rollback-release')}>
-            {lang === 'zh-CN' ? '回退应用版本' : 'Rollback app release'}
-          </button>
-          <button className="secondary-button" disabled={busy || runtime?.status !== 'running'} onClick={() => void manageRuntime('stop')}>{lang === 'zh-CN' ? '停止' : 'Stop'}</button>
-          {runtime?.status === 'running' && runtime.url ? (
-            <a className="secondary-button" href={runtime.url} target="_blank" rel="noopener noreferrer">{lang === 'zh-CN' ? '打开独立工作台 ↗' : 'Open Workbench ↗'}</a>
-          ) : null}
+        <div className="starter-form">
+          <label>
+            <span>{t('instanceProjectRoot')}</span>
+            <input className="root-input" value={projectRoot} onChange={(event) => selectProject(event.target.value)}
+              placeholder="/path/to/business-project" spellCheck={false} />
+            <small className="instance-field-hint">{lang === 'zh-CN' ? '填写已经存在的业务项目文件夹。每个项目拥有自己的聊天、Provider 设置与知识资产。' : 'An existing project directory. Conversations, Provider settings and knowledge are project-scoped.'}</small>
+          </label>
         </div>
-        {published ? <small>{lang === 'zh-CN' ? '已发布：' : 'Published: '}{published.releaseId} · {(published.totalBytes / 1048576).toFixed(2)} MiB</small> : null}
-        <small>{runtime?.status === 'running' ? `RUNNING · ${runtime.url}` : lang === 'zh-CN' ? '尚未启动或尚未检查' : 'Stopped or not checked'}</small>
+        <details className="instance-optional-settings">
+          <summary>{lang === 'zh-CN' ? '创建选项（可选）' : 'Creation options (optional)'}</summary>
+          <div>
+            <label>
+              <span>{lang === 'zh-CN' ? '工作台名称（可选）' : 'Workbench name (optional)'}</span>
+              <input className="root-input" value={name} onChange={(event) => setName(event.target.value)}
+                placeholder="payment-service" spellCheck={false} />
+              <small className="instance-field-hint">{lang === 'zh-CN' ? '只在首次创建时使用，已有工作台不会改名' : 'Only used when creating a new Instance'}</small>
+            </label>
+            <label className="instance-checkbox">
+              <input type="checkbox" checked={initializeKnowledge} onChange={(event) => setInitializeKnowledge(event.target.checked)} />
+              <span>{lang === 'zh-CN' ? '首次创建时同时初始化 00–05 知识目录（仅适用于符合初始化条件的项目）' : 'Initialize 00–05 knowledge on first creation (eligible projects only)'}</span>
+            </label>
+          </div>
+        </details>
+        <div className="instance-guided-steps">
+          <div><span>1</span><strong>{lang === 'zh-CN' ? '选择项目' : 'Choose project'}</strong><small>{lang === 'zh-CN' ? '填写目录，或从上方列表选择' : 'Enter path or select above'}</small></div>
+          <div><span>2</span><strong>{lang === 'zh-CN' ? '自动准备并启动' : 'Prepare and start'}</strong><small>{lang === 'zh-CN' ? '首次自动创建并准备运行包；已创建的不会自动升级' : 'Create and publish only when needed; no silent upgrades'}</small></div>
+          <div><span>3</span><strong>{lang === 'zh-CN' ? '打开完整工作台' : 'Open full Workbench'}</strong><small>{lang === 'zh-CN' ? '进入项目专属资产、聊天、Provider 与知识学习页面' : 'Assets, transcripts, Providers and project knowledge'}</small></div>
+        </div>
+        <div className="instance-guided-actions">
+          {runtime?.status === 'running' && runtime.url
+            ? <a className="primary-button instance-guided-primary" href={runtime.url} target="_blank" rel="noopener noreferrer">
+              {lang === 'zh-CN' ? '打开工作台 ↗' : 'Open Workbench ↗'}
+            </a>
+            : <button type="button" className="primary-button instance-guided-primary" disabled={busy || !projectRoot.trim()}
+                onClick={() => void deployAndStart()}>
+              {busy ? (lang === 'zh-CN' ? '正在处理，请稍候…' : 'Working…')
+                : manifest ? (lang === 'zh-CN' ? '启动独立工作台' : 'Start Workbench')
+                : (lang === 'zh-CN' ? '一键创建或启动工作台' : 'Create or start Workbench')}
+            </button>}
+          <span className="instance-guided-action-help">{lang === 'zh-CN'
+            ? '启动只会运行工作台；不会自动打开新网页，也不会修改项目业务代码。成功后点击「打开工作台」。'
+            : 'Starting does not open a browser automatically or change business code. Choose Open when ready.'}</span>
+        </div>
+        {published ? (
+          <small className="instance-release-hint">
+            {lang === 'zh-CN' ? '中央运行包已就绪' : 'Central runtime ready'} · {published.releaseId} · {(published.totalBytes / 1048576).toFixed(2)} MiB
+          </small>
+        ) : (
+          <small className="instance-release-hint">{lang === 'zh-CN' ? '若首次使用尚无运行包，系统将在首次创建时自动发布。' : 'If no release exists, first-time setup will publish it automatically.'}</small>
+        )}
       </section>
-      <details className="creator-advanced-cli"><summary>CLI · 高级详情 / Advanced commands</summary><div className="starter-cli-map">
-        <div>
-          <strong>{t('instanceCliCreate')}</strong>
-          <code>npm run creator -- instance create --project &lt;directory&gt;</code>
+      {message ? <p role="status" className="detail-summary starter-message">{message}</p> : null}
+      <details className="instance-advanced-management">
+        <summary>{lang === 'zh-CN' ? '高级管理 · 状态验证、版本发布、升级和回滚' : 'Advanced management · Verify, publish, upgrade and rollback'}</summary>
+        <p className="detail-summary">{lang === 'zh-CN'
+          ? '日常创建和启动不需要使用下列按钮。仅当你要检查故障、发布 Framework 新版本或主动升级、恢复实例时使用。'
+          : 'Not needed for everyday work. Use only for diagnostics, publishing a new Framework release or explicit upgrade and recovery.'}</p>
+        <div className="instance-stage-nav" role="group" aria-label="Instance lifecycle">
+          {([
+            ['create', '① 创建实例', 'Create'],
+            ['status', '② 状态与验证', 'Status / Verify'],
+            ['upgrade', '③ 实例升级', 'Upgrade'],
+            ['migration', '④ 迁移与回滚', 'Migration / Rollback'],
+          ] as const).map(([id, zh, en]) => (
+            <button type="button" key={id} className={`secondary-button instance-stage-button ${stage === id ? 'selected' : ''}`}
+              aria-pressed={stage === id} onClick={() => setStage(id)}>
+              {lang === 'zh-CN' ? zh : en}
+            </button>
+          ))}
         </div>
-        <div>
-          <strong>{t('instanceCliLifecycle')}</strong>
-          <code>npm run creator -- instance upgrade-plan --project &lt;directory&gt;</code>
-          <code>npm run creator -- instance rollback --project &lt;directory&gt;</code>
+        <p className="detail-summary">{stage === 'create' ? '仅创建实例身份，不会启动工作台。'
+          : stage === 'status' ? '读取当前 Instance 的 Manifest 和验证结果。'
+            : stage === 'upgrade' ? '生成计划、确认差异并主动升级 Manifest。'
+              : '查看已有迁移记录，并根据实际备份条件回滚 Manifest。'}</p>
+        <div className="hero-actions">
+          {stage === 'create' ? <button className="secondary-button" disabled={busy || !projectRoot.trim()} onClick={() => void create()}>{t('instanceCreateAction')}</button> : null}
+          <button className="secondary-button" disabled={busy || !projectRoot.trim()} onClick={() => void run(() => refresh())}>{t('instanceLoadAction')}</button>
+          {stage === 'status' ? <button className="secondary-button" disabled={busy || !manifest} onClick={() => void verify()}><ShieldCheck size={16} /> {t('instanceVerifyAction')}</button> : null}
+          {stage === 'upgrade' ? <button className="secondary-button" disabled={busy || !manifest} onClick={() => void planUpgrade()}><GitCompareArrows size={16} /> {t('instancePlanAction')}</button> : null}
+          {stage === 'upgrade' ? <button className="secondary-button" disabled={busy || !canApply} onClick={() => void applyUpgrade()}>{t('instanceApplyAction')}</button> : null}
+          {stage === 'migration' ? <button className="secondary-button" disabled={busy || !canRollback} onClick={() => void rollback()}><RotateCcw size={16} /> {t('instanceRollbackAction')}</button> : null}
         </div>
-      </div></details>
-
-      {message ? <p className="detail-summary starter-message">{message}</p> : null}
-
+        <section className="instance-runtime-controls">
+          <strong>{lang === 'zh-CN' ? '运行版本与维护' : 'Runtime release maintenance'}</strong>
+          <p className="detail-summary">{lang === 'zh-CN'
+            ? '「发布运行版本」为中央 Framework 构建新的共享运行包，不是创建工作台，也不是启动按钮。「采用最新运行版本」会主动切换所选实例的程序版本；回退仅在存在旧版本记录时可用。'
+            : 'Publish builds a shared Framework release; it does not create or start an Instance. Adopt switches the selected Instance release intentionally.'}</p>
+          <div className="hero-actions">
+            <button className="secondary-button" disabled={busy} onClick={() => void publish()}>{lang === 'zh-CN' ? '发布中央运行版本' : 'Publish Framework release'}</button>
+            <button className="secondary-button" disabled={busy || !projectRoot.trim() || !manifest} onClick={() => void manageRuntime('status')}>{lang === 'zh-CN' ? '检查运行状态' : 'Runtime status'}</button>
+            <button className="secondary-button" disabled={busy || !manifest} onClick={() => void manageRuntime('adopt')}>{lang === 'zh-CN' ? '采用最新运行版本' : 'Adopt latest release'}</button>
+            <button className="secondary-button" disabled={busy || !runtime?.previousReleaseId} onClick={() => void manageRuntime('rollback-release')}>{lang === 'zh-CN' ? '回退应用版本' : 'Rollback app release'}</button>
+            <button className="secondary-button" disabled={busy || runtime?.status !== 'running'} onClick={() => void manageRuntime('stop')}>{lang === 'zh-CN' ? '停止运行' : 'Stop Workbench'}</button>
+          </div>
+        </section>
+        <details className="creator-advanced-cli"><summary>CLI · 高级详情 / Advanced commands</summary><div className="starter-cli-map">
+          <div>
+            <strong>{t('instanceCliCreate')}</strong>
+            <code>npm run creator -- instance create --project &lt;directory&gt;</code>
+          </div>
+          <div>
+            <strong>{t('instanceCliLifecycle')}</strong>
+            <code>npm run creator -- instance upgrade-plan --project &lt;directory&gt;</code>
+            <code>npm run creator -- instance rollback --project &lt;directory&gt;</code>
+          </div>
+        </div></details>
       {(stage === 'status' || stage === 'create') && manifest ? (
         <div className="instance-manifest-card">
           <div className="instance-manifest-head">
@@ -507,6 +561,7 @@ export function InstanceLifecyclePanel() {
         </div>
       ) : null}
 
+      </details>
       <section className="instance-engine-self-test" aria-labelledby="instance-engine-self-test-title">
         <div className="instance-engine-self-test-heading">
           <div>

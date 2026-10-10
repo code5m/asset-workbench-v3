@@ -231,6 +231,7 @@ export const assetClient = {
     projectRoot: string; instanceId: string; status: 'running' | 'stopped';
     url: string | null; port: number | null; pid: number | null;
     frameworkVersion: string; frameworkRevision: string;
+    releaseId?: string | null; previousReleaseId?: string | null;
   }> {
     const response = await fetch(`${BASE}/creator/runtime/${action}`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
@@ -238,7 +239,7 @@ export const assetClient = {
     });
     const value = await response.json() as { error?: string };
     if (!response.ok) throw new ApiError(response.status, value.error ?? response.statusText);
-    return value as { projectRoot: string; instanceId: string; status: 'running' | 'stopped'; url: string | null; port: number | null; pid: number | null; frameworkVersion: string; frameworkRevision: string };
+    return value as { projectRoot: string; instanceId: string; status: 'running' | 'stopped'; url: string | null; port: number | null; pid: number | null; frameworkVersion: string; frameworkRevision: string; releaseId?: string | null; previousReleaseId?: string | null };
   },
   async createInstance(projectRoot: string, name?: string, initializeKnowledge = false): Promise<{ manifest: InstanceManifestView; knowledgeVerification: KnowledgeVerificationView; manifestPath: string }> {
     const res = await fetch(`${BASE}/creator/instance/create`, {
