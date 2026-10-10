@@ -26,9 +26,21 @@ export function InstanceLifecyclePanel() {
       setInventoryError('');
     } catch (error) { setInventoryError(error instanceof Error ? error.message : String(error)); }
   };
-  useEffect(() => { void loadInventory(); }, []);
+  useEffect(() => {
+    void loadInventory();
+    void assetClient.frameworkRelease('current')
+      .then(({ release }) => setPublished(release))
+      .catch(() => undefined);
+  }, []);
 
-  const [runtime, setRuntime] = useState<{ status: 'running' | 'stopped'; url: string | null; pid: number | null } | null>(null);
+  const [runtime, setRuntime] = useState<Awaited<ReturnType<typeof assetClient.instanceRuntime>> | null>(null);
+  const selectProject = (root: string) => {
+    setProjectRoot(root);
+    setStatus(null);
+    setRuntime(null);
+    setPlan(null);
+    setMessage('');
+  };
 
   const manifest = status?.manifest ?? null;
   const canApply = plan?.status === 'ready' && plan.actions.length > 0;
@@ -254,25 +266,33 @@ export function InstanceLifecyclePanel() {
     const release = action === 'adopt' ? (await assetClient.frameworkRelease('current')).release : null;
     const next = await assetClient.instanceRuntime(projectRoot.trim(), action, release?.releaseId);
     setRuntime(next);
+    await loadInventory();
     setMessage(lang === 'zh-CN'
-      ? (next.status === 'running' ? '独立工作台运行中，可点击打开。' : '独立工作台未运行。')
+      ? (next.status === 'running' ? '工作台已启动。点击「打开工作台」即可进入。' : '工作台目前未运行。')
       : (next.status === 'running' ? 'Independent workbench is running.' : 'Independent workbench is stopped.'));
   });
 
+  // Starting an existing Instance must not silently publish or adopt a newer build.
   const deployAndStart = () => run(async () => {
-    if (!projectRoot.trim()) { setMessage(t('instanceTargetRequired')); return; }
-    if (!manifest) {
-      const created = await assetClient.createInstance(projectRoot.trim(), name.trim() || undefined, initializeKnowledge);
-      setStatus(await assetClient.instanceStatus(projectRoot.trim()));
+    const root = projectRoot.trim();
+    if (!root) { setMessage(t('instanceTargetRequired')); return; }
+    let current = await assetClient.instanceStatus(root);
+    const wasExisting = Boolean(current.manifest);
+    if (!current.manifest) {
+      await assetClient.createInstance(root, name.trim() || undefined, initializeKnowledge);
+      current = await assetClient.instanceStatus(root);
     }
-    const release = (await assetClient.frameworkRelease('publish')).release;
-    if (!release) throw new Error('Framework release publication returned no build');
+    setStatus(current);
+    let release = (await assetClient.frameworkRelease('current')).release;
+    if (!release) release = (await assetClient.frameworkRelease('publish')).release;
+    if (!release) throw new Error('No verified Framework release available');
     setPublished(release);
-    await assetClient.instanceRuntime(projectRoot.trim(), 'adopt', release.releaseId);
-    const next = await assetClient.instanceRuntime(projectRoot.trim(), 'start');
+    const next = await assetClient.instanceRuntime(root, 'start');
     setRuntime(next);
     await loadInventory();
-    setMessage(lang === 'zh-CN' ? '独立工作台部署成功，已启动。' : 'Independent Workbench deployed and running.');
+    setMessage(lang === 'zh-CN'
+      ? (wasExisting ? '工作台已启动。点击「打开工作台」进入原来的项目。' : '独立工作台已创建并启动，点击「打开工作台」进入。')
+      : (wasExisting ? 'Workbench started. Choose Open to continue.' : 'Workbench created and started. Choose Open to enter.'));
   });
   const launchExisting = (root: string) => run(async () => {
     setProjectRoot(root);
@@ -327,7 +347,7 @@ export function InstanceLifecyclePanel() {
         <div className="instance-inventory-list">
           {knownInstances.map((item) => (
             <div className="instance-inventory-item" key={item.projectRoot}>
-              <button type="button" className="instance-inventory-select" disabled={busy} onClick={() => { setProjectRoot(item.projectRoot); setStatus(null); setRuntime(null); setStage('status'); void refresh(item.projectRoot); }}>
+              <button type="button" className="instance-inventory-select" disabled={busy} onClick={() => { selectProject(item.projectRoot); setStage('status'); void refresh(item.projectRoot); }}>
                 <strong>{item.projectRoot.split(/[\\/]/).filter(Boolean).at(-1) ?? item.projectRoot}</strong>
                 <span>{item.status === 'running' ? (lang === 'zh-CN' ? '运行中' : 'Running') : (lang === 'zh-CN' ? '未运行' : 'Stopped')}</span>
                 <span>{item.projectRoot}</span>
@@ -336,7 +356,7 @@ export function InstanceLifecyclePanel() {
                 {item.status === 'running' && item.url
                   ? <a className="primary-button" href={item.url} target="_blank" rel="noopener noreferrer">{lang === 'zh-CN' ? '打开工作台 ↗' : 'Open ↗'}</a>
                   : <button className="primary-button" disabled={busy} onClick={() => void launchExisting(item.projectRoot)}>{lang === 'zh-CN' ? '启动' : 'Start'}</button>}
-                <button className="secondary-button" disabled={busy} onClick={() => { setProjectRoot(item.projectRoot); setStatus(null); setRuntime(null); setStage('status'); void refresh(item.projectRoot); }}>{lang === 'zh-CN' ? '管理' : 'Manage'}</button>
+                <button className="secondary-button" disabled={busy} onClick={() => { selectProject(item.projectRoot); setStage('status'); void refresh(item.projectRoot); }}>{lang === 'zh-CN' ? '管理' : 'Manage'}</button>
               </div>
             </div>
           ))}
@@ -370,7 +390,7 @@ export function InstanceLifecyclePanel() {
       <div className="starter-form">
         <label>
           <span>{t('instanceProjectRoot')}</span>
-          <input className="root-input" value={projectRoot} onChange={(event) => setProjectRoot(event.target.value)} placeholder="/path/to/business-project" spellCheck={false} />
+          <input className="root-input" value={projectRoot} onChange={(event) => selectProject(event.target.value)} placeholder="/path/to/business-project" spellCheck={false} />
         </label>
         <label>
           <span>{t('instanceProjectName')}</span>
