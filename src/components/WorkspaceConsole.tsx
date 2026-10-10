@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Database, GitBranch, RefreshCw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Database, GitBranch, PlusCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import { wizardSteps } from '../data/navigation';
 import { pipelineNotes } from '../data/productCopy';
 import { assetClient } from '../services/assetClient';
@@ -29,6 +29,7 @@ export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated }
   const [fileCount, setFileCount] = useState(0);
   const [directoryCount, setDirectoryCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [creatorOpenKey, setCreatorOpenKey] = useState(0);
   const [runtimeMode, setRuntimeMode] = useState<'framework-self' | 'business-project'>('framework-self');
 
   const load = async () => {
@@ -74,6 +75,9 @@ export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated }
           <p className="lead">{t('consoleLead')}</p>
         </div>
         <div className="topbar-actions">
+          <button type="button" className="primary-button" onClick={() => { setCreatorOpenKey((x) => x + 1); onViewChange('creator'); }}>
+            <PlusCircle size={17} /> {loc({ 'zh-CN': '新建独立工作台', en: 'New Workbench' })}
+          </button>
           <span className="status-badge future">{t('noWorkspaceVersion')}</span>
           <button className="secondary-button" onClick={load} title={t('rescan')}>
             <RefreshCw size={17} />
@@ -91,7 +95,7 @@ export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated }
         </button>
       </div>
 
-      {view === 'creator' ? <CreatorWorkbench onActivated={onActivated} /> : null}
+      {view === 'creator' ? <CreatorWorkbench key={creatorOpenKey} initialWorkspace={creatorOpenKey ? 'instance' : 'knowledge'} onActivated={onActivated} /> : null}
 
       {view === 'project' ? (
       <>
