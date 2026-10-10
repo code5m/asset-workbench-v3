@@ -870,3 +870,22 @@ test('visual framework console copy exists in zh-CN and en', () => {
     assert.ok(ui.en[key], `missing en visual framework console key: ${key}`);
   }
 });
+
+test('guided workbench startup is explicit and keeps risky release actions behind advanced management', () => {
+  const panel = read('src/components/InstanceLifecyclePanel.tsx');
+  const client = read('src/services/assetClient.ts');
+  assert.match(panel, /instance-guided-flow/);
+  assert.match(panel, /instance-guided-steps/);
+  assert.match(panel, /instance-advanced-management/);
+  assert.match(panel, /打开工作台/);
+  assert.match(panel, /中央运行包已就绪/);
+  assert.match(panel, /每个项目拥有自己的聊天/);
+  assert.match(panel, /previousReleaseId/);
+  const routine = panel.slice(panel.indexOf('const deployAndStart ='), panel.indexOf('const launchExisting ='));
+  assert.match(routine, /assetClient\.instanceStatus\(root\)/);
+  assert.match(routine, /if \(!current\.manifest\)/);
+  assert.match(routine, /if \(!release\)/);
+  assert.match(routine, /assetClient\.instanceRuntime\(root, 'start'\)/);
+  assert.doesNotMatch(routine, /assetClient\.instanceRuntime\(.*'adopt'/);
+  assert.match(client, /previousReleaseId/);
+});
