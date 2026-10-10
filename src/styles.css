@@ -4358,3 +4358,28 @@ code {
 .instance-runtime-controls strong { font-size: 14px; }
 .instance-runtime-controls small { color: #667085; overflow-wrap: anywhere; }
 .instance-runtime-controls .secondary-button { text-decoration: none; }
+
+/* Creator discoverability and screenshot-verified whitespace correction.
+   Avoid implicit CSS grid row stretching into the whole tall viewport. */
+.console { align-content: start; grid-auto-rows: max-content; }
+.creator-workbench { align-content: start; }
+.creator-capability-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.creator-workbench-hero { align-items: center; }
+.creator-hero-actions { display: grid; justify-items: end; gap: 6px; flex-shrink: 0; }
+.creator-hero-hint { font-size: 12px; color: #64748b; text-align: right; }
+.creator-create-shortcut { white-space: nowrap; }
+.instance-inventory { display: grid; gap: 10px; border: 1px solid #dbe3ec; border-radius: 12px; padding: 14px; background: #fff; }
+.instance-inventory-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.instance-inventory-header h3 { font-size: 15px; margin: 0; }
+.instance-inventory-list { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.instance-inventory-item { text-align: left; font: inherit; color: inherit; cursor: pointer; border: 1px solid #dbe3ec; border-radius: 10px; background: #f8fafc; padding: 12px; display: grid; gap: 6px; }
+.instance-inventory-item:hover, .instance-inventory-item:focus-visible { border-color: #176b87; outline-offset: 2px; }
+.instance-inventory-item strong { font-size: 13px; }
+.instance-inventory-item span { font-size: 11px; color: #667085; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .creator-capability-grid { grid-template-columns: 1fr; }
+  .creator-workbench-hero { align-items: stretch; flex-direction: column; }
+  .creator-hero-actions { justify-items: start; }
+  .creator-hero-hint { text-align: left; }
+  .creator-create-shortcut { white-space: normal; }
+}
