@@ -28,7 +28,8 @@ import {
 } from './captureService.ts';
 import { detectProviders } from './providerAdapterService.ts';
 import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, listProviderStatuses, redetectProviderStatuses, runProviderVerification, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
-import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, listInstanceRuntimes } from './instanceRuntimeManager.ts';
+import { publishFrameworkRelease, currentFrameworkRelease } from './frameworkRelease.ts';
+import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { createKnowledge, verifyKnowledge } from '../packages/starter/src/index.ts';
 import {
@@ -100,7 +101,7 @@ async function readBody(req: Connect.IncomingMessage): Promise<Record<string, un
   }
 }
 
-function createHandler() {
+export function createHandler() {
   return async function handler(
     req: Connect.IncomingMessage,
     res: any,
@@ -144,6 +145,16 @@ function createHandler() {
         sendJson(res, 200, { ...loadConfig(), configurable: !process.env.AWB_INSTANCE_PROJECT_ROOT });
         return;
       }
+      if (req.method === 'GET' && pathPart === '/creator/release/current') {
+        try { sendJson(res, 200, { release: currentFrameworkRelease() }); }
+        catch (e) { sendJson(res, 400, { error: (e as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/creator/release/publish') {
+        try { sendJson(res, 200, { release: await publishFrameworkRelease() }); }
+        catch (e) { sendJson(res, 400, { error: (e as Error).message }); }
+        return;
+      }
       if (pathPart === '/creator/runtime/list' && req.method === 'GET') {
         try { sendJson(res, 200, await listInstanceRuntimes()); }
         catch (e) { sendJson(res, 400, { error: (e as Error).message }); }
@@ -154,7 +165,9 @@ function createHandler() {
           const body = await readBody(req);
           const projectRoot = typeof body.projectRoot === 'string' ? body.projectRoot : '';
           const action = pathPart.slice('/creator/runtime/'.length);
-          const result = action === 'status' ? await instanceRuntimeStatus(projectRoot)
+          const result = action === 'adopt' ? await adoptInstanceRelease(projectRoot, typeof body.releaseId === 'string' ? body.releaseId : '')
+            : action === 'rollback-release' ? await rollbackInstanceRelease(projectRoot)
+            : action === 'status' ? await instanceRuntimeStatus(projectRoot)
             : action === 'start' ? await startInstanceRuntime(projectRoot)
             : action === 'stop' ? await stopInstanceRuntime(projectRoot)
             : null;

@@ -317,3 +317,47 @@ API refuses to change its project. The UI provides Start, Stop, Status and Open.
 → inspect the Instance → start → open the independent URL → stop.
 This implementation does not create autonomous remote servers or copy the business
 code, and does not rewrite a business repository on upgrade.
+
+
+## Immutable standalone Framework release (architecture decision, October 2026)
+
+Central Framework keeps one source repository, but the end-user runtime is not a
+Vite Preview service. Central release publishing now creates a content-addressed
+`framework-releases/rel-<digest>` directory containing a frozen React `ui/`,
+standalone bundled Node `server.mjs`, and `release.json` with SHA-256 hashes
+of each deliverable. Publishing first runs the real build, verifies the frozen
+release, and changes the current release pointer only after the release is
+complete. If the directory exists, its contents must verify before it can be used.
+There is no per-instance `npm ci` / `npm run build`.
+
+Runtime manager checks the release and Instance Manifest before launching Node
+against its published `server.mjs`. Every Instance has a separate local port,
+process, captured project root, session and assets directory. Only loopback
+requests with the expected Host header are accepted. Private token-gated health
+check confirms PID, Instance identity, project identity, and immutable release
+identity; an unrelated PID must never be killed.
+
+User actions: **Publish runtime** (central only), **Start**, **Status**, **Open**,
+**Stop**. The application runs locally; the scheme is not multi-tenant public
+hosting or an isolated operating-system security sandbox.
+
+### Boundaries and remaining work
+
+The published release is immutable and verified with checksums; this is a local
+build integrity check, not cryptographic code-signing or an official GitHub
+Release package. The central source and Node executable remain prerequisites
+for publishing / launching, though instances no longer need Vite Preview.
+Cross-platform installation packages, remote distribution, automatic GitHub
+Release downloading, and code-signed installer delivery remain future work.
+A local runtime may now pin a verified published release, adopt a second release
+and health-check the new process. Failure to start a new release triggers
+reinstatement of the prior version and a restart attempt. **Rollback app release**
+is a separate action from Creator's existing **Rollback Manifest**. Both
+read from separate records. Application-level rollback is covered by a real
+build-switch test that changes the served HTML and checks restoration.
+This is a local-runtime A/B version path, not an OS package installer or a
+guarantee of restoration from hardware failure.
+
+Safety: one shared source, no copying code to business repositories; runtime
+state remains in the user-selected project. Verify behavior with real end-to-end
+tests, not documentation-only assertions.

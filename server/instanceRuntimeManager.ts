@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import net from 'node:net';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
+import { currentFrameworkRelease, verifyFrameworkRelease, publishFrameworkRelease } from './frameworkRelease.ts';
 import { spawn } from 'node:child_process';
 import { APP_ROOT, loadConfig } from './config.ts';
 import { frameworkIdentity, readInstanceManifest, verifyInstance } from '../packages/creator-core/src/index.ts';
@@ -10,9 +11,28 @@ import { frameworkIdentity, readInstanceManifest, verifyInstance } from '../pack
 export interface InstanceRuntimeView {
   projectRoot: string; instanceId: string; frameworkVersion: string; frameworkRevision: string;
   status: 'running' | 'stopped'; url: string | null; port: number | null; pid: number | null;
+  releaseId?: string | null;
+  previousReleaseId?: string | null;
 }
-interface RuntimeRecord { projectRoot: string; instanceId: string; pid: number; port: number; }
+interface RuntimeRecord { projectRoot: string; instanceId: string; pid: number; port: number; releaseId?: string; token?: string; }
 const registryDir = () => path.join(APP_ROOT, '.asset-workbench-data', 'instance-runtimes');
+type ReleaseSelection = { active: string; previous: string | null };
+function selectionFile(root: string): string {
+  return filename(root).slice(0, -5) + '.release.json';
+}
+function readSelection(root: string): ReleaseSelection | null {
+  try {
+    const entry = JSON.parse(fs.readFileSync(selectionFile(root), 'utf8')) as ReleaseSelection;
+    if (!entry.active || typeof entry.active !== 'string' || (entry.previous && typeof entry.previous !== 'string')) return null;
+    return entry;
+  } catch { return null; }
+}
+function saveSelection(root: string, selection: ReleaseSelection): void {
+  fs.mkdirSync(registryDir(), { recursive: true, mode: 0o700 });
+  const file = selectionFile(root), temp = file + '.tmp';
+  fs.writeFileSync(temp, JSON.stringify(selection), { mode: 0o600 });
+  fs.renameSync(temp, file);
+}
 function centralOnly(): void {
   if (process.env.AWB_INSTANCE_PROJECT_ROOT) throw new Error('An Instance cannot manage other Instance processes');
 }
@@ -50,13 +70,16 @@ function inspect(root: string) {
 }
 function alive(pid: number): boolean { try { process.kill(pid, 0); return true; } catch { return false; } }
 async function responds(v: RuntimeRecord): Promise<boolean> {
-  if (!alive(v.pid)) return false;
+  if (!alive(v.pid) || !v.releaseId || !v.token) return false;
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 1000);
   try {
-    const res = await fetch(`http://127.0.0.1:${v.port}/api/config`, { signal: controller.signal });
+    const res = await fetch(`http://127.0.0.1:${v.port}/_runtime/health`, {
+      headers: { 'x-awb-runtime-token': v.token }, signal: controller.signal,
+    });
     if (!res.ok) return false;
-    const cfg = await res.json() as { projectRoot?: string; instanceId?: string; mode?: string };
-    return cfg.projectRoot === v.projectRoot && cfg.instanceId === v.instanceId && cfg.mode === 'business-project';
+    const cfg = await res.json() as { projectRoot?: string; instanceId?: string; releaseId?: string; pid?: number };
+    return cfg.projectRoot === v.projectRoot && cfg.instanceId === v.instanceId
+      && cfg.releaseId === v.releaseId && cfg.pid === v.pid;
   } catch { return false; } finally { clearTimeout(timer); }
 }
 async function freePort(): Promise<number> {
@@ -72,6 +95,7 @@ async function freePort(): Promise<number> {
 export async function instanceRuntimeStatus(project: string): Promise<InstanceRuntimeView> {
   centralOnly();
   const root = resolveRoot(project), { manifest } = inspect(root), record = readRecord(root);
+  const selection = readSelection(root);
   const running = !!record && record.instanceId === manifest.instanceId && await responds(record);
   if (!running && record && !alive(record.pid)) forget(root);
   return {
@@ -79,6 +103,8 @@ export async function instanceRuntimeStatus(project: string): Promise<InstanceRu
     frameworkVersion: manifest.framework.version, frameworkRevision: manifest.framework.revision,
     status: running ? 'running' : 'stopped', url: running ? `http://127.0.0.1:${record!.port}/` : null,
     port: running ? record!.port : null, pid: running ? record!.pid : null,
+    releaseId: running ? record!.releaseId : selection?.active ?? null,
+    previousReleaseId: selection?.previous ?? null,
   };
 }
 export async function startInstanceRuntime(project: string): Promise<InstanceRuntimeView> {
@@ -88,19 +114,30 @@ export async function startInstanceRuntime(project: string): Promise<InstanceRun
   if (current.status === 'running') return current;
   const stale = readRecord(root);
   if (stale && alive(stale.pid)) throw new Error('Previous process still exists but cannot verify identity; stop it manually');
-  if (!check.upToDate) throw new Error('Instance must be upgraded to the current Framework before start');
-  if (!fs.existsSync(path.join(APP_ROOT, 'dist/index.html'))) throw new Error('Build Framework first: npm run build');
-  const binary = path.join(APP_ROOT, 'node_modules/vite/bin/vite.js');
-  if (!fs.existsSync(binary)) throw new Error('Install Framework dependencies first: npm ci');
+  const selection = readSelection(root);
+  const release = selection ? verifyFrameworkRelease(selection.active) : currentFrameworkRelease();
+  if (!release) throw new Error('No published Framework release; publish the first release from central UI');
+  // Manifest identity tracks creator metadata compatibility separately from published app runtime identity.
+  // Release compatibility is checked by the release's own immutable checksum before process launch.
+  const verified = verifyFrameworkRelease(release.releaseId);
+  const releaseDir = path.join(APP_ROOT, '.asset-workbench-data', 'framework-releases', verified.releaseId);
+  const token = randomBytes(32).toString('hex');
   const port = await freePort();
-  const child = spawn(process.execPath, [binary, 'preview', '--host', '127.0.0.1', '--strictPort', '--port', String(port)], {
-    cwd: APP_ROOT, detached: true, stdio: 'ignore', windowsHide: true,
-    env: { ...process.env, AWB_INSTANCE_PROJECT_ROOT: root },
+  const startupLog = path.join(registryDir(), 'startup-' + createHash('sha256').update(root).digest('hex').slice(0, 16) + '.log');
+  fs.mkdirSync(registryDir(), { recursive: true, mode: 0o700 });
+  const logFd = fs.openSync(startupLog, 'w', 0o600);
+  const child = spawn(process.execPath, [path.join(releaseDir, 'server.mjs')], {
+    cwd: APP_ROOT, detached: true, stdio: ['ignore', logFd, logFd], windowsHide: true,
+    env: { ...process.env, AWB_INSTANCE_PROJECT_ROOT: root,
+      AWB_RELEASE_ID: verified.releaseId, AWB_RELEASE_UI_DIR: path.join(releaseDir, 'ui'),
+      AWB_RUNTIME_PORT: String(port), AWB_RUNTIME_TOKEN: token },
   });
+  fs.closeSync(logFd);
   if (!child.pid) throw new Error('Failed to spawn Instance process');
   child.unref();
-  const record: RuntimeRecord = { projectRoot: root, instanceId: manifest.instanceId, pid: child.pid, port };
+  const record: RuntimeRecord = { projectRoot: root, instanceId: manifest.instanceId, pid: child.pid, port, releaseId: verified.releaseId, token };
   writeRecord(record);
+  if (!selection) saveSelection(root, { active: verified.releaseId, previous: null });
   for (let attempt = 0; attempt < 60; attempt++) {
     if (await responds(record)) return instanceRuntimeStatus(root);
     if (!alive(record.pid)) break;
@@ -108,7 +145,8 @@ export async function startInstanceRuntime(project: string): Promise<InstanceRun
   }
   if (alive(record.pid)) process.kill(record.pid, 'SIGTERM');
   forget(root);
-  throw new Error('Instance did not become ready; inspect Framework build and port availability');
+  const details = fs.existsSync(startupLog) ? fs.readFileSync(startupLog, 'utf8').slice(-1200) : '';
+  throw new Error('Instance did not become ready: ' + details);
 }
 export async function stopInstanceRuntime(project: string): Promise<InstanceRuntimeView> {
   centralOnly();
@@ -117,6 +155,34 @@ export async function stopInstanceRuntime(project: string): Promise<InstanceRunt
   else if (record && alive(record.pid)) throw new Error('Saved PID belongs to an unverified process; refused to kill');
   forget(root);
   return { ...current, status: 'stopped', url: null, port: null, pid: null };
+}
+export async function adoptInstanceRelease(project: string, releaseId: string): Promise<InstanceRuntimeView> {
+  centralOnly();
+  const root = resolveRoot(project);
+  inspect(root);
+  verifyFrameworkRelease(releaseId);
+  const previous = readSelection(root);
+  if (previous?.active === releaseId) return instanceRuntimeStatus(root);
+  const wasRunning = (await instanceRuntimeStatus(root)).status === 'running';
+  if (wasRunning) await stopInstanceRuntime(root);
+  const next = { active: releaseId, previous: previous?.active ?? currentFrameworkRelease()?.releaseId ?? null };
+  saveSelection(root, next);
+  if (!wasRunning) return instanceRuntimeStatus(root);
+  try { return await startInstanceRuntime(root); }
+  catch (error) {
+    if (previous) saveSelection(root, previous);
+    else { try { fs.unlinkSync(selectionFile(root)); } catch { /* absent */ } }
+    try { await startInstanceRuntime(root); }
+    catch (restoreError) { throw new Error('New release failed and old release restart also failed: ' + String(restoreError)); }
+    throw new Error('New release failed; previous running release restored: ' + String(error));
+  }
+}
+export async function rollbackInstanceRelease(project: string): Promise<InstanceRuntimeView> {
+  centralOnly();
+  const root = resolveRoot(project);
+  const previous = readSelection(root)?.previous;
+  if (!previous) throw new Error('No previous published runtime release to roll back to');
+  return adoptInstanceRelease(root, previous);
 }
 export async function listInstanceRuntimes(): Promise<InstanceRuntimeView[]> {
   centralOnly();

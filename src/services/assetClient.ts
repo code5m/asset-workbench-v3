@@ -215,14 +215,20 @@ export const assetClient = {
   async createStarter(target: string, name?: string): Promise<KnowledgeCreateView> {
     return this.createKnowledge(target, name);
   },
-  async instanceRuntime(projectRoot: string, action: 'status' | 'start' | 'stop'): Promise<{
+  async frameworkRelease(action: 'current' | 'publish'): Promise<{ release: { releaseId: string; framework: {version: string; revision: string}; totalBytes: number} | null }> {
+    const res = await fetch(`${BASE}/creator/release/${action}`, { method: action === 'publish' ? 'POST' : 'GET' });
+    const value = await res.json() as { release: { releaseId: string; framework: {version: string; revision: string}; totalBytes: number} | null; error?: string };
+    if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    return value;
+  },
+  async instanceRuntime(projectRoot: string, action: 'status' | 'start' | 'stop' | 'adopt' | 'rollback-release', releaseId?: string): Promise<{
     projectRoot: string; instanceId: string; status: 'running' | 'stopped';
     url: string | null; port: number | null; pid: number | null;
     frameworkVersion: string; frameworkRevision: string;
   }> {
     const response = await fetch(`${BASE}/creator/runtime/${action}`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ projectRoot }),
+      body: JSON.stringify({ projectRoot, releaseId }),
     });
     const value = await response.json() as { error?: string };
     if (!response.ok) throw new ApiError(response.status, value.error ?? response.statusText);
