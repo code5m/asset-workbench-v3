@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Boxes, FolderTree, PlusCircle, Wrench } from 'lucide-react';
+import { Boxes, FolderTree, Wrench } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { StarterCreator } from './StarterCreator';
 import { InstanceLifecyclePanel } from './InstanceLifecyclePanel';
@@ -21,12 +21,7 @@ export function CreatorWorkbench({ onActivated, initialWorkspace = 'instance' }:
           <h2>{zh ? '独立工作台' : 'Independent Workbenches'}</h2>
           <p className="detail-summary">{zh ? '一个业务项目对应一个独立工作台。集中创建、打开和管理运行实例，项目聊天、Agent 工作记录与知识资产分别保存。' : 'One workbench per project. Manage runtimes centrally; conversations, agent records and knowledge remain project-scoped.'}</p>
         </div>
-        <div className="creator-hero-actions">
-          <button type="button" className="primary-button creator-create-shortcut" onClick={() => setWorkspace('instance')}>
-            <PlusCircle size={17} /> {zh ? '新建独立工作台' : 'New independent Workbench'}
-          </button>
-          <span className="creator-hero-hint">{zh ? '选择本地项目 → 一键创建并启动' : 'Choose a project → deploy and launch'}</span>
-        </div>
+
       </section>
       <div className="creator-capability-grid" role="group" aria-label={zh ? '选择工作区' : 'Choose a workspace'}>
         <button type="button" className={`panel creator-capability-card creator-workspace-choice ${workspace === 'knowledge' ? 'selected' : ''}`}
