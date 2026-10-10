@@ -238,15 +238,31 @@ export function InstanceLifecyclePanel() {
     setPublished(result.release);
     setMessage(lang === 'zh-CN' ? '已发布并验证不可变运行版本，可启动独立实例。' : 'Verified immutable release published.');
   });
-  const manageRuntime = (action: 'start' | 'stop' | 'status') => run(async () => {
+  const manageRuntime = (action: 'start' | 'stop' | 'status' | 'adopt' | 'rollback-release') => run(async () => {
     if (!projectRoot.trim()) { setMessage(t('instanceTargetRequired')); return; }
-    const next = await assetClient.instanceRuntime(projectRoot.trim(), action);
+    const release = action === 'adopt' ? (await assetClient.frameworkRelease('current')).release : null;
+    const next = await assetClient.instanceRuntime(projectRoot.trim(), action, release?.releaseId);
     setRuntime(next);
     setMessage(lang === 'zh-CN'
       ? (next.status === 'running' ? '独立工作台运行中，可点击打开。' : '独立工作台未运行。')
       : (next.status === 'running' ? 'Independent workbench is running.' : 'Independent workbench is stopped.'));
   });
 
+  const deployAndStart = () => run(async () => {
+    if (!projectRoot.trim()) { setMessage(t('instanceTargetRequired')); return; }
+    let active = manifest;
+    if (!active) {
+      const created = await assetClient.createInstance(projectRoot.trim(), name.trim() || undefined, initializeKnowledge);
+      active = created.manifest;
+      setStatus({ manifest: created.manifest, verification: null, latestMigration: null } as InstanceStatusView);
+    }
+    const release = (await assetClient.frameworkRelease('publish')).release;
+    if (!release) throw new Error('Framework release publication returned no build');
+    setPublished(release);
+    const next = await assetClient.instanceRuntime(projectRoot.trim(), 'start');
+    setRuntime(next);
+    setMessage(lang === 'zh-CN' ? '独立工作台部署成功，已启动。' : 'Independent Workbench deployed and running.');
+  });
   const runSelfTest = async () => {
     setBusy(true);
     setSelfTestRunning(true);
@@ -325,11 +341,20 @@ export function InstanceLifecyclePanel() {
             : 'Shares the central V3 implementation with a dedicated process, local URL and project data. Publish and verify the shared runtime once; no per-instance installation.'}</p>
         </div>
         <div className="hero-actions">
+          <button className="primary-button" disabled={busy || !projectRoot.trim()} onClick={() => void deployAndStart()}>
+            {lang === 'zh-CN' ? '一键创建、部署并启动' : 'Create, deploy & start'}
+          </button>
           <button className="secondary-button" disabled={busy} onClick={() => void publish()}>
             {lang === 'zh-CN' ? '发布运行版本' : 'Publish runtime'}
           </button>
           <button className="secondary-button" disabled={busy || !projectRoot.trim() || !manifest} onClick={() => void manageRuntime('status')}>{lang === 'zh-CN' ? '检查运行状态' : 'Runtime status'}</button>
           <button className="primary-button" disabled={busy || !manifest || runtime?.status === 'running'} onClick={() => void manageRuntime('start')}>{lang === 'zh-CN' ? '启动独立工作台' : 'Start Workbench'}</button>
+          <button className="secondary-button" disabled={busy || !manifest} onClick={() => void manageRuntime('adopt')}>
+            {lang === 'zh-CN' ? '采用最新运行版本' : 'Adopt latest release'}
+          </button>
+          <button className="secondary-button" disabled={busy || !manifest} onClick={() => void manageRuntime('rollback-release')}>
+            {lang === 'zh-CN' ? '回退应用版本' : 'Rollback app release'}
+          </button>
           <button className="secondary-button" disabled={busy || runtime?.status !== 'running'} onClick={() => void manageRuntime('stop')}>{lang === 'zh-CN' ? '停止' : 'Stop'}</button>
           {runtime?.status === 'running' && runtime.url ? (
             <a className="secondary-button" href={runtime.url} target="_blank" rel="noopener noreferrer">{lang === 'zh-CN' ? '打开独立工作台 ↗' : 'Open Workbench ↗'}</a>
