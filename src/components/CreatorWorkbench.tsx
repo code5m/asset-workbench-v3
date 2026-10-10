@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { Boxes, FolderTree, TerminalSquare, Wrench } from 'lucide-react';
+import { Boxes, FolderTree, PlusCircle, TerminalSquare, Wrench } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { StarterCreator } from './StarterCreator';
 import { InstanceLifecyclePanel } from './InstanceLifecyclePanel';
 
 interface CreatorWorkbenchProps {
   onActivated?: () => void;
+  initialWorkspace?: 'knowledge' | 'instance';
 }
 
-export function CreatorWorkbench({ onActivated }: CreatorWorkbenchProps) {
+export function CreatorWorkbench({ onActivated, initialWorkspace = 'knowledge' }: CreatorWorkbenchProps) {
   const { t, lang } = useI18n();
-  const [workspace, setWorkspace] = useState<'knowledge' | 'instance'>('knowledge');
+  const [workspace, setWorkspace] = useState<'knowledge' | 'instance'>(initialWorkspace);
   const zh = lang === 'zh-CN';
   return (
     <section className="creator-workbench">
@@ -20,7 +21,12 @@ export function CreatorWorkbench({ onActivated }: CreatorWorkbenchProps) {
           <h2>{zh ? 'Creator 与实例管理工作台' : 'Creator & Instance Manager'}</h2>
           <p className="detail-summary">{zh ? '两个独立工作区：初始化项目知识，或创建并管理一个业务系统对应的 Workbench 实例。' : 'Two independent workspaces: initialize project knowledge or manage the lifecycle of a business-project Workbench instance.'}</p>
         </div>
-        <TerminalSquare size={30} />
+        <div className="creator-hero-actions">
+          <button type="button" className="primary-button creator-create-shortcut" onClick={() => setWorkspace('instance')}>
+            <PlusCircle size={17} /> {zh ? '新建独立工作台' : 'New independent Workbench'}
+          </button>
+          <span className="creator-hero-hint">{zh ? '选择本地项目 → 一键创建并启动' : 'Choose a project → deploy and launch'}</span>
+        </div>
       </section>
       <div className="creator-capability-grid" role="group" aria-label={zh ? '选择工作区' : 'Choose a workspace'}>
         <button type="button" className={`panel creator-capability-card creator-workspace-choice ${workspace === 'knowledge' ? 'selected' : ''}`}
