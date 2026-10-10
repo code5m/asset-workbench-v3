@@ -118,7 +118,7 @@ export async function resolveUiSource(): Promise<UiSource> {
 }
 
 export function sharedUiHeaders(kind: UiSource['kind']): Record<string, string> {
-  return { 'x-awb-ui-source': kind, 'x-content-type-options': 'nosniff' };
+  return { 'x-awb-ui-source': kind, 'x-awb-ui-delivery': SHARED_UI_DELIVERY, 'x-content-type-options': 'nosniff' };
 }
 
 export async function proxyCentralDevUi(
