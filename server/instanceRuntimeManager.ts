@@ -159,7 +159,7 @@ export async function startInstanceRuntime(project: string): Promise<InstanceRun
   const child = spawn(process.execPath, [path.join(releaseDir, 'server.mjs')], {
     cwd: APP_ROOT, detached: true, stdio: ['ignore', logFd, logFd], windowsHide: true,
     env: { ...process.env, AWB_INSTANCE_PROJECT_ROOT: root,
-      AWB_RELEASE_ID: verified.releaseId, AWB_RELEASE_UI_DIR: path.join(releaseDir, 'ui'),
+      AWB_RELEASE_ID: verified.releaseId,
       AWB_RUNTIME_PORT: String(port), AWB_RUNTIME_TOKEN: token },
   });
   fs.closeSync(logFd);
