@@ -355,6 +355,12 @@ function assertCaptureProject(sourceCwd: string | undefined, provider: string, s
 export function ingestProviderEvent(input: AdapterEventInput): { captureSessionId: string; accepted: string[]; duplicates: string[] } {
   if (!isProviderEnabled(input.provider)) return { captureSessionId: '', accepted: [], duplicates: [] };
   if (input.cwd) assertCaptureProject(input.cwd, input.provider, input.providerSessionId);
+  // A bound Instance must not accept an unproven first hook event from an arbitrary project.
+  // Follow-up hooks may omit cwd after the SessionStart established identity.
+  if (process.env.AWB_INSTANCE_PROJECT_ROOT && !input.cwd
+      && !readState(input.provider, input.providerSessionId)) {
+    throw new Error('Bound Instance requires project cwd on the first provider event');
+  }
   return withProviderLock(input.provider, input.providerSessionId, () => {
     let state = readState(input.provider, input.providerSessionId);
     if (!state) {
@@ -708,6 +714,14 @@ export function importOpencodeSession(exportPath: string): { captureSessionId: s
   const providerSessionId = parsed.info?.id;
   if (!providerSessionId) throw new Error('OpenCode export missing info.id');
 
+  if (process.env.AWB_INSTANCE_PROJECT_ROOT) {
+    const source = (parsed.info as Record<string, unknown> | undefined)?.directory
+      ?? (parsed.info as Record<string, unknown> | undefined)?.cwd;
+    if (typeof source !== 'string' || !source.trim()) {
+      throw new Error('OpenCode export has no project directory; cannot attribute to this Instance');
+    }
+    assertCaptureProject(source, 'opencode', providerSessionId);
+  }
   const records: OpencodeRecord[] = [];
   for (const message of parsed.messages ?? []) {
     const role = message.info?.role ?? 'assistant';
@@ -750,6 +764,11 @@ export async function importCodebuddyHistory(sourcePath: string): Promise<{ capt
   }
   const sessionDir = fs.statSync(resolved).isDirectory() ? resolved : path.dirname(resolved);
   const providerSessionId = path.basename(sessionDir);
+  // Official transcript paths by themselves do not prove which project ran the session.
+  // Accept only sessions whose matching live hook already bound cwd in this project.
+  if (process.env.AWB_INSTANCE_PROJECT_ROOT && !readState('codebuddy', providerSessionId)) {
+    throw new Error('CodeBuddy history has no verified project binding in this Instance');
+  }
   const indexPath = path.join(sessionDir, 'index.json');
   const messagesDir = path.join(sessionDir, 'messages');
   if (!fs.existsSync(indexPath)) throw new Error(`CodeBuddy transcript index missing: ${indexPath}`);

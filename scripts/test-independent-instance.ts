@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { createInstance, frameworkIdentity } from '../packages/creator-core/src/index.ts';
 import { publishFrameworkRelease, RELEASE_HOME, verifyFrameworkRelease } from '../server/frameworkRelease.ts';
 import { loadConfig } from '../server/config.ts';
-import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease } from '../server/instanceRuntimeManager.ts';
+import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime } from '../server/instanceRuntimeManager.ts';
 
 test('separate process gets one pinned business project, shares V3 UI, then stops', async () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-independent-'));
@@ -19,6 +19,8 @@ test('separate process gets one pinned business project, shares V3 UI, then stop
     projectRoot: root, frameworkRoot: cfg.appRoot,
     framework: frameworkIdentity(cfg.frameworkVersion, cfg.frameworkRevision),
   });
+  registerInstanceRuntime(root);
+  assert.ok((await listInstanceRuntimes()).some((item) => item.projectRoot === root && item.status === 'stopped'));
   await publishFrameworkRelease();
   let started = false;
   try {
@@ -48,6 +50,7 @@ test('separate process gets one pinned business project, shares V3 UI, then stop
   } finally {
     if (started) await stopInstanceRuntime(root);
     assert.equal((await instanceRuntimeStatus(root)).status, 'stopped');
+    assert.ok((await listInstanceRuntimes()).some((item) => item.projectRoot === root && item.status === 'stopped'));
     fs.rmSync(parent, { recursive: true, force: true });
   }
 });
@@ -79,6 +82,24 @@ test('two running instances keep independent project identities and runtime heal
       const info = await res.json() as { projectRoot: string; instanceId: string };
       assert.equal(info.projectRoot, expected.projectRoot);
       assert.equal(info.instanceId, expected.instanceId);
+      const assetsResponse = await fetch(new URL('api/workspace/tree?path=', running.url!));
+      assert.equal(assetsResponse.status, 200, 'project asset tree must work inside each Instance');
+      const providersResponse = await fetch(new URL('api/providers', running.url!));
+      assert.equal(providersResponse.status, 200, 'Provider manager overview must work inside each Instance');
+      const providerManager = await providersResponse.json() as { providers: Array<{ provider: string }> };
+      assert.ok(providerManager.providers.some((provider) => provider.provider === 'codex'));
+      const definitions = await fetch(new URL('api/provider-manager/definitions', running.url!));
+      assert.equal(definitions.status, 200, 'Provider definitions must be accessible inside each Instance');
+      const capture = await fetch(new URL('api/capture/v1/sessions', running.url!), {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ provider: 'other', providerSessionId: 'project-scoped-' + expected.instanceId, captureSource: 'manual' }),
+      });
+      assert.equal(capture.status, 201, 'capture must be writable inside the bound project');
+      const createdCapture = await capture.json() as { captureSessionId: string };
+      assert.ok(fs.existsSync(path.join(expected.projectRoot, '.asset-workbench-data', 'capture', 'sessions', createdCapture.captureSessionId, 'state.json')));
+      const other = running.url === runningA.url ? runningB : runningA;
+      const leaked = await fetch(new URL('api/capture/v1/sessions/' + createdCapture.captureSessionId, other.url!));
+      assert.equal(leaked.status, 404, 'a capture session from one project must not be readable from another');
       const health = await fetch(new URL('_runtime/health', running.url!));
       assert.equal(health.status, 403);
       const blocked = await fetch(new URL('api/creator/instance/create', running.url!), {
@@ -87,6 +108,14 @@ test('two running instances keep independent project identities and runtime heal
       });
       assert.equal(blocked.status, 403);
     }
+    const changeProvider = await fetch(new URL('api/provider-manager/providers/codex/disable', runningA.url!), {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
+    });
+    assert.equal(changeProvider.status, 200);
+    const aOverview = await (await fetch(new URL('api/providers', runningA.url!))).json() as { providers: Array<{ provider: string; enabled?: boolean }> };
+    const bOverview = await (await fetch(new URL('api/providers', runningB.url!))).json() as { providers: Array<{ provider: string; enabled?: boolean }> };
+    assert.equal(aOverview.providers.find((provider) => provider.provider === 'codex')?.enabled, false);
+    assert.equal(bOverview.providers.find((provider) => provider.provider === 'codex')?.enabled, true, 'Provider toggle must not affect another project');
     assert.equal(fs.readFileSync(path.join(a, 'pom.xml'), 'utf8'), originalA);
     assert.equal(fs.readFileSync(path.join(b, 'package.json'), 'utf8'), originalB);
   } finally {

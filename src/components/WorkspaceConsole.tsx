@@ -91,7 +91,7 @@ export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated }
           {t('consoleModeProject')}
         </button>
         <button className={view === 'creator' ? 'active' : ''} onClick={() => onViewChange('creator')}>
-          {t('consoleModeCreator')}
+          {loc({ 'zh-CN': '独立工作台', en: 'Workbenches' })}
         </button>
       </div>
 

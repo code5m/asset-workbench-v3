@@ -555,15 +555,15 @@ test('Creator Knowledge is executable from Workbench and shares its core with CL
   assert.match(creator, /starter-cli-map/);
   assert.match(workbench, /<StarterCreator/);
   assert.match(workbench, /workspace === 'knowledge'/);
-  assert.match(workbench, /Knowledge Creator/);
+  assert.match(workbench, /Knowledge Creator|知识初始化/);
   assert.match(workbench, /workspace === 'instance'/);
-  assert.match(workbench, /Instance Manager/);
+  assert.match(workbench, /Instance Manager|独立工作台/);
   assert.match(read('src/components/InstanceLifecyclePanel.tsx'), /instance-stage-nav/);
   assert.match(workbench, /<InstanceLifecyclePanel/);
   assert.doesNotMatch(workbench, /status: 'planned'/);
   assert.doesNotMatch(workbench, /child_process|exec\(|spawn\(/);
   assert.match(workspace, /<CreatorWorkbench/);
-  assert.match(workspace, /consoleModeCreator/);
+  assert.match(workspace, /consoleModeCreator|独立工作台|Workbenches/);
   assert.match(app, /openCreatorWorkbench/);
   assert.match(app, /setConsoleView\('creator'\)/);
   assert.match(client, /\/creator\/knowledge\/create/);

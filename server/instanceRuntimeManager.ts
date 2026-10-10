@@ -16,6 +16,32 @@ export interface InstanceRuntimeView {
 }
 interface RuntimeRecord { projectRoot: string; instanceId: string; pid: number; port: number; releaseId?: string; token?: string; }
 const registryDir = () => path.join(APP_ROOT, '.asset-workbench-data', 'instance-runtimes');
+const registryIndex = () => path.join(registryDir(), 'registered.json');
+
+interface RegisteredInstance { projectRoot: string; instanceId: string; projectName: string; registeredAt: string; }
+function readRegistry(): RegisteredInstance[] {
+  try {
+    const value = JSON.parse(fs.readFileSync(registryIndex(), 'utf8')) as unknown;
+    if (!Array.isArray(value)) return [];
+    return value.filter((row): row is RegisteredInstance =>
+      typeof row?.projectRoot === 'string' && typeof row?.instanceId === 'string'
+      && typeof row?.projectName === 'string' && typeof row?.registeredAt === 'string');
+  } catch { return []; }
+}
+/** The inventory is independent of process PIDs: stopping a workbench must not delete it. */
+export function registerInstanceRuntime(project: string): void {
+  centralOnly();
+  const root = resolveRoot(project);
+  const manifest = readInstanceManifest(root);
+  if (!manifest || manifest.projectRoot !== root) throw new Error('Valid Instance Manifest required for registration');
+  const entries = readRegistry().filter((entry) => entry.projectRoot !== root);
+  entries.push({ projectRoot: root, instanceId: manifest.instanceId, projectName: manifest.projectName, registeredAt: new Date().toISOString() });
+  fs.mkdirSync(registryDir(), { recursive: true, mode: 0o700 });
+  const temp = registryIndex() + '.tmp-' + process.pid;
+  fs.writeFileSync(temp, JSON.stringify(entries, null, 2) + '\n', { mode: 0o600 });
+  fs.renameSync(temp, registryIndex());
+}
+
 type ReleaseSelection = { active: string; previous: string | null };
 function selectionFile(root: string): string {
   return filename(root).slice(0, -5) + '.release.json';
@@ -94,7 +120,11 @@ async function freePort(): Promise<number> {
 }
 export async function instanceRuntimeStatus(project: string): Promise<InstanceRuntimeView> {
   centralOnly();
-  const root = resolveRoot(project), { manifest } = inspect(root), record = readRecord(root);
+  const root = resolveRoot(project);
+  // Inventory and stop controls must remain usable while an Instance needs a Framework upgrade.
+  const manifest = readInstanceManifest(root);
+  if (!manifest || manifest.projectRoot !== root) throw new Error('Valid Instance Manifest required');
+  const record = readRecord(root);
   const selection = readSelection(root);
   const running = !!record && record.instanceId === manifest.instanceId && await responds(record);
   if (!running && record && !alive(record.pid)) forget(root);
@@ -137,6 +167,7 @@ export async function startInstanceRuntime(project: string): Promise<InstanceRun
   child.unref();
   const record: RuntimeRecord = { projectRoot: root, instanceId: manifest.instanceId, pid: child.pid, port, releaseId: verified.releaseId, token };
   writeRecord(record);
+  registerInstanceRuntime(root);
   if (!selection) saveSelection(root, { active: verified.releaseId, previous: null });
   for (let attempt = 0; attempt < 60; attempt++) {
     if (await responds(record)) return instanceRuntimeStatus(root);
@@ -187,10 +218,12 @@ export async function rollbackInstanceRelease(project: string): Promise<Instance
 export async function listInstanceRuntimes(): Promise<InstanceRuntimeView[]> {
   centralOnly();
   if (!fs.existsSync(registryDir())) return [];
-  const roots = new Set<string>();
+  const roots = new Set<string>(readRegistry().map((entry) => entry.projectRoot));
   for (const file of fs.readdirSync(registryDir()).filter((name) => name.endsWith('.json'))) {
-    try { roots.add((JSON.parse(fs.readFileSync(path.join(registryDir(), file), 'utf8')) as RuntimeRecord).projectRoot); }
-    catch { /* invalid entry */ }
+    try {
+      const stored = JSON.parse(fs.readFileSync(path.join(registryDir(), file), 'utf8')) as Partial<RuntimeRecord>;
+      if (typeof stored.projectRoot === 'string') roots.add(stored.projectRoot);
+    } catch { /* invalid entry */ }
   }
   const result: InstanceRuntimeView[] = [];
   for (const root of roots) { try { result.push(await instanceRuntimeStatus(root)); } catch { /* moved project */ } }
