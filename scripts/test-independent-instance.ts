@@ -42,7 +42,7 @@ test('separate process gets one pinned business project, shares V3 UI, then stop
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ rootPath: parent }),
     });
-    assert.equal(forbidden.status, 400);
+    assert.equal(forbidden.status, 403);
     assert.equal((await instanceRuntimeStatus(root)).status, 'running');
   } finally {
     if (started) await stopInstanceRuntime(root);
