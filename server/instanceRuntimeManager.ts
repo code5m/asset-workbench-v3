@@ -36,8 +36,8 @@ function readRecord(root: string): RuntimeRecord | null {
 }
 function writeRecord(v: RuntimeRecord): void {
   fs.mkdirSync(registryDir(), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(filename(v) + '.tmp', JSON.stringify(v), { mode: 0o600 });
-  fs.renameSync(filename(v) + '.tmp', filename(v));
+  fs.writeFileSync(filename(v.projectRoot) + '.tmp', JSON.stringify(v), { mode: 0o600 });
+  fs.renameSync(filename(v.projectRoot) + '.tmp', filename(v.projectRoot));
 }
 function forget(root: string): void { try { fs.unlinkSync(filename(root)); } catch { /* no entry */ } }
 function inspect(root: string) {
