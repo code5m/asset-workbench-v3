@@ -284,3 +284,36 @@ The following remain explicitly planned and must not be represented as implement
 - automatic business-code migration;
 - database Schema migration;
 - automatic cross-version source rewriting.
+
+
+## Independent V3 runtime (shared Framework)
+
+A logical Instance can now be launched as its own local **process** (not a repository copy).
+The central Creator uses typed `/api/creator/runtime/status|start|stop` actions.
+Each spawned runtime binds to `127.0.0.1` on a dedicated ephemeral port and uses the
+already-built shared V3 frontend and Vite preview backend. It is pinned via
+`AWB_INSTANCE_PROJECT_ROOT` to the matching Instance Manifest, and the root-switch
+API refuses to change its project. The UI provides Start, Stop, Status and Open.
+
+- **Framework source:** one repository / one build; never copied into a business checkout.
+- **Per-project knowledge and records:** each business root keeps its own 00–05 assets
+  and `.asset-workbench-data` state (capture records, Provider preferences, Instance Manifest).
+- **Secrets:** independent runtimes scope OS Keyring provider IDs using a stable
+  SHA-256 project-root prefix; secrets are never copied into files or between projects.
+- **Runtime inventory:** the central app stores local process/port records under
+  `.asset-workbench-data/instance-runtimes`; a PID is not stopped unless its
+  loopback API confirms the matching Instance identity.
+- **Version handling:** Start requires Instance verification and matching current
+  Framework identity. Existing upgrade plan/apply and Manifest rollback are preserved.
+  To change the shared V3 code, update/build the central Framework and then use
+  explicit per-Instance upgrade plans before starting outdated instances.
+- **Isolation scope:** separate OS processes, project roots and local ports, not
+  containers or OS sandboxing. The same logged-in OS account and Framework build
+  are trusted. This is not an internet-facing multi-tenant service.
+- **Performance:** UI dist is shared, but each running Instance uses an additional
+  lightweight local Vite preview process. Stop unused instances to release memory.
+
+**Lifecycle:** create a logical Instance → build the central V3 (`npm run build`)
+→ inspect the Instance → start → open the independent URL → stop.
+This implementation does not create autonomous remote servers or copy the business
+code, and does not rewrite a business repository on upgrade.
