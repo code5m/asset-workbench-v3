@@ -4353,3 +4353,8 @@ code {
 .instance-engine-self-test-actions small { font-size: 12px; }
 .engine-check-pass { color: #087a55; }
 .engine-check-fail { color: #b54708; overflow-wrap: anywhere; }
+
+.instance-runtime-controls { display: grid; gap: 10px; padding: 14px; border: 1px solid #dbe3ec; border-radius: 12px; background: rgba(244, 249, 252, .8); }
+.instance-runtime-controls strong { font-size: 14px; }
+.instance-runtime-controls small { color: #667085; overflow-wrap: anywhere; }
+.instance-runtime-controls .secondary-button { text-decoration: none; }
