@@ -13,6 +13,7 @@ interface WorkspaceConsoleProps {
   view: 'project' | 'creator';
   onViewChange: (view: 'project' | 'creator') => void;
   onActivated?: () => void;
+  isManagedInstance?: boolean;
 }
 
 function formatDate(iso: string): string {
@@ -21,7 +22,7 @@ function formatDate(iso: string): string {
   return d.toLocaleString();
 }
 
-export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated }: WorkspaceConsoleProps) {
+export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated, isManagedInstance = false }: WorkspaceConsoleProps) {
   const { t, loc } = useI18n();
   const [repos, setRepos] = useState<RepositoryRevision[]>([]);
   const [projectRoot, setProjectRoot] = useState('');
@@ -75,9 +76,9 @@ export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated }
           <p className="lead">{t('consoleLead')}</p>
         </div>
         <div className="topbar-actions">
-          <button type="button" className="primary-button" onClick={() => { setCreatorOpenKey((x) => x + 1); onViewChange('creator'); }}>
-            <PlusCircle size={17} /> {loc({ 'zh-CN': '新建独立工作台', en: 'New Workbench' })}
-          </button>
+          {!isManagedInstance && view === 'project' ? <button type="button" className="primary-button" onClick={() => { setCreatorOpenKey((x) => x + 1); onViewChange('creator'); }}>
+            <PlusCircle size={17} /> {loc({ 'zh-CN': '管理独立工作台', en: 'Manage Workbenches' })}
+          </button> : null}
           <span className="status-badge future">{t('noWorkspaceVersion')}</span>
           <button className="secondary-button" onClick={load} title={t('rescan')}>
             <RefreshCw size={17} />
@@ -93,11 +94,11 @@ export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated }
         <button className={view === 'creator' ? 'active' : ''} onClick={() => onViewChange('creator')}>
           {loc({ 'zh-CN': '独立工作台', en: 'Workbenches' })}
         </button>
-      </div>
+      </div> : null}
 
-      {view === 'creator' ? <CreatorWorkbench key={creatorOpenKey} initialWorkspace={creatorOpenKey ? 'instance' : 'knowledge'} onActivated={onActivated} /> : null}
+      {!isManagedInstance && view === 'creator' ? <CreatorWorkbench key={creatorOpenKey} initialWorkspace="instance" onActivated={onActivated} /> : null}
 
-      {view === 'project' ? (
+      {(isManagedInstance || view === 'project') ? (
       <>
       {runtimeMode === 'framework-self' ? (
         <section className="panel runtime-mode-notice framework-self-notice">
