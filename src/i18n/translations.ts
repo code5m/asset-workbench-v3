@@ -728,6 +728,8 @@ export const ui: Record<Locale, Record<string, string>> = {
     instancePlanAction: '生成升级计划',
     instanceApplyAction: '应用升级',
     instanceRollbackAction: '回滚最新迁移',
+    instanceEngineSelfTestTitle: '引擎自检（隔离沙箱，不影响当前项目）',
+    instanceEngineSelfTestLead: '在临时目录自动跑完整生命周期，跑完清理，不触碰当前业务项目。',
     instanceSelfTestAction: '一键验收',
     instanceSelfTestRunning: '正在自动创建临时项目并执行完整生命周期验收…',
     instanceSelfTestPass: 'Instance 生命周期一键验收通过',
