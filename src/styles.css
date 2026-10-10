@@ -4426,3 +4426,9 @@ code {
   .instance-guided-flow { padding: 14px; }
   .instance-guided-primary { width: 100%; }
 }
+
+.instance-optional-settings { background: #fff; border: 1px solid #e0e8ee; border-radius: 9px; padding: 10px 12px; }
+.instance-optional-settings > summary { cursor: pointer; font-size: 12px; font-weight: 600; color: #475467; }
+.instance-optional-settings > div { display: grid; gap: 12px; padding-top: 12px; }
+.instance-optional-settings label { display: grid; gap: 5px; font-size: 12px; font-weight: 600; }
+.instance-optional-settings .instance-checkbox { display: flex; align-items: center; }
