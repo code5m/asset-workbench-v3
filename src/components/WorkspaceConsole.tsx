@@ -76,7 +76,7 @@ export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated }
         </div>
         <div className="topbar-actions">
           <button type="button" className="primary-button" onClick={() => { setCreatorOpenKey((x) => x + 1); onViewChange('creator'); }}>
-            <PlusCircle size={17} /> {loc({ cn: '新建独立工作台', en: 'New Workbench' })}
+            <PlusCircle size={17} /> {loc({ 'zh-CN': '新建独立工作台', en: 'New Workbench' })}
           </button>
           <span className="status-badge future">{t('noWorkspaceVersion')}</span>
           <button className="secondary-button" onClick={load} title={t('rescan')}>
