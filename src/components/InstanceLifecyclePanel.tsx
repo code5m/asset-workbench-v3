@@ -200,8 +200,8 @@ export function InstanceLifecyclePanel() {
       return;
     }
     const result = await assetClient.createInstance(projectRoot.trim(), name.trim() || undefined, initializeKnowledge);
-    await assetClient.setRoot(result.manifest.projectRoot);
     await refresh(result.manifest.projectRoot);
+    await loadInventory();
     setMessage(t('instanceCreated'));
    });
 
@@ -261,10 +261,8 @@ export function InstanceLifecyclePanel() {
 
   const deployAndStart = () => run(async () => {
     if (!projectRoot.trim()) { setMessage(t('instanceTargetRequired')); return; }
-    let active = manifest;
-    if (!active) {
+    if (!manifest) {
       const created = await assetClient.createInstance(projectRoot.trim(), name.trim() || undefined, initializeKnowledge);
-      active = created.manifest;
       setStatus(await assetClient.instanceStatus(projectRoot.trim()));
     }
     const release = (await assetClient.frameworkRelease('publish')).release;
@@ -306,7 +304,7 @@ export function InstanceLifecyclePanel() {
 
       <section className="instance-inventory" aria-label={lang === 'zh-CN' ? '我的独立工作台' : 'My workbenches'}>
         <div className="instance-inventory-header">
-          <h3>{lang === 'zh-CN' ? '已有独立工作台' : 'Existing workbenches'}</h3>
+          <h3>{lang === 'zh-CN' ? '我的独立工作台' : 'My workbenches'}</h3>
           <button className="secondary-button" disabled={busy} onClick={() => void loadInventory()}>{lang === 'zh-CN' ? '刷新列表' : 'Refresh'}</button>
         </div>
         {inventoryError ? <p role="alert" className="engine-check-fail">{inventoryError}</p> : null}
