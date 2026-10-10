@@ -26,7 +26,7 @@ test('separate process gets one pinned business project, shares V3 UI, then stop
     assert.equal(result.status, 'running');
     assert.equal(result.instanceId, created.manifest.instanceId);
     assert.ok(result.url?.startsWith('http://127.0.0.1:'));
-    const configResponse = await fetch(new URL('api/config', result.url));
+    const configResponse = await fetch(new URL('api/config', result.url!));
     assert.equal(configResponse.status, 200);
     const identity = await configResponse.json() as Record<string, unknown>;
     assert.equal(identity.projectRoot, root);
@@ -36,7 +36,7 @@ test('separate process gets one pinned business project, shares V3 UI, then stop
     const html = await fetch(result.url!);
     assert.equal(html.status, 200);
     assert.match(await html.text(), /<div id="root"><\/div>/);
-    const forbidden = await fetch(new URL('api/workspace/root', result.url), {
+    const forbidden = await fetch(new URL('api/workspace/root', result.url!), {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ rootPath: parent }),
     });
