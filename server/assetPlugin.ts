@@ -28,6 +28,7 @@ import {
 } from './captureService.ts';
 import { detectProviders } from './providerAdapterService.ts';
 import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, listProviderStatuses, redetectProviderStatuses, runProviderVerification, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
+import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, listInstanceRuntimes } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { createKnowledge, verifyKnowledge } from '../packages/starter/src/index.ts';
 import {
@@ -140,7 +141,26 @@ function createHandler() {
         return;
       }
       if (req.method === 'GET' && pathPart === '/config') {
-        sendJson(res, 200, { ...loadConfig(), configurable: true });
+        sendJson(res, 200, { ...loadConfig(), configurable: !process.env.AWB_INSTANCE_PROJECT_ROOT });
+        return;
+      }
+      if (pathPart === '/creator/runtime/list' && req.method === 'GET') {
+        try { sendJson(res, 200, await listInstanceRuntimes()); }
+        catch (e) { sendJson(res, 400, { error: (e as Error).message }); }
+        return;
+      }
+      if (pathPart.startsWith('/creator/runtime/') && req.method === 'POST') {
+        try {
+          const body = await readBody(req);
+          const projectRoot = typeof body.projectRoot === 'string' ? body.projectRoot : '';
+          const action = pathPart.slice('/creator/runtime/'.length);
+          const result = action === 'status' ? await instanceRuntimeStatus(projectRoot)
+            : action === 'start' ? await startInstanceRuntime(projectRoot)
+            : action === 'stop' ? await stopInstanceRuntime(projectRoot)
+            : null;
+          if (!result) { sendJson(res, 404, { error: 'Unknown runtime action' }); return; }
+          sendJson(res, 200, result);
+        } catch (e) { sendJson(res, 400, { error: (e as Error).message }); }
         return;
       }
       if (req.method === 'GET' && pathPart === '/providers') {
