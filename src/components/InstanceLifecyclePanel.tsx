@@ -357,6 +357,12 @@ export function InstanceLifecyclePanel() {
                   ? <a className="primary-button" href={item.url} target="_blank" rel="noopener noreferrer">{lang === 'zh-CN' ? '打开工作台 ↗' : 'Open ↗'}</a>
                   : <button className="primary-button" disabled={busy} onClick={() => void launchExisting(item.projectRoot)}>{lang === 'zh-CN' ? '启动' : 'Start'}</button>}
                 <button className="secondary-button" disabled={busy} onClick={() => { selectProject(item.projectRoot); setStage('status'); void refresh(item.projectRoot); }}>{lang === 'zh-CN' ? '管理' : 'Manage'}</button>
+                {item.status === 'running' ? <button className="secondary-button" disabled={busy} onClick={() => void run(async () => {
+                  const next = await assetClient.instanceRuntime(item.projectRoot, 'stop');
+                  if (projectRoot === item.projectRoot) setRuntime(next);
+                  await loadInventory();
+                  setMessage(lang === 'zh-CN' ? '已停止该工作台的后台服务；项目数据仍保留。' : 'Workbench stopped; project data preserved.');
+                })}>{lang === 'zh-CN' ? '停止运行' : 'Stop'}</button> : null}
               </div>
             </div>
           ))}
