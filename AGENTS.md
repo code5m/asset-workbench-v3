@@ -264,6 +264,7 @@ The current capability truth is:
 - one external business-project binding: available;
 - Knowledge Init: available;
 - full Workbench Instance Creator / CLI: available (v1);
+- independent per-business-project local runtime: available (shared Framework build, dedicated loopback process and URL);
 - Instance Manifest / framework-version + revision + capability identity: available;
 - upgrade plan/apply + migration evidence + latest-migration rollback: available;
 - automatic business-code migration: not implemented; any future code/schema migration must be an explicit versioned capability.
@@ -295,6 +296,7 @@ Hard rules:
   Knowledge -> Provider -> Evolution.
 - The current `packages/starter` capability remains a **project knowledge structure
   initializer**. It is not Spring Boot Starter, Maven POM, or a business-code generator.
+- Independent runtime management lives in `server/instanceRuntimeManager.ts`: starts only a verified project-locked Instance, reuses the central V3 build and does not copy source; source/framework update is separate from Manifest metadata migration. The instance must not change its project root or launch nested runtimes. Per-instance Provider OS Keyring IDs must not cross project boundaries.
 - Full Instance lifecycle now lives in `packages/creator-core`: one external business
   project -> one Instance Manifest -> version-aware upgrade plan/apply -> migration
   evidence/Manifest backup -> verify -> latest-migration rollback.
