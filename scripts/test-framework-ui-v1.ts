@@ -643,6 +643,11 @@ test('Creator Workbench exposes a typed one-click Instance self test without bro
 
   assert.match(panel, /assetClient\.runInstanceSelfTest/);
   assert.match(panel, /instanceSelfTestAction/);
+  assert.match(panel, /instanceEngineSelfTestTitle/);
+  assert.match(panel, /instanceEngineSelfTestLead/);
+  assert.match(panel, /instance-engine-self-test/);
+  assert.doesNotMatch(panel, /stage === 'status' && selfTest/);
+  assert.equal((panel.match(/onClick=\{\(\) => void runSelfTest\(\)\}/g) ?? []).length, 1);
   assert.match(panel, /SELF_TEST_PASS/);
   assert.doesNotMatch(panel, /child_process|exec\(|spawn\(/);
 
@@ -776,6 +781,8 @@ test('visual framework console copy exists in zh-CN and en', () => {
     'instanceVerificationTitle',
     'instanceUpgradePlanTitle',
     'instanceMigrationEvidence',
+    'instanceEngineSelfTestTitle',
+    'instanceEngineSelfTestLead',
     'instanceSelfTestAction',
     'instanceSelfTestRunning',
     'instanceSelfTestPass',
