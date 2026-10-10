@@ -83,8 +83,8 @@ export function AppNavigation({ items, activeSection, onSelect }: AppNavigationP
                 <Icon size={18} strokeWidth={1.9} />
               </span>
               <span className="step-copy">
-                <span>{loc(item.title)}</span>
-                <small>{loc(item.eyebrow)}</small>
+                <span>{item.id === 'guide' && runtime?.mode === 'business-project' ? loc({ 'zh-CN': '项目知识', en: 'Project knowledge' }) : loc(item.title)}</span>
+                <small>{item.id === 'guide' && runtime?.mode === 'business-project' ? loc({ 'zh-CN': '学习与沉淀', en: 'Learn & capture' }) : loc(item.eyebrow)}</small>
               </span>
             </button>
           );
