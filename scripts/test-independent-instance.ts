@@ -115,6 +115,29 @@ test('two running instances keep independent project identities and runtime heal
       });
       assert.equal(blocked.status, 403);
     }
+    // UI is a single live source: changing the central built HTML must update
+    // both already-running Instances without publishing/adopting/restarting.
+    const centralHtml = path.join(cfg.appRoot, 'dist', 'index.html');
+    const beforeUi = fs.readFileSync(centralHtml);
+    const marker = '<!-- shared-central-ui-parity-test -->';
+    const beforeA = await (await fetch(runningA.url!)).text();
+    const beforeB = await (await fetch(runningB.url!)).text();
+    assert.equal(beforeA, beforeB, 'Both Instances must serve the exact same central UI');
+    try {
+      fs.writeFileSync(centralHtml, Buffer.concat([beforeUi, Buffer.from('\n' + marker + '\n')]));
+      for (const instance of [runningA, runningB]) {
+        const updated = await fetch(instance.url!);
+        assert.equal(updated.status, 200);
+        assert.match(await updated.text(), /shared-central-ui-parity-test/,
+          'An already-running Instance must immediately serve the modified central UI');
+      }
+    } finally {
+      fs.writeFileSync(centralHtml, beforeUi);
+    }
+    for (const instance of [runningA, runningB]) {
+      assert.equal((await (await fetch(instance.url!)).text()), beforeA,
+        'Restoring central UI must restore each Instance immediately');
+    }
     const changeProvider = await fetch(new URL('api/provider-manager/providers/codex/disable', runningA.url!), {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
     });
