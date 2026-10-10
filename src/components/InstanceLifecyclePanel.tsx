@@ -304,13 +304,13 @@ export function InstanceLifecyclePanel() {
         <PackageCheck size={28} />
       </div>
 
-      <section className="instance-inventory" aria-label={lang === 'zh-CN' ? '已有独立工作台' : 'Existing workbenches'}>
+      <section className="instance-inventory" aria-label={lang === 'zh-CN' ? '我的独立工作台' : 'My workbenches'}>
         <div className="instance-inventory-header">
           <h3>{lang === 'zh-CN' ? '已有独立工作台' : 'Existing workbenches'}</h3>
           <button className="secondary-button" disabled={busy} onClick={() => void loadInventory()}>{lang === 'zh-CN' ? '刷新列表' : 'Refresh'}</button>
         </div>
         {inventoryError ? <p role="alert" className="engine-check-fail">{inventoryError}</p> : null}
-        {knownInstances.length === 0 ? <p className="detail-summary">{lang === 'zh-CN' ? '尚无已登记的运行实例。填写下方业务项目路径后即可创建。' : 'No registered runtimes yet. Choose a project path below to create one.'}</p> : null}
+        {knownInstances.length === 0 ? <p className="detail-summary">{lang === 'zh-CN' ? '暂无已登记的运行实例。下方输入项目路径，即可创建第一个独立工作台。' : 'No registered runtimes yet. Enter a project path below to create your first workbench.'}</p> : null}
         <div className="instance-inventory-list">
           {knownInstances.map((item) => (
             <button type="button" className="instance-inventory-item" key={item.projectRoot} onClick={() => { setProjectRoot(item.projectRoot); setStatus(null); setRuntime(null); setStage('status'); void refresh(item.projectRoot); }}>
@@ -319,6 +319,14 @@ export function InstanceLifecyclePanel() {
               <span>{item.projectRoot}</span>
             </button>
           ))}
+        </div>
+      </section>
+      <section className="instance-isolation-note" aria-label={lang === 'zh-CN' ? '项目数据边界' : 'Project data boundary'}>
+        <ShieldCheck size={20} />
+        <div>
+          <strong>{lang === 'zh-CN' ? '项目数据独立保存' : 'Project-scoped storage'}</strong>
+          <p>{lang === 'zh-CN' ? '每个工作台的聊天原文、Agent 工作记录和采集事件保存在其绑定的项目目录中。中央 Framework 负责统一管理，不自动合并其他项目的记录。导入来源不明的历史会话仍需人工确认归属。' : 'Transcripts, agent work records and capture events are stored under the bound project. The central Framework manages runtimes without merging project data. Historical imports with unknown origin still require attribution review.'}</p>
+          <code>04-conversations/transcripts · 04-conversations/work-records · .asset-workbench-data/capture</code>
         </div>
       </section>
       <div className="instance-stage-nav" role="group" aria-label="Instance lifecycle">
