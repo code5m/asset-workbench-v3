@@ -22,7 +22,7 @@ function formatDate(iso: string): string {
 }
 
 export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated }: WorkspaceConsoleProps) {
-  const { t, loc } = useI18n();
+  const { t, lang } = useI18n();
   const [repos, setRepos] = useState<RepositoryRevision[]>([]);
   const [projectRoot, setProjectRoot] = useState('');
   const [scannedAt, setScannedAt] = useState('');
@@ -76,7 +76,7 @@ export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated }
         </div>
         <div className="topbar-actions">
           <button type="button" className="primary-button" onClick={() => { setCreatorOpenKey((x) => x + 1); onViewChange('creator'); }}>
-            <PlusCircle size={17} /> {loc === 'zh-CN' ? '新建独立工作台' : 'New Workbench'}
+            <PlusCircle size={17} /> {lang === 'zh-CN' ? '新建独立工作台' : 'New Workbench'}
           </button>
           <span className="status-badge future">{t('noWorkspaceVersion')}</span>
           <button className="secondary-button" onClick={load} title={t('rescan')}>
