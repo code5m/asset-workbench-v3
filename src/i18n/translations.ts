@@ -1657,6 +1657,8 @@ export const ui: Record<Locale, Record<string, string>> = {
     instancePlanAction: 'Plan upgrade',
     instanceApplyAction: 'Apply upgrade',
     instanceRollbackAction: 'Rollback latest migration',
+    instanceEngineSelfTestTitle: 'Engine self-test (isolated sandbox; current project unaffected)',
+    instanceEngineSelfTestLead: 'Runs the complete lifecycle in a temporary directory, cleans up afterward, and never touches the current business project.',
     instanceSelfTestAction: 'Run self test',
     instanceSelfTestRunning: 'Creating an isolated temporary project and running the full lifecycle self test…',
     instanceSelfTestPass: 'Instance lifecycle self test passed',
