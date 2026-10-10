@@ -17,11 +17,13 @@ export function GuidePage({ onNavigate, onOpenAsset }: GuidePageProps) {
   const [rootPath, setRootPath] = useState('');
   const [currentRoot, setCurrentRoot] = useState('');
   const [message, setMessage] = useState('');
+  const [lockedInstance, setLockedInstance] = useState(false);
 
   useEffect(() => {
     assetClient
       .config()
       .then((cfg) => {
+        setLockedInstance(cfg.lockedToInstance === true);
         setCurrentRoot(cfg.mode === 'business-project' ? cfg.projectRoot : '');
         setRootPath(cfg.mode === 'business-project' ? cfg.projectRoot : '');
       })
@@ -44,8 +46,8 @@ export function GuidePage({ onNavigate, onOpenAsset }: GuidePageProps) {
       <section className="topbar">
         <div>
           <p className="eyebrow">{t('guideEyebrow')}</p>
-          <h1>{t('guideTitle')}</h1>
-          <p className="lead">{t('guideLead')}</p>
+          <h1>{lockedInstance ? loc({ 'zh-CN': '项目知识与学习', en: 'Project knowledge & learning' }) : t('guideTitle')}</h1>
+          <p className="lead">{lockedInstance ? loc({ 'zh-CN': '学习当前项目的知识结构、代码资产、聊天记录和决策证据；始终绑定本项目，不允许切换到其他项目。', en: 'Understand the current project’s knowledge, code assets, transcripts and decisions. This workbench is pinned to this project.' }) : t('guideLead')}</p>
         </div>
         <button className="primary-button" onClick={() => onNavigate('console')}>
           <ArrowRight size={17} />
@@ -92,7 +94,7 @@ export function GuidePage({ onNavigate, onOpenAsset }: GuidePageProps) {
         </div>
       </section>
 
-      <section className="panel root-config">
+      {!lockedInstance ? <section className="panel root-config">
         <div className="section-heading">
           <div>
             <p className="eyebrow">{t('workspaceBootstrap')}</p>
@@ -115,9 +117,9 @@ export function GuidePage({ onNavigate, onOpenAsset }: GuidePageProps) {
         </div>
         {currentRoot ? <p className="detail-summary">{t('currentRoot')}: <code>{currentRoot}</code></p> : null}
         {message ? <p className="detail-summary">{message}</p> : null}
-      </section>
+      </section> : <section className="panel root-config"><strong>{loc({ 'zh-CN': '当前项目（已锁定）', en: 'Current project (locked)' })}</strong><p className="detail-summary"><code>{currentRoot}</code></p></section>}
 
-      <StarterCreator onActivated={() => onNavigate('assets')} compact />
+      {!lockedInstance ? <StarterCreator onActivated={() => onNavigate('assets')} compact /> : null}
 
       <KnowledgeLifecycle
         compact
