@@ -16,6 +16,7 @@ export function InstanceLifecyclePanel() {
   const [selfTest, setSelfTest] = useState<InstanceSelfTestView | null>(null);
   const [selfTestRunning, setSelfTestRunning] = useState(false);
   const [selfTestError, setSelfTestError] = useState('');
+  const [published, setPublished] = useState<{ releaseId: string; totalBytes: number } | null>(null);
   const [runtime, setRuntime] = useState<{ status: 'running' | 'stopped'; url: string | null; pid: number | null } | null>(null);
 
   const manifest = status?.manifest ?? null;
@@ -232,6 +233,11 @@ export function InstanceLifecyclePanel() {
     setMessage(t('instanceRollbackDone'));
   });
 
+  const publish = () => run(async () => {
+    const result = await assetClient.frameworkRelease('publish');
+    setPublished(result.release);
+    setMessage(lang === 'zh-CN' ? '已发布并验证不可变运行版本，可启动独立实例。' : 'Verified immutable release published.');
+  });
   const manageRuntime = (action: 'start' | 'stop' | 'status') => run(async () => {
     if (!projectRoot.trim()) { setMessage(t('instanceTargetRequired')); return; }
     const next = await assetClient.instanceRuntime(projectRoot.trim(), action);
@@ -315,10 +321,13 @@ export function InstanceLifecyclePanel() {
         <div>
           <strong>{lang === 'zh-CN' ? '独立工作台 · 运行管理' : 'Independent Workbench · Runtime'}</strong>
           <p className="detail-summary">{lang === 'zh-CN'
-            ? '复用中央 V3 功能，但使用专属进程、入口地址和项目数据。无需复制整套源码；首次启动前需在中央框架执行构建。'
-            : 'Shares the central V3 implementation with a dedicated process, local URL and project data. Build the Framework before first launch.'}</p>
+            ? '复用中央 V3 功能，但使用专属进程、入口地址和项目数据。无需复制整套源码；先点击“发布运行版本”，系统自动构建和校验；每个实例无需独立安装依赖。'
+            : 'Shares the central V3 implementation with a dedicated process, local URL and project data. Publish and verify the shared runtime once; no per-instance installation.'}</p>
         </div>
         <div className="hero-actions">
+          <button className="secondary-button" disabled={busy} onClick={() => void publish()}>
+            {lang === 'zh-CN' ? '发布运行版本' : 'Publish runtime'}
+          </button>
           <button className="secondary-button" disabled={busy || !projectRoot.trim() || !manifest} onClick={() => void manageRuntime('status')}>{lang === 'zh-CN' ? '检查运行状态' : 'Runtime status'}</button>
           <button className="primary-button" disabled={busy || !manifest || runtime?.status === 'running'} onClick={() => void manageRuntime('start')}>{lang === 'zh-CN' ? '启动独立工作台' : 'Start Workbench'}</button>
           <button className="secondary-button" disabled={busy || runtime?.status !== 'running'} onClick={() => void manageRuntime('stop')}>{lang === 'zh-CN' ? '停止' : 'Stop'}</button>
@@ -326,6 +335,7 @@ export function InstanceLifecyclePanel() {
             <a className="secondary-button" href={runtime.url} target="_blank" rel="noopener noreferrer">{lang === 'zh-CN' ? '打开独立工作台 ↗' : 'Open Workbench ↗'}</a>
           ) : null}
         </div>
+        {published ? <small>{lang === 'zh-CN' ? '已发布：' : 'Published: '}{published.releaseId} · {(published.totalBytes / 1048576).toFixed(2)} MiB</small> : null}
         <small>{runtime?.status === 'running' ? `RUNNING · ${runtime.url}` : lang === 'zh-CN' ? '尚未启动或尚未检查' : 'Stopped or not checked'}</small>
       </section>
       <details className="creator-advanced-cli"><summary>CLI · 高级详情 / Advanced commands</summary><div className="starter-cli-map">
