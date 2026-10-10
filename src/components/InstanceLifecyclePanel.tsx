@@ -5,6 +5,7 @@ import { useI18n } from '../i18n/I18nProvider';
 
 export function InstanceLifecyclePanel() {
   const { t } = useI18n();
+  const [stage, setStage] = useState<'create' | 'status' | 'upgrade' | 'migration'>('create');
   const [projectRoot, setProjectRoot] = useState('');
   const [name, setName] = useState('');
   const [initializeKnowledge, setInitializeKnowledge] = useState(false);
@@ -245,6 +246,23 @@ export function InstanceLifecyclePanel() {
         <PackageCheck size={28} />
       </div>
 
+      <div className="instance-stage-nav" role="group" aria-label="Instance lifecycle">
+        {([
+          ['create', '① 创建实例', 'Create'],
+          ['status', '② 状态与验证', 'Status / Verify'],
+          ['upgrade', '③ 实例升级', 'Upgrade'],
+          ['migration', '④ 迁移与回滚', 'Migration / Rollback'],
+        ] as const).map(([id, zh, en]) => (
+          <button type="button" key={id} className={`secondary-button instance-stage-button ${stage === id ? 'selected' : ''}`}
+            aria-pressed={stage === id} onClick={() => setStage(id)}>
+            {t('starterTitle').includes('初始化') ? zh : en}
+          </button>
+        ))}
+      </div>
+      <p className="detail-summary">{stage === 'create' ? '绑定一个业务项目，选择是否同时初始化 00–05 知识目录。'
+        : stage === 'status' ? '查看真实 Manifest、验证结果和隔离式生命周期自测。'
+        : stage === 'upgrade' ? '先生成版本差异计划，确认可执行后应用；不会自动改写业务代码。'
+        : '查看迁移证据及备份，只在存在可回滚记录时允许回滚。'}</p>
       <div className="starter-form">
         <label>
           <span>{t('instanceProjectRoot')}</span>
@@ -256,22 +274,22 @@ export function InstanceLifecyclePanel() {
         </label>
       </div>
 
-      <label className="instance-checkbox">
+      {stage === 'create' ? <label className="instance-checkbox">
         <input type="checkbox" checked={initializeKnowledge} onChange={(event) => setInitializeKnowledge(event.target.checked)} />
         <span>{t('instanceInitializeKnowledge')}</span>
-      </label>
+      </label> : null}
 
       <div className="hero-actions">
-        <button className="primary-button" disabled={busy} onClick={() => void create()}>{t('instanceCreateAction')}</button>
+        {stage === 'create' ? <button className="primary-button" disabled={busy} onClick={() => void create()}>{t('instanceCreateAction')}</button> : null}
         <button className="secondary-button" disabled={busy || !projectRoot.trim()} onClick={() => void run(() => refresh())}>{t('instanceLoadAction')}</button>
-        <button className="secondary-button" disabled={busy || !manifest} onClick={() => void verify()}><ShieldCheck size={16} /> {t('instanceVerifyAction')}</button>
-        <button className="secondary-button" disabled={busy || !manifest} onClick={() => void planUpgrade()}><GitCompareArrows size={16} /> {t('instancePlanAction')}</button>
-        <button className="secondary-button" disabled={busy || !canApply} onClick={() => void applyUpgrade()}>{t('instanceApplyAction')}</button>
-        <button className="secondary-button" disabled={busy || !canRollback} onClick={() => void rollback()}><RotateCcw size={16} /> {t('instanceRollbackAction')}</button>
-        <button className="secondary-button" disabled={busy} onClick={() => void runSelfTest()}><ShieldCheck size={16} /> {t('instanceSelfTestAction')}</button>
+        {stage === 'status' ? <button className="secondary-button" disabled={busy || !manifest} onClick={() => void verify()}><ShieldCheck size={16} /> {t('instanceVerifyAction')}</button> : null}
+        {stage === 'upgrade' ? <button className="secondary-button" disabled={busy || !manifest} onClick={() => void planUpgrade()}><GitCompareArrows size={16} /> {t('instancePlanAction')}</button> : null}
+        {stage === 'upgrade' ? <button className="secondary-button" disabled={busy || !canApply} onClick={() => void applyUpgrade()}>{t('instanceApplyAction')}</button> : null}
+        {stage === 'migration' ? <button className="secondary-button" disabled={busy || !canRollback} onClick={() => void rollback()}><RotateCcw size={16} /> {t('instanceRollbackAction')}</button> : null}
+        {stage === 'status' ? <button className="secondary-button" disabled={busy} onClick={() => void runSelfTest()}><ShieldCheck size={16} /> {t('instanceSelfTestAction')}</button> : null}
       </div>
 
-      <div className="starter-cli-map">
+      <details className="creator-advanced-cli"><summary>CLI · 高级详情 / Advanced commands</summary><div className="starter-cli-map">
         <div>
           <strong>{t('instanceCliCreate')}</strong>
           <code>npm run creator -- instance create --project &lt;directory&gt;</code>
@@ -283,9 +301,11 @@ export function InstanceLifecyclePanel() {
         </div>
       </div>
 
+      </div></details>
+
       {message ? <p className="detail-summary starter-message">{message}</p> : null}
 
-      {manifest ? (
+      {(stage === 'status' || stage === 'create') && manifest ? (
         <div className="instance-manifest-card">
           <div className="instance-manifest-head">
             <CheckCircle2 size={18} />
@@ -304,7 +324,7 @@ export function InstanceLifecyclePanel() {
         </div>
       ) : null}
 
-      {status?.verification ? (
+      {stage === 'status' && status?.verification ? (
         <div className={status.verification.ok ? 'starter-verification pass' : 'starter-verification fail'}>
           <div className="starter-verification-head">
             {status.verification.ok ? <CheckCircle2 size={20} /> : <CircleX size={20} />}
@@ -325,7 +345,7 @@ export function InstanceLifecyclePanel() {
         </div>
       ) : null}
 
-      {plan ? (
+      {stage === 'upgrade' && plan ? (
         <div className="instance-upgrade-plan">
           <div className="instance-manifest-head">
             <GitCompareArrows size={18} />
@@ -347,7 +367,7 @@ export function InstanceLifecyclePanel() {
         </div>
       ) : null}
 
-      {status?.latestMigration ? (
+      {stage === 'migration' && status?.latestMigration ? (
         <div className="instance-migration-evidence">
           <strong>{t('instanceMigrationEvidence')}</strong>
           <code>{status.latestMigration.migrationId}</code>
@@ -356,7 +376,7 @@ export function InstanceLifecyclePanel() {
         </div>
       ) : null}
 
-      {selfTest ? (
+      {stage === 'status' && selfTest ? (
         <div className={selfTest.ok ? 'instance-self-test pass' : 'instance-self-test fail'}>
           <div className="instance-self-test-head">
             <div className="instance-self-test-title">
