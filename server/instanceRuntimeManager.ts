@@ -12,9 +12,27 @@ export interface InstanceRuntimeView {
   projectRoot: string; instanceId: string; frameworkVersion: string; frameworkRevision: string;
   status: 'running' | 'stopped'; url: string | null; port: number | null; pid: number | null;
   releaseId?: string | null;
+  previousReleaseId?: string | null;
 }
 interface RuntimeRecord { projectRoot: string; instanceId: string; pid: number; port: number; releaseId?: string; token?: string; }
 const registryDir = () => path.join(APP_ROOT, '.asset-workbench-data', 'instance-runtimes');
+type ReleaseSelection = { active: string; previous: string | null };
+function selectionFile(root: string): string {
+  return filename(root).replace(/\\.json$/, '.release.json');
+}
+function readSelection(root: string): ReleaseSelection | null {
+  try {
+    const entry = JSON.parse(fs.readFileSync(selectionFile(root), 'utf8')) as ReleaseSelection;
+    if (!entry.active || typeof entry.active !== 'string' || (entry.previous && typeof entry.previous !== 'string')) return null;
+    return entry;
+  } catch { return null; }
+}
+function saveSelection(root: string, selection: ReleaseSelection): void {
+  fs.mkdirSync(registryDir(), { recursive: true, mode: 0o700 });
+  const file = selectionFile(root), temp = file + '.tmp';
+  fs.writeFileSync(temp, JSON.stringify(selection), { mode: 0o600 });
+  fs.renameSync(temp, file);
+}
 function centralOnly(): void {
   if (process.env.AWB_INSTANCE_PROJECT_ROOT) throw new Error('An Instance cannot manage other Instance processes');
 }
@@ -77,6 +95,7 @@ async function freePort(): Promise<number> {
 export async function instanceRuntimeStatus(project: string): Promise<InstanceRuntimeView> {
   centralOnly();
   const root = resolveRoot(project), { manifest } = inspect(root), record = readRecord(root);
+  const selection = readSelection(root);
   const running = !!record && record.instanceId === manifest.instanceId && await responds(record);
   if (!running && record && !alive(record.pid)) forget(root);
   return {
@@ -84,7 +103,8 @@ export async function instanceRuntimeStatus(project: string): Promise<InstanceRu
     frameworkVersion: manifest.framework.version, frameworkRevision: manifest.framework.revision,
     status: running ? 'running' : 'stopped', url: running ? `http://127.0.0.1:${record!.port}/` : null,
     port: running ? record!.port : null, pid: running ? record!.pid : null,
-    releaseId: running ? record!.releaseId : null,
+    releaseId: running ? record!.releaseId : selection?.active ?? null,
+    previousReleaseId: selection?.previous ?? null,
   };
 }
 export async function startInstanceRuntime(project: string): Promise<InstanceRuntimeView> {
@@ -94,12 +114,11 @@ export async function startInstanceRuntime(project: string): Promise<InstanceRun
   if (current.status === 'running') return current;
   const stale = readRecord(root);
   if (stale && alive(stale.pid)) throw new Error('Previous process still exists but cannot verify identity; stop it manually');
-  if (!check.upToDate) throw new Error('Instance must be upgraded to the current Framework before start');
-  const release = currentFrameworkRelease();
+  const selection = readSelection(root);
+  const release = selection ? verifyFrameworkRelease(selection.active) : currentFrameworkRelease();
   if (!release) throw new Error('No published Framework release; publish the first release from central UI');
-  if (manifest.framework.version !== release.framework.version || manifest.framework.revision !== release.framework.revision) {
-    throw new Error('Instance Manifest does not match the selected Framework release');
-  }
+  // Manifest identity tracks creator metadata compatibility separately from published app runtime identity.
+  // Release compatibility is checked by the release's own immutable checksum before process launch.
   const verified = verifyFrameworkRelease(release.releaseId);
   const releaseDir = path.join(APP_ROOT, '.asset-workbench-data', 'framework-releases', verified.releaseId);
   const token = randomBytes(32).toString('hex');
@@ -118,6 +137,7 @@ export async function startInstanceRuntime(project: string): Promise<InstanceRun
   child.unref();
   const record: RuntimeRecord = { projectRoot: root, instanceId: manifest.instanceId, pid: child.pid, port, releaseId: verified.releaseId, token };
   writeRecord(record);
+  if (!selection) saveSelection(root, { active: verified.releaseId, previous: null });
   for (let attempt = 0; attempt < 60; attempt++) {
     if (await responds(record)) return instanceRuntimeStatus(root);
     if (!alive(record.pid)) break;
@@ -135,6 +155,34 @@ export async function stopInstanceRuntime(project: string): Promise<InstanceRunt
   else if (record && alive(record.pid)) throw new Error('Saved PID belongs to an unverified process; refused to kill');
   forget(root);
   return { ...current, status: 'stopped', url: null, port: null, pid: null };
+}
+export async function adoptInstanceRelease(project: string, releaseId: string): Promise<InstanceRuntimeView> {
+  centralOnly();
+  const root = resolveRoot(project);
+  inspect(root);
+  verifyFrameworkRelease(releaseId);
+  const previous = readSelection(root);
+  if (previous?.active === releaseId) return instanceRuntimeStatus(root);
+  const wasRunning = (await instanceRuntimeStatus(root)).status === 'running';
+  if (wasRunning) await stopInstanceRuntime(root);
+  const next = { active: releaseId, previous: previous?.active ?? currentFrameworkRelease()?.releaseId ?? null };
+  saveSelection(root, next);
+  if (!wasRunning) return instanceRuntimeStatus(root);
+  try { return await startInstanceRuntime(root); }
+  catch (error) {
+    if (previous) saveSelection(root, previous);
+    else { try { fs.unlinkSync(selectionFile(root)); } catch { /* absent */ } }
+    try { await startInstanceRuntime(root); }
+    catch (restoreError) { throw new Error('New release failed and old release restart also failed: ' + String(restoreError)); }
+    throw new Error('New release failed; previous running release restored: ' + String(error));
+  }
+}
+export async function rollbackInstanceRelease(project: string): Promise<InstanceRuntimeView> {
+  centralOnly();
+  const root = resolveRoot(project);
+  const previous = readSelection(root)?.previous;
+  if (!previous) throw new Error('No previous published runtime release to roll back to');
+  return adoptInstanceRelease(root, previous);
 }
 export async function listInstanceRuntimes(): Promise<InstanceRuntimeView[]> {
   centralOnly();
