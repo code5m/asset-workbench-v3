@@ -123,7 +123,7 @@ test('release adoption changes running application assets and rollback restores 
         else {
           const data = fs.readFileSync(path.join(stage, item));
           collected.push({
-            path: item, size: data.length, sha256: createHash('sha256').update(data).digest('hex'),
+            path: item, sha256: createHash('sha256').update(data).digest('hex'), size: data.length,
           });
         }
       }
