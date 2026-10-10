@@ -102,6 +102,7 @@ async function publishInner(): Promise<FrameworkRelease> {
       outfile: path.join(stage, 'server.mjs'),
       bundle: true, platform: 'node', format: 'esm', target: 'node22',
       logLevel: 'warning', sourcemap: false, packages: 'bundle',
+      banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
     });
     const cfg = loadConfig();
     const framework = { version: cfg.frameworkVersion, revision: cfg.frameworkRevision };
