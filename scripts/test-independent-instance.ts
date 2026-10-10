@@ -50,3 +50,48 @@ test('separate process gets one pinned business project, shares V3 UI, then stop
     fs.rmSync(parent, { recursive: true, force: true });
   }
 });
+
+test('two running instances keep independent project identities and runtime health credentials', async () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-dual-runtime-'));
+  const a = path.join(parent, 'project-a');
+  const b = path.join(parent, 'project-b');
+  const cfg = loadConfig();
+  const identity = frameworkIdentity(cfg.frameworkVersion, cfg.frameworkRevision);
+  fs.mkdirSync(a, { recursive: true });
+  fs.mkdirSync(b, { recursive: true });
+  fs.writeFileSync(path.join(a, 'pom.xml'), '<project>a</project>');
+  fs.writeFileSync(path.join(b, 'package.json'), '{"name":"b"}');
+  const originalA = fs.readFileSync(path.join(a, 'pom.xml'), 'utf8');
+  const originalB = fs.readFileSync(path.join(b, 'package.json'), 'utf8');
+  const first = createInstance({ projectRoot: a, framework: identity, frameworkRoot: cfg.appRoot });
+  const second = createInstance({ projectRoot: b, framework: identity, frameworkRoot: cfg.appRoot });
+  try {
+    const runningA = await startInstanceRuntime(a);
+    const runningB = await startInstanceRuntime(b);
+    assert.equal(runningA.status, 'running');
+    assert.equal(runningB.status, 'running');
+    assert.notEqual(runningA.port, runningB.port);
+    assert.notEqual(runningA.pid, runningB.pid);
+    for (const [running, expected] of [[runningA, first.manifest], [runningB, second.manifest]] as const) {
+      const res = await fetch(new URL('api/config', running.url!));
+      assert.equal(res.status, 200);
+      const info = await res.json() as { projectRoot: string; instanceId: string };
+      assert.equal(info.projectRoot, expected.projectRoot);
+      assert.equal(info.instanceId, expected.instanceId);
+      const health = await fetch(new URL('_runtime/health', running.url!));
+      assert.equal(health.status, 403);
+      const blocked = await fetch(new URL('api/creator/instance/create', running.url!), {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ projectRoot: parent }),
+      });
+      assert.equal(blocked.status, 403);
+    }
+    assert.equal(fs.readFileSync(path.join(a, 'pom.xml'), 'utf8'), originalA);
+    assert.equal(fs.readFileSync(path.join(b, 'package.json'), 'utf8'), originalB);
+  } finally {
+    for (const root of [a,b]) {
+      try { await stopInstanceRuntime(root); } catch { /* continue cleanup */ }
+    }
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
