@@ -29,7 +29,7 @@ import {
 import { detectProviders } from './providerAdapterService.ts';
 import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, listProviderStatuses, redetectProviderStatuses, runProviderVerification, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
 import { publishFrameworkRelease, currentFrameworkRelease } from './frameworkRelease.ts';
-import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes } from './instanceRuntimeManager.ts';
+import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { createKnowledge, verifyKnowledge } from '../packages/starter/src/index.ts';
 import {
@@ -231,6 +231,7 @@ export function createHandler() {
             framework: frameworkIdentity(cfg.frameworkVersion, cfg.frameworkRevision),
             frameworkRoot: cfg.appRoot,
           });
+          registerInstanceRuntime(result.manifest.projectRoot);
           sendJson(res, 201, result);
         } catch (e) {
           sendJson(res, 400, { error: (e as Error).message });
