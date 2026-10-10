@@ -1,6 +1,7 @@
 import type { Plugin, Connect, ViteDevServer, PreviewServer } from 'vite';
 import { assetService } from './assetService.ts';
 import { getProjectRoot, loadConfig } from './config.ts';
+import { registerCentralDevUi } from './sharedUi.ts';
 import type { ServerEvent } from '../src/domain/asset';
 import {
   createConversation,
@@ -526,6 +527,7 @@ export function assetEnginePlugin(): Plugin {
   return {
     name: 'asset-engine',
     configureServer(server) {
+      registerCentralDevUi(server);
       bootstrap(server);
     },
     configurePreviewServer(server) {
