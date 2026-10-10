@@ -10,6 +10,7 @@ import { BUILTIN_PROVIDER_DEFINITIONS } from '../../packages/provider-sdk/src/in
 interface FrameworkPageProps {
   onNavigate: (section: AppSection) => void;
   onOpenCreator: () => void;
+  allowCreator?: boolean;
   focusRequest: { focus: FrameworkFocus; token: number } | null;
 }
 
@@ -32,7 +33,7 @@ const PACKAGE_CARDS = [
   ['provider-sdk', 'Provider SDK', 'frameworkPackageProviderTitle', 'frameworkPackageProviderBody', 'frameworkPackageBadgeProvider', 'provider'],
 ] as const;
 
-export function FrameworkPage({ onNavigate, onOpenCreator, focusRequest }: FrameworkPageProps) {
+export function FrameworkPage({ onNavigate, onOpenCreator, focusRequest, allowCreator = true }: FrameworkPageProps) {
   const { t } = useI18n();
   const architectureRef = useRef<HTMLElement | null>(null);
   const packagesRef = useRef<HTMLDetailsElement | null>(null);
@@ -42,7 +43,8 @@ export function FrameworkPage({ onNavigate, onOpenCreator, focusRequest }: Frame
   useEffect(() => {
     if (!focusRequest) return;
     if (focusRequest.focus === 'starter') {
-      onOpenCreator();
+      if (allowCreator) onOpenCreator();
+      else onNavigate('guide');
       return;
     }
     const target =
@@ -68,10 +70,10 @@ export function FrameworkPage({ onNavigate, onOpenCreator, focusRequest }: Frame
               <Plug size={17} />
               {t('frameworkManageProviders')}
             </button>
-            <button className="secondary-button" onClick={onOpenCreator}>
+            {allowCreator ? <button className="secondary-button" onClick={onOpenCreator}>
               <FolderPlus size={17} />
               {t('frameworkOpenCreatorWorkbench')}
-            </button>
+            </button> : null}
             <button className="secondary-button" onClick={() => onNavigate('guide')}>
               <ArrowRight size={17} />
               {t('frameworkOpenGuide')}
@@ -117,7 +119,7 @@ export function FrameworkPage({ onNavigate, onOpenCreator, focusRequest }: Frame
         </div>
       </section>
 
-      <FrameworkLearningConsole onNavigate={onNavigate} onOpenCreator={onOpenCreator} />
+      <FrameworkLearningConsole onNavigate={onNavigate} onOpenCreator={onOpenCreator} allowCreator={allowCreator} />
 
       <section className="panel framework-beginner-map">
         <div>
