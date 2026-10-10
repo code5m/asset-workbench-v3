@@ -17,6 +17,17 @@ export function InstanceLifecyclePanel() {
   const [selfTestRunning, setSelfTestRunning] = useState(false);
   const [selfTestError, setSelfTestError] = useState('');
   const [published, setPublished] = useState<{ releaseId: string; totalBytes: number } | null>(null);
+  const [knownInstances, setKnownInstances] = useState<Array<{ projectRoot: string; status: string; url: string | null }>>([]);
+  const [inventoryError, setInventoryError] = useState('');
+  const loadInventory = async () => {
+    try {
+      const items = await assetClient.listInstanceRuntimes();
+      setKnownInstances(items);
+      setInventoryError('');
+    } catch (error) { setInventoryError(error instanceof Error ? error.message : String(error)); }
+  };
+  useEffect(() => { void loadInventory(); }, []);
+
   const [runtime, setRuntime] = useState<{ status: 'running' | 'stopped'; url: string | null; pid: number | null } | null>(null);
 
   const manifest = status?.manifest ?? null;
@@ -262,6 +273,7 @@ export function InstanceLifecyclePanel() {
     await assetClient.instanceRuntime(projectRoot.trim(), 'adopt', release.releaseId);
     const next = await assetClient.instanceRuntime(projectRoot.trim(), 'start');
     setRuntime(next);
+    await loadInventory();
     setMessage(lang === 'zh-CN' ? '独立工作台部署成功，已启动。' : 'Independent Workbench deployed and running.');
   });
   const runSelfTest = async () => {
@@ -292,6 +304,23 @@ export function InstanceLifecyclePanel() {
         <PackageCheck size={28} />
       </div>
 
+      <section className="instance-inventory" aria-label={lang === 'zh-CN' ? '已有独立工作台' : 'Existing workbenches'}>
+        <div className="instance-inventory-header">
+          <h3>{lang === 'zh-CN' ? '已有独立工作台' : 'Existing workbenches'}</h3>
+          <button className="secondary-button" disabled={busy} onClick={() => void loadInventory()}>{lang === 'zh-CN' ? '刷新列表' : 'Refresh'}</button>
+        </div>
+        {inventoryError ? <p role="alert" className="engine-check-fail">{inventoryError}</p> : null}
+        {knownInstances.length === 0 ? <p className="detail-summary">{lang === 'zh-CN' ? '尚无已登记的运行实例。填写下方业务项目路径后即可创建。' : 'No registered runtimes yet. Choose a project path below to create one.'}</p> : null}
+        <div className="instance-inventory-list">
+          {knownInstances.map((item) => (
+            <button type="button" className="instance-inventory-item" key={item.projectRoot} onClick={() => { setProjectRoot(item.projectRoot); setStatus(null); setRuntime(null); setStage('status'); void refresh(item.projectRoot); }}>
+              <strong>{item.projectRoot.split(/[\\/]/).filter(Boolean).at(-1) ?? item.projectRoot}</strong>
+              <span>{item.status === 'running' ? (lang === 'zh-CN' ? '运行中' : 'Running') : (lang === 'zh-CN' ? '未运行' : 'Stopped')}</span>
+              <span>{item.projectRoot}</span>
+            </button>
+          ))}
+        </div>
+      </section>
       <div className="instance-stage-nav" role="group" aria-label="Instance lifecycle">
         {([
           ['create', '① 创建实例', 'Create'],
