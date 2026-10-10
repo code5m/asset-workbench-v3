@@ -29,7 +29,7 @@ import {
 import { detectProviders } from './providerAdapterService.ts';
 import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, listProviderStatuses, redetectProviderStatuses, runProviderVerification, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
 import { publishFrameworkRelease, currentFrameworkRelease } from './frameworkRelease.ts';
-import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, listInstanceRuntimes } from './instanceRuntimeManager.ts';
+import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { createKnowledge, verifyKnowledge } from '../packages/starter/src/index.ts';
 import {
@@ -165,7 +165,9 @@ export function createHandler() {
           const body = await readBody(req);
           const projectRoot = typeof body.projectRoot === 'string' ? body.projectRoot : '';
           const action = pathPart.slice('/creator/runtime/'.length);
-          const result = action === 'status' ? await instanceRuntimeStatus(projectRoot)
+          const result = action === 'adopt' ? await adoptInstanceRelease(projectRoot, typeof body.releaseId === 'string' ? body.releaseId : '')
+            : action === 'rollback-release' ? await rollbackInstanceRelease(projectRoot)
+            : action === 'status' ? await instanceRuntimeStatus(projectRoot)
             : action === 'start' ? await startInstanceRuntime(projectRoot)
             : action === 'stop' ? await stopInstanceRuntime(projectRoot)
             : null;
