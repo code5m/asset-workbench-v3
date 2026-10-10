@@ -122,7 +122,7 @@ export function StarterCreator({ onActivated, compact = false }: StarterCreatorP
         ) : null}
       </div>
 
-      <div className="starter-cli-map">
+      <details className="creator-advanced-cli"><summary>CLI · 高级详情 / Advanced commands</summary><div className="starter-cli-map">
         <div>
           <strong>{t('starterCliCreateTitle')}</strong>
           <code>npm run creator -- knowledge create --target &lt;directory&gt; --name &lt;project&gt;</code>
@@ -132,6 +132,8 @@ export function StarterCreator({ onActivated, compact = false }: StarterCreatorP
           <code>npm run creator -- knowledge verify --target &lt;directory&gt;</code>
         </div>
       </div>
+
+      </div></details>
 
       <p className="starter-safety">{t('starterSafety')}</p>
       {message ? <p className="detail-summary starter-message">{message}</p> : null}
