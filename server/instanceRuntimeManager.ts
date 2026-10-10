@@ -120,7 +120,11 @@ async function freePort(): Promise<number> {
 }
 export async function instanceRuntimeStatus(project: string): Promise<InstanceRuntimeView> {
   centralOnly();
-  const root = resolveRoot(project), { manifest } = inspect(root), record = readRecord(root);
+  const root = resolveRoot(project);
+  // Inventory and stop controls must remain usable while an Instance needs a Framework upgrade.
+  const manifest = readInstanceManifest(root);
+  if (!manifest || manifest.projectRoot !== root) throw new Error('Valid Instance Manifest required');
+  const record = readRecord(root);
   const selection = readSelection(root);
   const running = !!record && record.instanceId === manifest.instanceId && await responds(record);
   if (!running && record && !alive(record.pid)) forget(root);
