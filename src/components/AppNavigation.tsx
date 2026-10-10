@@ -7,6 +7,7 @@ interface AppNavigationProps {
   items: NavigationItem[];
   activeSection: AppSection;
   onSelect: (section: AppSection) => void;
+  isManagedInstance?: boolean;
 }
 
 type RuntimeIdentity = {
@@ -22,7 +23,7 @@ function lastPathSegment(value: string): string {
   return parts[parts.length - 1] || value;
 }
 
-export function AppNavigation({ items, activeSection, onSelect }: AppNavigationProps) {
+export function AppNavigation({ items, activeSection, onSelect, isManagedInstance = false }: AppNavigationProps) {
   const { t, loc } = useI18n();
   const [runtime, setRuntime] = useState<RuntimeIdentity | null>(null);
 
@@ -83,8 +84,8 @@ export function AppNavigation({ items, activeSection, onSelect }: AppNavigationP
                 <Icon size={18} strokeWidth={1.9} />
               </span>
               <span className="step-copy">
-                <span>{item.id === 'guide' && runtime?.mode === 'business-project' ? loc({ 'zh-CN': '项目知识', en: 'Project knowledge' }) : loc(item.title)}</span>
-                <small>{item.id === 'guide' && runtime?.mode === 'business-project' ? loc({ 'zh-CN': '学习与沉淀', en: 'Learn & capture' }) : loc(item.eyebrow)}</small>
+                <span>{item.id === 'guide' && (isManagedInstance || runtime?.mode === 'business-project') ? loc({ 'zh-CN': '项目知识', en: 'Project knowledge' }) : item.id === 'console' && isManagedInstance ? loc({ 'zh-CN': '项目工作台', en: 'Project Workbench' }) : loc(item.title)}</span>
+                <small>{item.id === 'guide' && (isManagedInstance || runtime?.mode === 'business-project') ? loc({ 'zh-CN': '学习与沉淀', en: 'Learn & capture' }) : item.id === 'console' && isManagedInstance ? loc({ 'zh-CN': '当前项目', en: 'Current project' }) : loc(item.eyebrow)}</small>
               </span>
             </button>
           );
