@@ -274,6 +274,21 @@ export function InstanceLifecyclePanel() {
     await loadInventory();
     setMessage(lang === 'zh-CN' ? '独立工作台部署成功，已启动。' : 'Independent Workbench deployed and running.');
   });
+  const launchExisting = (root: string) => run(async () => {
+    setProjectRoot(root);
+    const current = await assetClient.instanceRuntime(root, 'status');
+    if (current.status === 'running') {
+      setRuntime(current);
+      return;
+    }
+    // Reuse an existing immutable Framework release; publish only when none exists.
+    const publishedRelease = (await assetClient.frameworkRelease('current')).release;
+    if (!publishedRelease) await assetClient.frameworkRelease('publish');
+    const next = await assetClient.instanceRuntime(root, 'start');
+    setRuntime(next);
+    await loadInventory();
+    setMessage(lang === 'zh-CN' ? '工作台已启动，点击「打开」进入。' : 'Workbench started; choose Open.');
+  });
   const runSelfTest = async () => {
     setBusy(true);
     setSelfTestRunning(true);
@@ -311,11 +326,19 @@ export function InstanceLifecyclePanel() {
         {knownInstances.length === 0 ? <p className="detail-summary">{lang === 'zh-CN' ? '暂无已登记的运行实例。下方输入项目路径，即可创建第一个独立工作台。' : 'No registered runtimes yet. Enter a project path below to create your first workbench.'}</p> : null}
         <div className="instance-inventory-list">
           {knownInstances.map((item) => (
-            <button type="button" className="instance-inventory-item" key={item.projectRoot} onClick={() => { setProjectRoot(item.projectRoot); setStatus(null); setRuntime(null); setStage('status'); void refresh(item.projectRoot); }}>
-              <strong>{item.projectRoot.split(/[\\/]/).filter(Boolean).at(-1) ?? item.projectRoot}</strong>
-              <span>{item.status === 'running' ? (lang === 'zh-CN' ? '运行中' : 'Running') : (lang === 'zh-CN' ? '未运行' : 'Stopped')}</span>
-              <span>{item.projectRoot}</span>
-            </button>
+            <div className="instance-inventory-item" key={item.projectRoot}>
+              <button type="button" className="instance-inventory-select" disabled={busy} onClick={() => { setProjectRoot(item.projectRoot); setStatus(null); setRuntime(null); setStage('status'); void refresh(item.projectRoot); }}>
+                <strong>{item.projectRoot.split(/[\\/]/).filter(Boolean).at(-1) ?? item.projectRoot}</strong>
+                <span>{item.status === 'running' ? (lang === 'zh-CN' ? '运行中' : 'Running') : (lang === 'zh-CN' ? '未运行' : 'Stopped')}</span>
+                <span>{item.projectRoot}</span>
+              </button>
+              <div className="instance-inventory-actions">
+                {item.status === 'running' && item.url
+                  ? <a className="primary-button" href={item.url} target="_blank" rel="noopener noreferrer">{lang === 'zh-CN' ? '打开工作台 ↗' : 'Open ↗'}</a>
+                  : <button className="primary-button" disabled={busy} onClick={() => void launchExisting(item.projectRoot)}>{lang === 'zh-CN' ? '启动' : 'Start'}</button>}
+                <button className="secondary-button" disabled={busy} onClick={() => { setProjectRoot(item.projectRoot); setStatus(null); setRuntime(null); setStage('status'); void refresh(item.projectRoot); }}>{lang === 'zh-CN' ? '管理' : 'Manage'}</button>
+              </div>
+            </div>
           ))}
         </div>
       </section>
