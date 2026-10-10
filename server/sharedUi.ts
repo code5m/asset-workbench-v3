@@ -87,7 +87,6 @@ async function healthyDev(): Promise<DevSource | null> {
     const response = await fetch(`http://127.0.0.1:${source.port}/_awb/shared-ui-health`, {
       headers: { 'x-awb-shared-ui-token': source.token },
       signal: AbortSignal.timeout(500),
-      cache: 'no-store',
     });
     const valid = response.ok && response.headers.get('x-awb-shared-ui-health') === 'v1';
     checked = { at: Date.now(), dev: valid ? source : null, marker };
