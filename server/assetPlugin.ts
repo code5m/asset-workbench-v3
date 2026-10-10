@@ -28,6 +28,7 @@ import {
 } from './captureService.ts';
 import { detectProviders } from './providerAdapterService.ts';
 import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, listProviderStatuses, redetectProviderStatuses, runProviderVerification, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
+import { publishFrameworkRelease, currentFrameworkRelease } from './frameworkRelease.ts';
 import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, listInstanceRuntimes } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { createKnowledge, verifyKnowledge } from '../packages/starter/src/index.ts';
@@ -142,6 +143,16 @@ export function createHandler() {
       }
       if (req.method === 'GET' && pathPart === '/config') {
         sendJson(res, 200, { ...loadConfig(), configurable: !process.env.AWB_INSTANCE_PROJECT_ROOT });
+        return;
+      }
+      if (req.method === 'GET' && pathPart === '/creator/release/current') {
+        try { sendJson(res, 200, { release: currentFrameworkRelease() }); }
+        catch (e) { sendJson(res, 400, { error: (e as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/creator/release/publish') {
+        try { sendJson(res, 200, { release: await publishFrameworkRelease() }); }
+        catch (e) { sendJson(res, 400, { error: (e as Error).message }); }
         return;
       }
       if (pathPart === '/creator/runtime/list' && req.method === 'GET') {
