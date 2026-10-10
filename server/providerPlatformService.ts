@@ -29,8 +29,14 @@ function authStatusFor(def: ProviderDefinition): string {
   if (def.auth.type === 'env') return 'ENVIRONMENT';
   if (def.auth.type === 'api-key' || def.auth.type === 'ak-sk') {
     const fields = credentialFields(def);
-    const configured = credentialStore.listConfiguredFields(def.id, fields);
-    return configured.length === fields.length ? 'CONFIGURED' : 'NOT_CONFIGURED';
+    try {
+      const configured = credentialStore.listConfiguredFields(def.id, fields);
+      return configured.length === fields.length ? 'CONFIGURED' : 'NOT_CONFIGURED';
+    } catch {
+      // OS Keyring, libsecret or the local compiler can be unavailable in a fresh Instance.
+      // Keep the entire Provider Manager operational; never imply authentication succeeded.
+      return 'SECURE_STORE_UNAVAILABLE';
+    }
   }
   return 'EXTERNAL';
 }
@@ -40,7 +46,7 @@ function platformStatus(status: ProviderStatus, def: ProviderDefinition, active:
   if (def.id === 'chatgpt') return 'LIMITED';
   if (def.providerType === 'custom') return 'LIMITED';
   if (!status.installed) return 'NOT_INSTALLED';
-  if ((def.auth.type === 'ak-sk' || def.auth.type === 'api-key') && authStatusFor(def) === 'NOT_CONFIGURED') return 'BLOCKED_AUTH';
+  if ((def.auth.type === 'ak-sk' || def.auth.type === 'api-key') && ['NOT_CONFIGURED', 'SECURE_STORE_UNAVAILABLE'].includes(authStatusFor(def))) return 'BLOCKED_AUTH';
   if (def.id === 'trae' && !status.runtimeVerified) return 'WAITING_REAL_EVENT';
   if (status.runtimeVerified && status.configured) return 'ENABLED';
   return status.status === 'ERROR' ? 'ERROR' : 'LIMITED';
@@ -58,7 +64,7 @@ function verificationFor(def: ProviderDefinition, base: ProviderStatus): Provide
     },
     {
       step: 'Authentication',
-      status: authStatus === 'NOT_CONFIGURED' ? 'BLOCKED' : 'PASS',
+      status: ['NOT_CONFIGURED', 'SECURE_STORE_UNAVAILABLE'].includes(authStatus) ? 'BLOCKED' : 'PASS',
       detail: authStatus,
     },
     {
@@ -118,7 +124,7 @@ export function runProviderVerification(id: string): ProviderDetail & { verifica
   getProviderSnapshot(true);
   const def = definition(id);
   let authProbe: ReturnType<typeof verifyProviderAuth> | undefined;
-  if ((def.auth.type === 'ak-sk' || def.auth.type === 'api-key') && authStatusFor(def) !== 'NOT_CONFIGURED') {
+  if ((def.auth.type === 'ak-sk' || def.auth.type === 'api-key') && authStatusFor(def) === 'CONFIGURED') {
     authProbe = verifyProviderAuth(id);
   }
   return { ...getProviderDetail(id), verificationRunAt: new Date().toISOString(), authProbe };
