@@ -131,8 +131,6 @@ export function StarterCreator({ onActivated, compact = false }: StarterCreatorP
           <strong>{t('starterCliVerifyTitle')}</strong>
           <code>npm run creator -- knowledge verify --target &lt;directory&gt;</code>
         </div>
-      </div>
-
       </div></details>
 
       <p className="starter-safety">{t('starterSafety')}</p>
