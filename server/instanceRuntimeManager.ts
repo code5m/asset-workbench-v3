@@ -18,7 +18,7 @@ interface RuntimeRecord { projectRoot: string; instanceId: string; pid: number; 
 const registryDir = () => path.join(APP_ROOT, '.asset-workbench-data', 'instance-runtimes');
 type ReleaseSelection = { active: string; previous: string | null };
 function selectionFile(root: string): string {
-  return filename(root).replace(/\\.json$/, '.release.json');
+  return filename(root).slice(0, -5) + '.release.json';
 }
 function readSelection(root: string): ReleaseSelection | null {
   try {
