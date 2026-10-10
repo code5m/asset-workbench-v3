@@ -1,19 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
-import { loadConfig, APP_ROOT } from './config.ts';
+import { loadConfig } from './config.ts';
+import { resolveUiSource, proxyCentralDevUi, proxyCentralDevUpgrade, sharedUiHeaders, sharedUiRevision } from './sharedUi.ts';
 import { assetService } from './assetService.ts';
 import { createHandler } from './assetPlugin.ts';
 
 const bindHost = '127.0.0.1';
 const token = process.env.AWB_RUNTIME_TOKEN;
 const releaseId = process.env.AWB_RELEASE_ID;
-const uiDir = process.env.AWB_RELEASE_UI_DIR;
 const port = Number(process.env.AWB_RUNTIME_PORT);
-if (!token || !releaseId || !uiDir || !Number.isInteger(port) || port < 1 || port > 65535) {
+if (!token || !releaseId || !Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error('Standalone runtime requires a release, local port and private health token');
 }
-const root = fs.realpathSync(uiDir);
 const config = loadConfig();
 if (!config.lockedToInstance || !config.instanceId) {
   throw new Error('Standalone runtime requires a valid, locked business Instance');
@@ -57,6 +56,15 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === '/_runtime/ui-source') {
+    const source = await resolveUiSource();
+    respond(res, source.kind === 'unavailable' ? 503 : 200, {
+      mode: source.kind, revision: sharedUiRevision(source),
+      backendReleaseId: releaseId, instanceId: config.instanceId,
+    });
+    return;
+  }
+
   // Central-only lifecycle and workspace retargeting cannot be invoked inside a bound Instance.
   if (url.pathname.startsWith('/api/creator/') || url.pathname === '/api/workspace/root') {
     respond(res, 403, { code: 'CENTRAL_ONLY', error: '请在中央 V3 的「独立工作台管理」页面执行此操作。' });
@@ -77,6 +85,18 @@ const server = http.createServer(async (req, res) => {
     respond(res, 405, { error: 'Read-only static server' }); return;
   }
 
+  const ui = await resolveUiSource();
+  if (ui.kind === 'central-dev') {
+    await proxyCentralDevUi(req, res, ui.dev);
+    return;
+  }
+  if (ui.kind === 'unavailable') {
+    respond(res, 503, { error: 'Central shared UI is not available. Start central V3 or build its UI.' });
+    return;
+  }
+  // Resolve the root for EACH request. The running Instance backend never owns
+  // or pins an old UI snapshot.
+  const root = ui.root;
   let normalized: string;
   try { normalized = decodeURIComponent(url.pathname); }
   catch { respond(res, 400, { error: 'Invalid path encoding' }); return; }
@@ -101,15 +121,24 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, {
       'content-type': contentTypes[path.extname(actual)] || 'application/octet-stream',
       'content-length': stat.size,
-      'x-content-type-options': 'nosniff',
+      ...sharedUiHeaders(ui.kind),
       'cache-control': actual.includes(path.sep + 'assets' + path.sep)
-        ? 'public, max-age=31536000, immutable' : 'no-cache',
+        ? 'public, max-age=31536000, immutable' : 'no-store',
     });
     if (req.method === 'HEAD') { res.end(); return; }
     fs.createReadStream(actual).on('error', () => res.destroy()).pipe(res);
   } catch {
     if (!res.headersSent) respond(res, 404, { error: 'Static file not found' });
   }
+});
+server.on('upgrade', (req, socket, head) => {
+  const host = req.headers.host || '';
+  const origin = req.headers.origin;
+  if (host !== bindHost + ':' + port || (origin && origin !== 'http://' + host)) {
+    socket.destroy();
+    return;
+  }
+  void proxyCentralDevUpgrade(req, socket, head);
 });
 const shutdown = () => {
   server.close(() => process.exit(0));
