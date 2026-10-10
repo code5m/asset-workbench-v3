@@ -104,12 +104,16 @@ export async function startInstanceRuntime(project: string): Promise<InstanceRun
   const releaseDir = path.join(APP_ROOT, '.asset-workbench-data', 'framework-releases', verified.releaseId);
   const token = randomBytes(32).toString('hex');
   const port = await freePort();
+  const startupLog = path.join(registryDir(), 'startup-' + createHash('sha256').update(root).digest('hex').slice(0, 16) + '.log');
+  fs.mkdirSync(registryDir(), { recursive: true, mode: 0o700 });
+  const logFd = fs.openSync(startupLog, 'w', 0o600);
   const child = spawn(process.execPath, [path.join(releaseDir, 'server.mjs')], {
-    cwd: APP_ROOT, detached: true, stdio: 'ignore', windowsHide: true,
+    cwd: APP_ROOT, detached: true, stdio: ['ignore', logFd, logFd], windowsHide: true,
     env: { ...process.env, AWB_INSTANCE_PROJECT_ROOT: root,
       AWB_RELEASE_ID: verified.releaseId, AWB_RELEASE_UI_DIR: path.join(releaseDir, 'ui'),
       AWB_RUNTIME_PORT: String(port), AWB_RUNTIME_TOKEN: token },
   });
+  fs.closeSync(logFd);
   if (!child.pid) throw new Error('Failed to spawn Instance process');
   child.unref();
   const record: RuntimeRecord = { projectRoot: root, instanceId: manifest.instanceId, pid: child.pid, port, releaseId: verified.releaseId, token };
@@ -121,7 +125,8 @@ export async function startInstanceRuntime(project: string): Promise<InstanceRun
   }
   if (alive(record.pid)) process.kill(record.pid, 'SIGTERM');
   forget(root);
-  throw new Error('Instance did not become ready; inspect published release and port availability');
+  const details = fs.existsSync(startupLog) ? fs.readFileSync(startupLog, 'utf8').slice(-1200) : '';
+  throw new Error('Instance did not become ready: ' + details);
 }
 export async function stopInstanceRuntime(project: string): Promise<InstanceRuntimeView> {
   centralOnly();
