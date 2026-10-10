@@ -187,6 +187,8 @@ export const assetClient = {
     frameworkVersion: string;
     frameworkRevision: string;
     configurable: boolean;
+    instanceId?: string;
+    lockedToInstance?: boolean;
   }> {
     return getJson(`${BASE}/config`);
   },
@@ -212,6 +214,19 @@ export const assetClient = {
   },
   async createStarter(target: string, name?: string): Promise<KnowledgeCreateView> {
     return this.createKnowledge(target, name);
+  },
+  async instanceRuntime(projectRoot: string, action: 'status' | 'start' | 'stop'): Promise<{
+    projectRoot: string; instanceId: string; status: 'running' | 'stopped';
+    url: string | null; port: number | null; pid: number | null;
+    frameworkVersion: string; frameworkRevision: string;
+  }> {
+    const response = await fetch(`${BASE}/creator/runtime/${action}`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ projectRoot }),
+    });
+    const value = await response.json() as { error?: string };
+    if (!response.ok) throw new ApiError(response.status, value.error ?? response.statusText);
+    return value as { projectRoot: string; instanceId: string; status: 'running' | 'stopped'; url: string | null; port: number | null; pid: number | null; frameworkVersion: string; frameworkRevision: string };
   },
   async createInstance(projectRoot: string, name?: string, initializeKnowledge = false): Promise<{ manifest: InstanceManifestView; knowledgeVerification: KnowledgeVerificationView; manifestPath: string }> {
     const res = await fetch(`${BASE}/creator/instance/create`, {
