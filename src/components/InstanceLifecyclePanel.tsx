@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, CircleDashed, CircleX, GitCompareArrows, PackageCheck, RotateCcw, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, CircleDashed, CircleX, GitCompareArrows, PackageCheck, RotateCcw, ShieldCheck, Stethoscope } from 'lucide-react';
 import { assetClient, type InstanceSelfTestView, type InstanceStatusView, type InstanceUpgradePlanView } from '../services/assetClient';
 import { useI18n } from '../i18n/I18nProvider';
 
@@ -14,6 +14,8 @@ export function InstanceLifecyclePanel() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [selfTest, setSelfTest] = useState<InstanceSelfTestView | null>(null);
+  const [selfTestRunning, setSelfTestRunning] = useState(false);
+  const [selfTestError, setSelfTestError] = useState('');
 
   const manifest = status?.manifest ?? null;
   const canApply = plan?.status === 'ready' && plan.actions.length > 0;
@@ -227,13 +229,22 @@ export function InstanceLifecyclePanel() {
     setMessage(t('instanceRollbackDone'));
   });
 
-  const runSelfTest = () => run(async () => {
+  const runSelfTest = async () => {
+    setBusy(true);
+    setSelfTestRunning(true);
     setSelfTest(null);
-    setMessage(t('instanceSelfTestRunning'));
-    const result = await assetClient.runInstanceSelfTest();
-    setSelfTest(result);
-    setMessage(result.ok ? t('instanceSelfTestPass') : t('instanceSelfTestFail'));
-  });
+    setSelfTestError('');
+    try {
+      // This API creates and cleans its own temporary project; no projectRoot is passed.
+      const result = await assetClient.runInstanceSelfTest();
+      setSelfTest(result);
+    } catch (error) {
+      setSelfTestError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSelfTestRunning(false);
+      setBusy(false);
+    }
+  };
 
   return (
     <section className="panel instance-lifecycle-panel">
@@ -260,7 +271,7 @@ export function InstanceLifecyclePanel() {
         ))}
       </div>
       <p className="detail-summary">{stage === 'create' ? '绑定一个业务项目，选择是否同时初始化 00–05 知识目录。'
-        : stage === 'status' ? '查看真实 Manifest、验证结果和隔离式生命周期自测。'
+        : stage === 'status' ? '查看当前实例的真实 Manifest 和验证结果。'
         : stage === 'upgrade' ? '先生成版本差异计划，确认可执行后应用；不会自动改写业务代码。'
         : '查看迁移证据及备份，只在存在可回滚记录时允许回滚。'}</p>
       <div className="starter-form">
@@ -286,7 +297,6 @@ export function InstanceLifecyclePanel() {
         {stage === 'upgrade' ? <button className="secondary-button" disabled={busy || !manifest} onClick={() => void planUpgrade()}><GitCompareArrows size={16} /> {t('instancePlanAction')}</button> : null}
         {stage === 'upgrade' ? <button className="secondary-button" disabled={busy || !canApply} onClick={() => void applyUpgrade()}>{t('instanceApplyAction')}</button> : null}
         {stage === 'migration' ? <button className="secondary-button" disabled={busy || !canRollback} onClick={() => void rollback()}><RotateCcw size={16} /> {t('instanceRollbackAction')}</button> : null}
-        {stage === 'status' ? <button className="secondary-button" disabled={busy} onClick={() => void runSelfTest()}><ShieldCheck size={16} /> {t('instanceSelfTestAction')}</button> : null}
       </div>
 
       <details className="creator-advanced-cli"><summary>CLI · 高级详情 / Advanced commands</summary><div className="starter-cli-map">
@@ -374,7 +384,26 @@ export function InstanceLifecyclePanel() {
         </div>
       ) : null}
 
-      {stage === 'status' && selfTest ? (
+      <section className="instance-engine-self-test" aria-labelledby="instance-engine-self-test-title">
+        <div className="instance-engine-self-test-heading">
+          <div>
+            <h3 id="instance-engine-self-test-title">{t('instanceEngineSelfTestTitle')}</h3>
+            <small>{t('instanceEngineSelfTestLead')}</small>
+          </div>
+        </div>
+        <div className="instance-engine-self-test-actions">
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => void runSelfTest()}>
+            <Stethoscope size={16} /> {t('instanceSelfTestAction')}
+          </button>
+          {selfTestRunning ? <small role="status">{t('instanceSelfTestRunning')}</small> : null}
+          {!selfTestRunning && selfTest ? (
+            <small role="status" className={selfTest.ok ? 'engine-check-pass' : 'engine-check-fail'}>
+              {selfTest.ok ? t('instanceSelfTestPass') : t('instanceSelfTestFail')}
+            </small>
+          ) : null}
+          {selfTestError ? <small role="alert" className="engine-check-fail">{selfTestError}</small> : null}
+        </div>
+        {selfTest ? (
         <div className={selfTest.ok ? 'instance-self-test pass' : 'instance-self-test fail'}>
           <div className="instance-self-test-head">
             <div className="instance-self-test-title">
@@ -455,6 +484,7 @@ export function InstanceLifecyclePanel() {
           <p className="detail-summary">{t('instanceSelfTestCleanup')}</p>
         </div>
       ) : null}
+      </section>
 
       <p className="starter-safety">{t('instanceSafety')}</p>
     </section>
