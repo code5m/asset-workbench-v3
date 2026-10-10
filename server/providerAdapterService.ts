@@ -338,8 +338,23 @@ function provenanceOf(input: AdapterEventInput): Record<string, unknown> {
   }
   return merged;
 }
+/**
+ * A provider may report its cwd only at SessionStart. Pin that directory to
+ * the first session and reject later conflicting evidence before any write.
+ * Existing framework-self integrations remain permissive for legacy imports;
+ * locked business Instances must never accept a different project root.
+ */
+function assertCaptureProject(sourceCwd: string | undefined, provider: string, sessionId: string): void {
+  if (!sourceCwd) return;
+  const expected = fs.realpathSync(getProjectRoot());
+  let actual: string;
+  try { actual = fs.realpathSync(path.resolve(sourceCwd)); }
+  catch { throw new Error('Capture source project directory does not exist'); }
+  if (actual !== expected) throw new Error(`Capture project mismatch for ${provider}/${sessionId}: expected ${expected}, got ${actual}`);
+}
 export function ingestProviderEvent(input: AdapterEventInput): { captureSessionId: string; accepted: string[]; duplicates: string[] } {
   if (!isProviderEnabled(input.provider)) return { captureSessionId: '', accepted: [], duplicates: [] };
+  if (input.cwd) assertCaptureProject(input.cwd, input.provider, input.providerSessionId);
   return withProviderLock(input.provider, input.providerSessionId, () => {
     let state = readState(input.provider, input.providerSessionId);
     if (!state) {
@@ -466,6 +481,8 @@ export async function importCodexHistory(sourcePath: string): Promise<{ captureS
   const rows = fs.readFileSync(absolute, 'utf8').split('\n').filter(Boolean).flatMap((line) => { try { return [JSON.parse(line) as Record<string, any>]; } catch { return []; } });
   const meta = rows.find((row) => row.type === 'session_meta')?.payload;
   const providerSessionId = typeof meta?.session_id === 'string' ? meta.session_id : path.basename(absolute, '.jsonl');
+  if (typeof meta?.cwd === 'string' && meta.cwd.trim()) assertCaptureProject(meta.cwd, 'codex', providerSessionId);
+  else if (process.env.AWB_INSTANCE_PROJECT_ROOT) throw new Error('Codex history has no project cwd; cannot safely import into a bound Instance');
   return withProviderLock('codex', providerSessionId, () => {
     let state = readState('codex', providerSessionId);
     if (!state) {
