@@ -9,9 +9,9 @@ interface CreatorWorkbenchProps {
 }
 
 export function CreatorWorkbench({ onActivated }: CreatorWorkbenchProps) {
-  const { t, locale } = useI18n();
+  const { t, lang } = useI18n();
   const [workspace, setWorkspace] = useState<'knowledge' | 'instance'>('knowledge');
-  const zh = locale === 'zh-CN';
+  const zh = lang === 'zh-CN';
   return (
     <section className="creator-workbench">
       <section className="panel creator-workbench-hero">
