@@ -4,7 +4,7 @@ import { assetClient, type InstanceSelfTestView, type InstanceStatusView, type I
 import { useI18n } from '../i18n/I18nProvider';
 
 export function InstanceLifecyclePanel() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [stage, setStage] = useState<'create' | 'status' | 'upgrade' | 'migration'>('create');
   const [projectRoot, setProjectRoot] = useState('');
   const [name, setName] = useState('');
@@ -255,7 +255,7 @@ export function InstanceLifecyclePanel() {
         ] as const).map(([id, zh, en]) => (
           <button type="button" key={id} className={`secondary-button instance-stage-button ${stage === id ? 'selected' : ''}`}
             aria-pressed={stage === id} onClick={() => setStage(id)}>
-            {t('starterTitle').includes('初始化') ? zh : en}
+            {lang === 'zh-CN' ? zh : en}
           </button>
         ))}
       </div>
@@ -299,8 +299,6 @@ export function InstanceLifecyclePanel() {
           <code>npm run creator -- instance upgrade-plan --project &lt;directory&gt;</code>
           <code>npm run creator -- instance rollback --project &lt;directory&gt;</code>
         </div>
-      </div>
-
       </div></details>
 
       {message ? <p className="detail-summary starter-message">{message}</p> : null}
