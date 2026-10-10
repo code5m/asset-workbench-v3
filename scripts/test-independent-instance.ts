@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createInstance, frameworkIdentity } from '../packages/creator-core/src/index.ts';
+import { publishFrameworkRelease } from '../server/frameworkRelease.ts';
 import { loadConfig } from '../server/config.ts';
 import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime } from '../server/instanceRuntimeManager.ts';
 
@@ -17,6 +18,7 @@ test('separate process gets one pinned business project, shares V3 UI, then stop
     projectRoot: root, frameworkRoot: cfg.appRoot,
     framework: frameworkIdentity(cfg.frameworkVersion, cfg.frameworkRevision),
   });
+  await publishFrameworkRelease();
   let started = false;
   try {
     const before = await instanceRuntimeStatus(root);
