@@ -391,17 +391,22 @@ export function InstanceLifecyclePanel() {
               placeholder="/path/to/business-project" spellCheck={false} />
             <small className="instance-field-hint">{lang === 'zh-CN' ? '填写已经存在的业务项目文件夹。每个项目拥有自己的聊天、Provider 设置与知识资产。' : 'An existing project directory. Conversations, Provider settings and knowledge are project-scoped.'}</small>
           </label>
-          <label>
-            <span>{t('instanceProjectName')}</span>
-            <input className="root-input" value={name} onChange={(event) => setName(event.target.value)}
-              placeholder="payment-service" spellCheck={false} />
-            <small className="instance-field-hint">{lang === 'zh-CN' ? '可选；仅在第一次创建时使用' : 'Optional; used only on first creation'}</small>
-          </label>
         </div>
-        <label className="instance-checkbox">
-          <input type="checkbox" checked={initializeKnowledge} onChange={(event) => setInitializeKnowledge(event.target.checked)} />
-          <span>{lang === 'zh-CN' ? '首次创建时同时初始化 00–05 知识目录（仅适用于符合初始化条件的项目）' : 'Initialize 00–05 knowledge on first creation (eligible projects only)'}</span>
-        </label>
+        <details className="instance-optional-settings">
+          <summary>{lang === 'zh-CN' ? '创建选项（可选）' : 'Creation options (optional)'}</summary>
+          <div>
+            <label>
+              <span>{lang === 'zh-CN' ? '工作台名称（可选）' : 'Workbench name (optional)'}</span>
+              <input className="root-input" value={name} onChange={(event) => setName(event.target.value)}
+                placeholder="payment-service" spellCheck={false} />
+              <small className="instance-field-hint">{lang === 'zh-CN' ? '只在首次创建时使用，已有工作台不会改名' : 'Only used when creating a new Instance'}</small>
+            </label>
+            <label className="instance-checkbox">
+              <input type="checkbox" checked={initializeKnowledge} onChange={(event) => setInitializeKnowledge(event.target.checked)} />
+              <span>{lang === 'zh-CN' ? '首次创建时同时初始化 00–05 知识目录（仅适用于符合初始化条件的项目）' : 'Initialize 00–05 knowledge on first creation (eligible projects only)'}</span>
+            </label>
+          </div>
+        </details>
         <div className="instance-guided-steps">
           <div><span>1</span><strong>{lang === 'zh-CN' ? '选择项目' : 'Choose project'}</strong><small>{lang === 'zh-CN' ? '填写目录，或从上方列表选择' : 'Enter path or select above'}</small></div>
           <div><span>2</span><strong>{lang === 'zh-CN' ? '自动准备并启动' : 'Prepare and start'}</strong><small>{lang === 'zh-CN' ? '首次自动创建并准备运行包；已创建的不会自动升级' : 'Create and publish only when needed; no silent upgrades'}</small></div>
