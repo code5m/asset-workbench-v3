@@ -159,7 +159,7 @@ export async function startInstanceRuntime(project: string): Promise<InstanceRun
   const child = spawn(process.execPath, [path.join(releaseDir, 'server.mjs')], {
     cwd: APP_ROOT, detached: true, stdio: ['ignore', logFd, logFd], windowsHide: true,
     env: { ...process.env, AWB_INSTANCE_PROJECT_ROOT: root,
-      AWB_RELEASE_ID: verified.releaseId, AWB_RELEASE_UI_DIR: path.join(releaseDir, 'ui'),
+      AWB_RELEASE_ID: verified.releaseId,
       AWB_RUNTIME_PORT: String(port), AWB_RUNTIME_TOKEN: token },
   });
   fs.closeSync(logFd);
@@ -228,4 +228,40 @@ export async function listInstanceRuntimes(): Promise<InstanceRuntimeView[]> {
   const result: InstanceRuntimeView[] = [];
   for (const root of roots) { try { result.push(await instanceRuntimeStatus(root)); } catch { /* moved project */ } }
   return result;
+}
+
+/**
+ * One-time bridge migration for Instances created before shared UI delivery.
+ * Never update healthy shared-UI backend releases just because a UI file changed.
+ * Every migration preserves the previous release for explicit rollback.
+ */
+let bridgeMigration: Promise<void> | null = null;
+export function reconcileLegacyInstanceUi(): Promise<void> {
+  centralOnly();
+  if (bridgeMigration) return bridgeMigration;
+  bridgeMigration = migrateLegacyUiBridge().finally(() => { bridgeMigration = null; });
+  return bridgeMigration;
+}
+function hasSharedUiBridge(releaseId: string | null | undefined): boolean {
+  if (!releaseId) return false;
+  try {
+    const release = verifyFrameworkRelease(releaseId);
+    const server = fs.readFileSync(path.join(APP_ROOT, '.asset-workbench-data', 'framework-releases', release.releaseId, 'server.mjs'), 'utf8');
+    return server.includes('central-shared-ui-v1');
+  } catch { return false; }
+}
+async function migrateLegacyUiBridge(): Promise<void> {
+  const instances = await listInstanceRuntimes();
+  const legacy = instances.filter((item) => item.releaseId && !hasSharedUiBridge(item.releaseId));
+  if (!legacy.length) return;
+  let central = currentFrameworkRelease();
+  if (!central || !hasSharedUiBridge(central.releaseId)) central = await publishFrameworkRelease();
+  if (!hasSharedUiBridge(central.releaseId)) throw new Error('Shared UI backend bridge was not included in the new Framework release');
+  for (const instance of legacy) {
+    try {
+      await adoptInstanceRelease(instance.projectRoot, central.releaseId);
+    } catch (error) {
+      console.error('[shared-ui] Could not migrate legacy instance ' + instance.instanceId + ': ' + String(error));
+    }
+  }
 }

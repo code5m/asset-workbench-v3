@@ -41,6 +41,13 @@ test('separate process gets one pinned business project, shares V3 UI, then stop
     const html = await fetch(result.url!);
     assert.equal(html.status, 200);
     assert.match(await html.text(), /<div id="root"><\/div>/);
+    assert.notEqual(html.headers.get('x-awb-ui-source'), null);
+    const sharedStatus = await fetch(new URL('_runtime/ui-source', result.url!));
+    assert.equal(sharedStatus.status, 200);
+    const source = await sharedStatus.json() as { mode: string; revision: string; backendReleaseId: string };
+    assert.notEqual(source.mode, 'unavailable');
+    assert.ok(source.revision);
+    assert.equal(source.backendReleaseId, result.releaseId);
     const forbidden = await fetch(new URL('api/workspace/root', result.url!), {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ rootPath: parent }),
@@ -108,6 +115,29 @@ test('two running instances keep independent project identities and runtime heal
       });
       assert.equal(blocked.status, 403);
     }
+    // UI is a single live source: changing the central built HTML must update
+    // both already-running Instances without publishing/adopting/restarting.
+    const centralHtml = path.join(cfg.appRoot, 'dist', 'index.html');
+    const beforeUi = fs.readFileSync(centralHtml);
+    const marker = '<!-- shared-central-ui-parity-test -->';
+    const beforeA = await (await fetch(runningA.url!)).text();
+    const beforeB = await (await fetch(runningB.url!)).text();
+    assert.equal(beforeA, beforeB, 'Both Instances must serve the exact same central UI');
+    try {
+      fs.writeFileSync(centralHtml, Buffer.concat([beforeUi, Buffer.from('\n' + marker + '\n')]));
+      for (const instance of [runningA, runningB]) {
+        const updated = await fetch(instance.url!);
+        assert.equal(updated.status, 200);
+        assert.match(await updated.text(), /shared-central-ui-parity-test/,
+          'An already-running Instance must immediately serve the modified central UI');
+      }
+    } finally {
+      fs.writeFileSync(centralHtml, beforeUi);
+    }
+    for (const instance of [runningA, runningB]) {
+      assert.equal((await (await fetch(instance.url!)).text()), beforeA,
+        'Restoring central UI must restore each Instance immediately');
+    }
     const changeProvider = await fetch(new URL('api/provider-manager/providers/codex/disable', runningA.url!), {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
     });
@@ -172,7 +202,9 @@ test('release adoption changes running application assets and rollback restores 
     const upgraded = await adoptInstanceRelease(project, releaseId);
     assert.equal(upgraded.status, 'running');
     assert.equal(upgraded.releaseId, releaseId);
-    assert.match(await (await fetch(upgraded.url!)).text(), /release-switch-e2e-test/);
+    const upgradedUi = await fetch(upgraded.url!);
+    assert.equal(upgradedUi.status, 200);
+    assert.doesNotMatch(await upgradedUi.text(), /release-switch-e2e-test/, 'new backend must still use central shared UI');
     const restored = await rollbackInstanceRelease(project);
     assert.equal(restored.status, 'running');
     assert.equal(restored.releaseId, base.releaseId);

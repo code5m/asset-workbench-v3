@@ -1,6 +1,7 @@
 import type { Plugin, Connect, ViteDevServer, PreviewServer } from 'vite';
 import { assetService } from './assetService.ts';
 import { getProjectRoot, loadConfig } from './config.ts';
+import { registerCentralDevUi } from './sharedUi.ts';
 import type { ServerEvent } from '../src/domain/asset';
 import {
   createConversation,
@@ -29,7 +30,7 @@ import {
 import { detectProviders } from './providerAdapterService.ts';
 import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, listProviderStatuses, redetectProviderStatuses, runProviderVerification, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
 import { publishFrameworkRelease, currentFrameworkRelease } from './frameworkRelease.ts';
-import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime } from './instanceRuntimeManager.ts';
+import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime, reconcileLegacyInstanceUi } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { createKnowledge, verifyKnowledge } from '../packages/starter/src/index.ts';
 import {
@@ -519,6 +520,14 @@ function bootstrap(server: ViteDevServer | PreviewServer): void {
   loadConfig();
   assetService.scan().catch((e) => console.error('[asset-engine] initial scan failed:', e));
   assetService.startWatcher();
+  // In the central dev server only: once after startup, move old frozen-UI
+  // backend processes onto the shared-UI bridge. Subsequent UI changes do
+  // NOT require backend upgrades or release adoption.
+  if (!process.env.AWB_INSTANCE_PROJECT_ROOT) {
+    void reconcileLegacyInstanceUi().catch((error) => {
+      console.error('[shared-ui] Legacy Instance migration failed:', error);
+    });
+  }
   server.middlewares.use('/api', createHandler());
 }
 
@@ -526,6 +535,7 @@ export function assetEnginePlugin(): Plugin {
   return {
     name: 'asset-engine',
     configureServer(server) {
+      registerCentralDevUi(server);
       bootstrap(server);
     },
     configurePreviewServer(server) {
