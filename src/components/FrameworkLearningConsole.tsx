@@ -33,7 +33,7 @@ type RuntimeIdentity = {
   frameworkRevision: string;
 };
 
-export function FrameworkLearningConsole({ onNavigate, onOpenCreator }: { onNavigate: (section: AppSection) => void; onOpenCreator: () => void }) {
+export function FrameworkLearningConsole({ onNavigate, onOpenCreator, allowCreator = true }: { onNavigate: (section: AppSection) => void; onOpenCreator: () => void; allowCreator?: boolean }) {
   const { t, loc } = useI18n();
   const [tab, setTab] = useState<Tab>('directories');
   const [runtime, setRuntime] = useState<RuntimeIdentity | null>(null);
@@ -60,7 +60,7 @@ export function FrameworkLearningConsole({ onNavigate, onOpenCreator }: { onNavi
           frameworkVersion: cfg.frameworkVersion,
           frameworkRevision: cfg.frameworkRevision,
         });
-        if (cfg.mode === 'business-project') {
+        if (cfg.mode === 'business-project' && allowCreator) {
           setInstanceStatus(await assetClient.instanceStatus(cfg.projectRoot).catch(() => null));
         } else {
           setInstanceStatus(null);
@@ -91,9 +91,9 @@ export function FrameworkLearningConsole({ onNavigate, onOpenCreator }: { onNavi
         <button className={tab === 'files' ? 'active' : ''} onClick={() => setTab('files')}>
           <FileCode2 size={16} /> {t('frameworkConsoleFiles')}
         </button>
-        <button className={tab === 'instances' ? 'active' : ''} onClick={() => setTab('instances')}>
+        {allowCreator ? <button className={tab === 'instances' ? 'active' : ''} onClick={() => setTab('instances')}>
           <PackageOpen size={16} /> {t('frameworkConsoleInstances')}
-        </button>
+        </button> : null}
         <button className={tab === 'versions' ? 'active' : ''} onClick={() => setTab('versions')}>
           <GitBranch size={16} /> {t('frameworkConsoleVersions')}
         </button>
@@ -141,7 +141,7 @@ export function FrameworkLearningConsole({ onNavigate, onOpenCreator }: { onNavi
         </div>
       ) : null}
 
-      {tab === 'instances' ? <InstanceManager runtime={runtime} onNavigate={onNavigate} onOpenCreator={onOpenCreator} /> : null}
+      {allowCreator && tab === 'instances' ? <InstanceManager runtime={runtime} onNavigate={onNavigate} onOpenCreator={onOpenCreator} /> : null}
       {tab === 'versions' ? <VersionMap runtime={runtime} instanceStatus={instanceStatus} /> : null}
     </section>
   );
