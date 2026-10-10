@@ -259,6 +259,7 @@ export function InstanceLifecyclePanel() {
     const release = (await assetClient.frameworkRelease('publish')).release;
     if (!release) throw new Error('Framework release publication returned no build');
     setPublished(release);
+    await assetClient.instanceRuntime(projectRoot.trim(), 'adopt', release.releaseId);
     const next = await assetClient.instanceRuntime(projectRoot.trim(), 'start');
     setRuntime(next);
     setMessage(lang === 'zh-CN' ? '独立工作台部署成功，已启动。' : 'Independent Workbench deployed and running.');
