@@ -100,7 +100,7 @@ async function readBody(req: Connect.IncomingMessage): Promise<Record<string, un
   }
 }
 
-function createHandler() {
+export function createHandler() {
   return async function handler(
     req: Connect.IncomingMessage,
     res: any,
