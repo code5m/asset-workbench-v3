@@ -57,6 +57,11 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Central-only lifecycle and workspace retargeting cannot be invoked inside a bound Instance.
+  if (url.pathname.startsWith('/api/creator/') || url.pathname === '/api/workspace/root') {
+    respond(res, 403, { error: 'This action is available only in central Framework management' });
+    return;
+  }
   if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
     const original = req.url;
     req.url = (original || '').slice(4) || '/';
