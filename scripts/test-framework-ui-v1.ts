@@ -554,8 +554,11 @@ test('Creator Knowledge is executable from Workbench and shares its core with CL
   assert.match(creator, /starterVerificationTitle/);
   assert.match(creator, /starter-cli-map/);
   assert.match(workbench, /<StarterCreator/);
-  assert.match(workbench, /creatorCapabilityKnowledge/);
-  assert.match(workbench, /creatorCapabilityInstance/);
+  assert.match(workbench, /workspace === 'knowledge'/);
+  assert.match(workbench, /Knowledge Creator/);
+  assert.match(workbench, /workspace === 'instance'/);
+  assert.match(workbench, /Instance Manager/);
+  assert.match(read('src/components/InstanceLifecyclePanel.tsx'), /instance-stage-nav/);
   assert.match(workbench, /<InstanceLifecyclePanel/);
   assert.doesNotMatch(workbench, /status: 'planned'/);
   assert.doesNotMatch(workbench, /child_process|exec\(|spawn\(/);
