@@ -381,6 +381,7 @@ function createHandler() {
           sendJson(res, 400, { error: 'rootPath is required' });
           return;
         }
+        if (process.env.AWB_INSTANCE_PROJECT_ROOT) throw new Error('Project switching is disabled for an independent Instance');
         assetService.changeRoot(rootPath);
         const result = await assetService.scan();
         sendJson(res, 200, {
