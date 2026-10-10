@@ -4344,3 +4344,12 @@ code {
 .creator-advanced-cli summary { cursor: pointer; font-weight: 700; }
 .creator-advanced-cli .starter-cli-map { margin-top: 12px; }
 @media(max-width: 760px) { .instance-stage-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* The engine acceptance flow is independent of the selected business Instance. */
+.instance-engine-self-test { display: grid; gap: 12px; border-top: 1px solid #dbe3ec; padding-top: 18px; margin-top: 12px; }
+.instance-engine-self-test-heading h3 { margin: 0 0 5px; font-size: 14px; color: #17202a; }
+.instance-engine-self-test-heading small { color: #667085; font-size: 12px; line-height: 1.6; }
+.instance-engine-self-test-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.instance-engine-self-test-actions small { font-size: 12px; }
+.engine-check-pass { color: #087a55; }
+.engine-check-fail { color: #b54708; overflow-wrap: anywhere; }
