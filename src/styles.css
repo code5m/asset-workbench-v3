@@ -4391,3 +4391,8 @@ code {
 .instance-isolation-note strong { font-size: 14px; }
 .instance-isolation-note p { margin: 7px 0; line-height: 1.6; color: #475569; font-size: 13px; }
 .instance-isolation-note code { display: block; overflow-wrap: anywhere; font-size: 11px; color: #526579; }
+
+.instance-inventory-select { text-align: left; display: grid; gap: 6px; border: 0; padding: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; min-width: 0; }
+.instance-inventory-select:focus-visible { outline: 2px solid #176b87; outline-offset: 3px; border-radius: 4px; }
+.instance-inventory-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
+.instance-inventory-actions .primary-button, .instance-inventory-actions .secondary-button { font-size: 12px; padding: 7px 10px; text-decoration: none; }
