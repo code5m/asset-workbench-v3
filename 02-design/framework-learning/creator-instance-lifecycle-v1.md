@@ -347,11 +347,16 @@ The published release is immutable and verified with checksums; this is a local
 build integrity check, not cryptographic code-signing or an official GitHub
 Release package. The central source and Node executable remain prerequisites
 for publishing / launching, though instances no longer need Vite Preview.
-Cross-platform installation packages, remote distribution/auto-updates, staged
-application-level upgrade/rollback and A/B boot health gates must be separately
-tested before being advertised as ready. Existing Creator Upgrade/Rollback
-manages Instance metadata; it does not yet roll back a running application
-binary. Do not confuse the two mechanisms.
+Cross-platform installation packages, remote distribution, automatic GitHub
+Release downloading, and code-signed installer delivery remain future work.
+A local runtime may now pin a verified published release, adopt a second release
+and health-check the new process. Failure to start a new release triggers
+reinstatement of the prior version and a restart attempt. **Rollback app release**
+is a separate action from Creator's existing **Rollback Manifest**. Both
+read from separate records. Application-level rollback is covered by a real
+build-switch test that changes the served HTML and checks restoration.
+This is a local-runtime A/B version path, not an OS package installer or a
+guarantee of restoration from hardware failure.
 
 Safety: one shared source, no copying code to business repositories; runtime
 state remains in the user-selected project. Verify behavior with real end-to-end
