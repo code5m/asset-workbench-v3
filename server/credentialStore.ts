@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { APP_ROOT, getDataDir } from './config.ts';
+import { APP_ROOT, getDataDir, getProjectRoot } from './config.ts';
 
 function binary(): string { return path.join(getDataDir(), 'secure-bin', 'awb-secret-store'); }
 function source(): string { return path.join(APP_ROOT, 'scripts', 'awb-secret-store.c'); }
@@ -14,7 +15,11 @@ function ensureBinary(): string {
 }
 function run(action: 'set' | 'get' | 'delete' | 'has', provider: string, field: string, secret?: string): string | null {
   if (!/^[a-z0-9-]+$/i.test(provider) || !/^[A-Z0-9_]+$/.test(field)) throw new Error('invalid credential identifier');
-  try { return execFileSync(ensureBinary(), [action, provider, field], { input: secret, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'], timeout: 8000 }); }
+  // Independent processes must never share the same OS Keyring item.
+  const scopedProvider = process.env.AWB_INSTANCE_PROJECT_ROOT
+    ? `i-${createHash('sha256').update(getProjectRoot()).digest('hex').slice(0, 16)}-${provider}`
+    : provider;
+  try { return execFileSync(ensureBinary(), [action, scopedProvider, field], { input: secret, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'], timeout: 8000 }); }
   catch (error) { const code = (error as { status?: number }).status; if ((action === 'get' || action === 'has') && code === 2) return null; throw new Error('OS secure credential store is unavailable'); }
 }
 export const credentialStore = {

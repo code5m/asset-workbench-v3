@@ -400,7 +400,7 @@ test('Workbench separates framework self-study mode from a bound business projec
 
   assert.match(config, /'framework-self' \| 'business-project'/);
   assert.match(config, /hasExternalProject/);
-  assert.match(plugin, /\.\.\.loadConfig\(\), configurable: true/);
+  assert.match(plugin, /\.\.\.loadConfig\(\), configurable: !process\.env\.AWB_INSTANCE_PROJECT_ROOT/);
   assert.match(consolePage, /runtimeMode === 'framework-self'/);
   assert.match(consolePage, /runtimeFrameworkNoticeTitle/);
   assert.match(assets, /assetFrameworkModeTitle/);

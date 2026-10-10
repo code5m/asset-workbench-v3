@@ -32,6 +32,8 @@ export interface WorkbenchConfig {
   hasExternalProject: boolean;
   frameworkVersion: string;
   frameworkRevision: string;
+  instanceId?: string;
+  lockedToInstance?: boolean;
 }
 
 let currentRoot = APP_ROOT;
@@ -58,11 +60,34 @@ export function ensureDataDir(): void {
   }
 }
 
+function lockedInstance(): { projectRoot: string; instanceId: string } | null {
+  const raw = process.env.AWB_INSTANCE_PROJECT_ROOT;
+  if (!raw) return null;
+  const root = fs.realpathSync(path.resolve(raw));
+  if (!fs.statSync(root).isDirectory() || root === fs.realpathSync(APP_ROOT)) throw new Error('Invalid managed Instance project');
+  const file = path.join(root, '.asset-workbench-data', 'instance', 'manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(file, 'utf8')) as { projectRoot?: string; instanceId?: string; state?: string };
+  if (path.resolve(manifest.projectRoot ?? '') !== root || manifest.state !== 'ready' || !manifest.instanceId) {
+    throw new Error('Instance runtime requires matching ready Manifest');
+  }
+  return { projectRoot: root, instanceId: manifest.instanceId };
+}
+
 function runtimeMode(root = currentRoot): WorkbenchRuntimeMode {
   return path.resolve(root) === path.resolve(APP_ROOT) ? 'framework-self' : 'business-project';
 }
 
 export function loadConfig(): WorkbenchConfig {
+  const locked = lockedInstance();
+  if (locked) {
+    currentRoot = locked.projectRoot;
+    ensureDataDir();
+    return {
+      projectRoot: currentRoot, appRoot: APP_ROOT, mode: 'business-project', hasExternalProject: true,
+      frameworkVersion: FRAMEWORK_VERSION, frameworkRevision: frameworkRevision(),
+      instanceId: locked.instanceId, lockedToInstance: true,
+    };
+  }
   ensureDataDir();
   try {
     const raw = fs.readFileSync(CONFIG_FILE, 'utf8');
@@ -88,6 +113,7 @@ export function getProjectRoot(): string {
 }
 
 export function setProjectRoot(root: string): WorkbenchConfig {
+  if (process.env.AWB_INSTANCE_PROJECT_ROOT) throw new Error('This Instance is locked to one business project; project switching is disabled');
   const resolved = path.resolve(root);
   if (!fs.existsSync(resolved)) {
     throw new Error(`project root does not exist: ${resolved}`);

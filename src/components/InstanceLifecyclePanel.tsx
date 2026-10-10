@@ -16,6 +16,7 @@ export function InstanceLifecyclePanel() {
   const [selfTest, setSelfTest] = useState<InstanceSelfTestView | null>(null);
   const [selfTestRunning, setSelfTestRunning] = useState(false);
   const [selfTestError, setSelfTestError] = useState('');
+  const [runtime, setRuntime] = useState<{ status: 'running' | 'stopped'; url: string | null; pid: number | null } | null>(null);
 
   const manifest = status?.manifest ?? null;
   const canApply = plan?.status === 'ready' && plan.actions.length > 0;
@@ -175,6 +176,8 @@ export function InstanceLifecyclePanel() {
     }
     const next = await assetClient.instanceStatus(root.trim());
     setStatus(next);
+    try { setRuntime(next.manifest ? await assetClient.instanceRuntime(root.trim(), 'status') : null); }
+    catch { setRuntime(null); }
     setPlan(null);
     setMessage(next.manifest ? t('instanceStatusLoaded') : t('instanceNotCreated'));
   };
@@ -227,6 +230,15 @@ export function InstanceLifecyclePanel() {
     await assetClient.rollbackInstance(projectRoot.trim(), status?.latestMigration?.migrationId);
     await refresh(projectRoot.trim());
     setMessage(t('instanceRollbackDone'));
+  });
+
+  const manageRuntime = (action: 'start' | 'stop' | 'status') => run(async () => {
+    if (!projectRoot.trim()) { setMessage(t('instanceTargetRequired')); return; }
+    const next = await assetClient.instanceRuntime(projectRoot.trim(), action);
+    setRuntime(next);
+    setMessage(lang === 'zh-CN'
+      ? (next.status === 'running' ? '独立工作台运行中，可点击打开。' : '独立工作台未运行。')
+      : (next.status === 'running' ? 'Independent workbench is running.' : 'Independent workbench is stopped.'));
   });
 
   const runSelfTest = async () => {
@@ -299,6 +311,23 @@ export function InstanceLifecyclePanel() {
         {stage === 'migration' ? <button className="secondary-button" disabled={busy || !canRollback} onClick={() => void rollback()}><RotateCcw size={16} /> {t('instanceRollbackAction')}</button> : null}
       </div>
 
+      <section className="instance-runtime-controls">
+        <div>
+          <strong>{lang === 'zh-CN' ? '独立工作台 · 运行管理' : 'Independent Workbench · Runtime'}</strong>
+          <p className="detail-summary">{lang === 'zh-CN'
+            ? '复用中央 V3 功能，但使用专属进程、入口地址和项目数据。无需复制整套源码；首次启动前需在中央框架执行构建。'
+            : 'Shares the central V3 implementation with a dedicated process, local URL and project data. Build the Framework before first launch.'}</p>
+        </div>
+        <div className="hero-actions">
+          <button className="secondary-button" disabled={busy || !projectRoot.trim() || !manifest} onClick={() => void manageRuntime('status')}>{lang === 'zh-CN' ? '检查运行状态' : 'Runtime status'}</button>
+          <button className="primary-button" disabled={busy || !manifest || runtime?.status === 'running'} onClick={() => void manageRuntime('start')}>{lang === 'zh-CN' ? '启动独立工作台' : 'Start Workbench'}</button>
+          <button className="secondary-button" disabled={busy || runtime?.status !== 'running'} onClick={() => void manageRuntime('stop')}>{lang === 'zh-CN' ? '停止' : 'Stop'}</button>
+          {runtime?.status === 'running' && runtime.url ? (
+            <a className="secondary-button" href={runtime.url} target="_blank" rel="noopener noreferrer">{lang === 'zh-CN' ? '打开独立工作台 ↗' : 'Open Workbench ↗'}</a>
+          ) : null}
+        </div>
+        <small>{runtime?.status === 'running' ? `RUNNING · ${runtime.url}` : lang === 'zh-CN' ? '尚未启动或尚未检查' : 'Stopped or not checked'}</small>
+      </section>
       <details className="creator-advanced-cli"><summary>CLI · 高级详情 / Advanced commands</summary><div className="starter-cli-map">
         <div>
           <strong>{t('instanceCliCreate')}</strong>
