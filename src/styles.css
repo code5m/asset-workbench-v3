@@ -4331,3 +4331,16 @@ code {
     grid-template-columns: 1fr;
   }
 }
+
+/* Creator has two primary workspaces; lifecycle actions reveal progressively. */
+.creator-workspace-choice { cursor: pointer; text-align: left; font: inherit; color: inherit; width: 100%; }
+.creator-workspace-choice.selected, .instance-stage-button.selected { border-color: #176b87; background: #eef7fa; box-shadow: inset 0 0 0 1px #176b87; }
+.creator-workspace-choice:focus-visible, .instance-stage-button:focus-visible { outline: 3px solid #176b87; outline-offset: 2px; }
+.creator-workspace-choice .creator-capability-head strong { display: inline-flex; gap: 8px; align-items: center; }
+.creator-workspace-choice small { display: block; margin-top: 10px; color: #475467; }
+.instance-stage-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.instance-stage-button { white-space: normal; justify-content: center; }
+.creator-advanced-cli { margin: 12px 0; padding: 12px; border: 1px solid #dbe3ec; border-radius: 10px; }
+.creator-advanced-cli summary { cursor: pointer; font-weight: 700; }
+.creator-advanced-cli .starter-cli-map { margin-top: 12px; }
+@media(max-width: 760px) { .instance-stage-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
