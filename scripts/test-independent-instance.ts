@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { createInstance, frameworkIdentity } from '../packages/creator-core/src/index.ts';
-import { publishFrameworkRelease } from '../server/frameworkRelease.ts';
+import { publishFrameworkRelease, RELEASE_HOME, verifyFrameworkRelease } from '../server/frameworkRelease.ts';
 import { loadConfig } from '../server/config.ts';
-import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime } from '../server/instanceRuntimeManager.ts';
+import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease } from '../server/instanceRuntimeManager.ts';
 
 test('separate process gets one pinned business project, shares V3 UI, then stops', async () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-independent-'));
@@ -92,6 +93,65 @@ test('two running instances keep independent project identities and runtime heal
     for (const root of [a,b]) {
       try { await stopInstanceRuntime(root); } catch { /* continue cleanup */ }
     }
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('release adoption changes running application assets and rollback restores old assets', async () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-release-rollback-'));
+  const project = path.join(parent, 'project');
+  fs.mkdirSync(project, { recursive: true });
+  fs.writeFileSync(path.join(project, 'pom.xml'), '<project/>');
+  const cfg = loadConfig();
+  createInstance({
+    projectRoot: project, frameworkRoot: cfg.appRoot,
+    framework: frameworkIdentity(cfg.frameworkVersion, cfg.frameworkRevision),
+  });
+  const base = await publishFrameworkRelease();
+  const stage = fs.mkdtempSync(path.join(RELEASE_HOME, '.test-'));
+  let target = '';
+  try {
+    fs.cpSync(path.join(RELEASE_HOME, base.releaseId, 'ui'), path.join(stage, 'ui'), { recursive: true });
+    fs.copyFileSync(path.join(RELEASE_HOME, base.releaseId, 'server.mjs'), path.join(stage, 'server.mjs'));
+    const html = path.join(stage, 'ui', 'index.html');
+    fs.appendFileSync(html, '\n<!-- release-switch-e2e-test -->\n');
+    const collected: Array<{ path: string; sha256: string; size: number }> = [];
+    const collect = (relative: string): void => {
+      for (const dirent of fs.readdirSync(path.join(stage, relative), { withFileTypes: true })) {
+        const item = path.posix.join(relative, dirent.name);
+        if (dirent.isDirectory()) collect(item);
+        else {
+          const data = fs.readFileSync(path.join(stage, item));
+          collected.push({
+            path: item, size: data.length, sha256: createHash('sha256').update(data).digest('hex'),
+          });
+        }
+      }
+    };
+    collect('');
+    collected.sort((a, b) => a.path.localeCompare(b.path));
+    const releaseId = 'rel-' + createHash('sha256').update(JSON.stringify({ framework: base.framework, files: collected })).digest('hex').slice(0, 24);
+    target = path.join(RELEASE_HOME, releaseId);
+    fs.writeFileSync(path.join(stage, 'release.json'), JSON.stringify({
+      schemaVersion: 1, releaseId, framework: base.framework, createdAt: new Date().toISOString(),
+      totalBytes: collected.reduce((v, file) => v + file.size, 0), files: collected,
+    }));
+    fs.renameSync(stage, target);
+    verifyFrameworkRelease(releaseId);
+    const original = await startInstanceRuntime(project);
+    assert.equal(original.releaseId, base.releaseId);
+    const upgraded = await adoptInstanceRelease(project, releaseId);
+    assert.equal(upgraded.status, 'running');
+    assert.equal(upgraded.releaseId, releaseId);
+    assert.match(await (await fetch(upgraded.url!)).text(), /release-switch-e2e-test/);
+    const restored = await rollbackInstanceRelease(project);
+    assert.equal(restored.status, 'running');
+    assert.equal(restored.releaseId, base.releaseId);
+    assert.doesNotMatch(await (await fetch(restored.url!)).text(), /release-switch-e2e-test/);
+  } finally {
+    try { await stopInstanceRuntime(project); } catch { /* cleanup */ }
+    if (target && fs.existsSync(target)) fs.rmSync(target, { recursive: true, force: true });
+    if (fs.existsSync(stage)) fs.rmSync(stage, { recursive: true, force: true });
     fs.rmSync(parent, { recursive: true, force: true });
   }
 });
