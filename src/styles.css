@@ -4383,3 +4383,11 @@ code {
   .creator-hero-hint { text-align: left; }
   .creator-create-shortcut { white-space: normal; }
 }
+
+/* Unified workbench: one entry, one instance lifecycle, clear data boundary. */
+.instance-isolation-note { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 1px solid #d7e4e8; border-radius: 12px; background: #f5f9fa; }
+.instance-isolation-note > svg { flex-shrink: 0; color: #23768a; margin-top: 2px; }
+.instance-isolation-note > div { min-width: 0; }
+.instance-isolation-note strong { font-size: 14px; }
+.instance-isolation-note p { margin: 7px 0; line-height: 1.6; color: #475569; font-size: 13px; }
+.instance-isolation-note code { display: block; overflow-wrap: anywhere; font-size: 11px; color: #526579; }
