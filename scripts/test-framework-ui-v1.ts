@@ -889,3 +889,20 @@ test('guided workbench startup is explicit and keeps risky release actions behin
   assert.doesNotMatch(routine, /assetClient\.instanceRuntime\(.*'adopt'/);
   assert.match(client, /previousReleaseId/);
 });
+
+test('central-only Instance actions are not rendered in an independent project Workbench', () => {
+  const app = read('src/App.tsx');
+  const console = read('src/components/WorkspaceConsole.tsx');
+  const framework = read('src/components/FrameworkLearningConsole.tsx');
+  const runtime = read('server/standaloneRuntime.ts');
+  const inventory = read('src/components/InstanceLifecyclePanel.tsx');
+  const creator = read('src/components/CreatorWorkbench.tsx');
+  assert.match(app, /cfg\.lockedToInstance === true/);
+  assert.match(app, /isManagedInstance \? 'project' : consoleView/);
+  assert.match(console, /!isManagedInstance && view === 'creator'/);
+  assert.match(console, /!isManagedInstance && view === 'project'/);
+  assert.match(framework, /allowCreator && tab === 'instances'/);
+  assert.match(runtime, /CENTRAL_ONLY/);
+  assert.match(inventory, /instanceRuntime\(item\.projectRoot, 'stop'\)/);
+  assert.doesNotMatch(creator, /creator-create-shortcut/);
+});
