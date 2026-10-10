@@ -41,6 +41,13 @@ test('separate process gets one pinned business project, shares V3 UI, then stop
     const html = await fetch(result.url!);
     assert.equal(html.status, 200);
     assert.match(await html.text(), /<div id="root"><\/div>/);
+    assert.notEqual(html.headers.get('x-awb-ui-source'), null);
+    const sharedStatus = await fetch(new URL('_runtime/ui-source', result.url!));
+    assert.equal(sharedStatus.status, 200);
+    const source = await sharedStatus.json() as { mode: string; revision: string; backendReleaseId: string };
+    assert.notEqual(source.mode, 'unavailable');
+    assert.ok(source.revision);
+    assert.equal(source.backendReleaseId, result.releaseId);
     const forbidden = await fetch(new URL('api/workspace/root', result.url!), {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ rootPath: parent }),
@@ -172,7 +179,9 @@ test('release adoption changes running application assets and rollback restores 
     const upgraded = await adoptInstanceRelease(project, releaseId);
     assert.equal(upgraded.status, 'running');
     assert.equal(upgraded.releaseId, releaseId);
-    assert.match(await (await fetch(upgraded.url!)).text(), /release-switch-e2e-test/);
+    const upgradedUi = await fetch(upgraded.url!);
+    assert.equal(upgradedUi.status, 200);
+    assert.doesNotMatch(await upgradedUi.text(), /release-switch-e2e-test/, 'new backend must still use central shared UI');
     const restored = await rollbackInstanceRelease(project);
     assert.equal(restored.status, 'running');
     assert.equal(restored.releaseId, base.releaseId);
