@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { endProviderSession, ingestProviderEvent } from '../server/providerAdapterService.ts';
+import { endProviderSession, importCodebuddyHistory, ingestProviderEvent } from '../server/providerAdapterService.ts';
 import type { CaptureProvider } from '../src/domain/asset.ts';
 
 /**
@@ -70,7 +70,19 @@ async function main(): Promise<void> {
     rawPayload: event,
   });
 
-  if (hookEventName === 'SessionEnd') await endProviderSession(provider, providerSessionId);
+  if (hookEventName === 'SessionEnd') {
+    // Complete the official transcript BEFORE closing the CaptureSession:
+    // the kernel correctly forbids appending events after close.
+    if (provider === 'codebuddy' && typeof event.transcript_path === 'string' && event.transcript_path) {
+      try {
+        await importCodebuddyHistory(event.transcript_path);
+      } catch {
+        // Observation-only: an unavailable official history must not break the IDE.
+        // The live-hook transcript still ends with honest partial evidence.
+      }
+    }
+    await endProviderSession(provider, providerSessionId);
+  }
 }
 
 main().catch(() => process.exit(0));

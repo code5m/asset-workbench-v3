@@ -685,6 +685,10 @@ function opencodeWithSession(providerSessionId: string, captureSource: 'native-h
 
 /** Drain the fail-open plugin inbox (`.opencode/plugins/awb-capture.js`) into the Capture Kernel. */
 export function importOpencodeInbox(inboxPath: string): { captureSessionId: string; imported: number } {
+  if (process.env.AWB_INSTANCE_PROJECT_ROOT) {
+    const expected = path.join(fs.realpathSync(getProjectRoot()), '.asset-workbench-data', 'provider-adapters', 'opencode', 'inbox.jsonl');
+    if (path.resolve(inboxPath) !== expected) throw new Error('OpenCode inbox must reside in the bound Instance project');
+  }
   const records: OpencodeRecord[] = fs.readFileSync(inboxPath, 'utf8').split('\n').filter(Boolean).flatMap((line) => {
     try { return [JSON.parse(line) as OpencodeRecord]; } catch { return []; }
   });
@@ -692,6 +696,15 @@ export function importOpencodeInbox(inboxPath: string): { captureSessionId: stri
   for (const record of records) {
     const sid = record.sessionID ?? (record.part as any)?.sessionID ?? (record.properties as any)?.sessionID;
     if (typeof sid === 'string') sessionIds.add(sid);
+  }
+  if (process.env.AWB_INSTANCE_PROJECT_ROOT) {
+    for (const record of records) {
+      const source = (record as OpencodeRecord & { projectDirectory?: string }).projectDirectory;
+      if (typeof source !== 'string' || !source.trim()) {
+        throw new Error('OpenCode inbox record has no project provenance');
+      }
+      assertCaptureProject(source, 'opencode', record.sessionID ?? 'inbox');
+    }
   }
   if (sessionIds.size === 0) throw new Error('no OpenCode session id found in inbox');
   let last = { captureSessionId: '', imported: 0 };
