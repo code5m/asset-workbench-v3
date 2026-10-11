@@ -163,8 +163,12 @@ export function discoverEnterpriseWorkspace(inputRoot: string): EnterpriseDiscov
     limits: { maxDepth: MAX_DEPTH, maxRepositories: MAX_REPOSITORIES } };
 }
 function snapshotDigest(data: Pick<EnterpriseSnapshot, 'workspaceFingerprint' | 'source' | 'repositories'>): string {
+  // Volatile observations (dirty files, branch labels, refreshed remote metadata)
+  // cannot change an immutable version pinned by the same exact Git commits.
   return sha(JSON.stringify({ workspaceFingerprint: data.workspaceFingerprint,
-    source: data.source, repositories: data.repositories }));
+    source: data.source, repositories: data.repositories.map((r) => ({
+      path: r.path, sourceRef: r.sourceRef, commit: r.commit, tree: r.tree,
+    })) }));
 }
 function snapshotFile(root: string, id: string): string {
   if (!/^ws-[a-f0-9]{24}$/.test(id)) throw new Error('Invalid workspace snapshot ID');
