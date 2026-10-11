@@ -32,10 +32,12 @@ import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProvi
 import { publishFrameworkRelease, currentFrameworkRelease } from './frameworkRelease.ts';
 import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime, reconcileLegacyInstanceUi } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
+import { setupProjectProviders } from './providerSetup.ts';
 import { createKnowledge, verifyKnowledge } from '../packages/starter/src/index.ts';
 import {
   applyInstanceUpgrade,
   createInstance,
+  readInstanceManifest,
   frameworkIdentity,
   instanceStatus,
   planInstanceUpgrade,
@@ -233,13 +235,26 @@ export function createHandler() {
             frameworkRoot: cfg.appRoot,
           });
           registerInstanceRuntime(result.manifest.projectRoot);
-          sendJson(res, 201, result);
+          const providerSetup = setupProjectProviders(result.manifest.projectRoot);
+          sendJson(res, 201, { ...result, providerSetup });
         } catch (e) {
           sendJson(res, 400, { error: (e as Error).message });
         }
         return;
       }
 
+      if (req.method === 'POST' && pathPart === '/creator/instance/providers/setup') {
+        try {
+          if (process.env.AWB_INSTANCE_PROJECT_ROOT) { sendJson(res, 403, { error: 'Central Framework only' }); return; }
+          const body = await readBody(req);
+          const projectRoot = typeof body.projectRoot === 'string' ? body.projectRoot.trim() : '';
+          if (!projectRoot) { sendJson(res, 400, { error: 'projectRoot is required' }); return; }
+          const manifest = readInstanceManifest(projectRoot);
+          if (!manifest) { sendJson(res, 404, { error: 'Instance Manifest not found' }); return; }
+          sendJson(res, 200, { providers: setupProjectProviders(projectRoot) });
+        } catch (e) { sendJson(res, 400, { error: (e as Error).message }); }
+        return;
+      }
       if (req.method === 'POST' && pathPart === '/creator/instance/status') {
         try {
           const body = await readBody(req);
