@@ -14,6 +14,14 @@ export function EnterpriseWorkspacePanel() {
   const [comparison, setComparison] = useState<Comparison | null>(null);
   const [verification, setVerification] = useState('');
   const [error, setError] = useState('');
+  const [pipeline, setPipeline] = useState('');
+  const [evolution, setEvolution] = useState<Array<{ id: string; title: string; stage: string; scope: string }>>([]);
+  const [title, setTitle] = useState('');
+  const [problem, setProblem] = useState('');
+  const [evidenceRepo, setEvidenceRepo] = useState('');
+  const [evidencePath, setEvidencePath] = useState('');
+  const [note, setNote] = useState('');
+
   const [busy, setBusy] = useState(false);
   const refresh = async () => {
     const [result, versions] = await Promise.all([assetClient.enterpriseDiscovery(), assetClient.enterpriseSnapshots()]);
@@ -23,6 +31,12 @@ export function EnterpriseWorkspacePanel() {
     setSelectedBefore((s) => s || versions.snapshots[1]?.snapshotId || versions.snapshots[0]?.snapshotId || '');
   };
   useEffect(() => { void refresh().catch((e: unknown) => setError(String(e))); }, []);
+  const reloadEvolution = async () => {
+    const answer = await assetClient.enterpriseGet<{ cases: Array<{ id: string; title: string; stage: string; scope: string }> }>('evolution');
+    setEvolution(answer.cases);
+  };
+  useEffect(() => {void reloadEvolution().catch(() => undefined);}, []);
+
   const action = async (fn: () => Promise<void>) => {
     setBusy(true); setError('');
     try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
@@ -51,6 +65,56 @@ export function EnterpriseWorkspacePanel() {
           </div>
         ))}
       </div>
+      {snapshots.length > 0 ? <section className="workspace-card">
+        <h3>归档与 Maven 架构认知</h3>
+        <p className="detail-summary">从固定的 Git commit 导入受管 Raw；大小超限或缺失会标为 partial，不会伪装完整。只有实际导入的数据才能进入 Maven 模块分析。</p>
+        <div className="topbar-actions">
+          <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
+            const result = await assetClient.enterpriseCommand<{ results: Array<{status:string;reason?:string}> }>('mirrors/sync',{snapshotId:selectedAfter});
+            const failed=result.results.filter(r=>r.status!=='verified');
+            setPipeline('本地镜像归档：'+(result.results.length-failed.length)+'/'+result.results.length+' 已验证。'+(failed.length?'失败：'+failed.map(x=>x.reason).join('；'):''));
+          })}>建立或更新本地受管 Git 镜像</button>
+          <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
+            const result = await assetClient.enterpriseCommand<{ status: string; total: number; materialized: number; missing: number }>('raw/import', { snapshotId: selectedAfter });
+            setPipeline('Raw '+result.status+'：'+result.materialized+'/'+result.total+' 文件；未物化 '+result.missing);
+          })}>归档当前快照 Raw</button>
+          <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
+            const graph = await assetClient.enterpriseCommand<{ status: string; modules: unknown[]; edges: unknown[] }>('graph/build',{snapshotId:selectedAfter});
+            setPipeline('Maven '+graph.status+'：'+graph.modules.length+' 个 POM 模块，'+graph.edges.length+' 条可验证关系');
+          })}>分析 Maven 模块关系</button>
+        </div>
+        {pipeline ? <p role="status">{pipeline}</p> : null}
+        <h3>问题与 Framework 演进</h3>
+        <p className="detail-summary">先绑定真实 Git 版本和文件证据。记录问题、实验、验证后才能提交通用能力候选。绝不自动修改业务代码。</p>
+        <input aria-label="问题标题" value={title} placeholder="问题标题" onChange={e => setTitle(e.target.value)}/>
+        <textarea aria-label="问题描述" value={problem} placeholder="描述问题以及判断依据" onChange={e => setProblem(e.target.value)}/>
+        <select aria-label="证据来源仓库" value={evidenceRepo} onChange={e=>setEvidenceRepo(e.target.value)}>
+          <option value="">选择证据仓库</option>
+          {snapshots.find(s=>s.snapshotId===selectedAfter)?.repositories.map(r=><option key={r.path} value={r.path}>{r.path || '(根仓库)'}</option>)}
+        </select>
+        <input aria-label="证据文件路径" value={evidencePath} placeholder="Git 提交中真实存在的文件相对路径，如 pom.xml" onChange={e=>setEvidencePath(e.target.value)}/>
+        <button className="secondary-button" disabled={busy || !selectedAfter || !title.trim() || !problem.trim() || !evidenceRepo || !evidencePath.trim()} onClick={() => void action(async () => {
+          const snapshot = snapshots.find(s=>s.snapshotId===selectedAfter);
+          const repo = snapshot?.repositories.find(r=>r.path===evidenceRepo);
+          if (!repo) throw new Error('缺少快照仓库');
+          await assetClient.enterpriseCommand('evolution/create', {snapshotId:selectedAfter,title,problem,
+            evidence:[{repository:repo.path,path:evidencePath.trim(),commit:repo.commit}]});
+          await reloadEvolution(); setTitle(''); setProblem(''); setEvidencePath('');
+        })}>保存带版本来源的问题</button>
+        <input aria-label="阶段依据" value={note} placeholder="记录实验、评估、验证依据" onChange={e=>setNote(e.target.value)}/>
+        {evolution.map(item=><div className="repository-row" key={item.id}>
+          <strong>{item.title}</strong><span>{item.stage} / {item.scope}</span>
+          <button className="secondary-button" disabled={busy || !note.trim() || ['promoted','rejected'].includes(item.stage)} onClick={()=>void action(async ()=>{
+            const transitions:Record<string,string>={observed:'proposed',proposed:'experimented',experimented:'verified',verified:'promoted'};
+            if(item.stage==='verified' && item.scope!=='framework-candidate'){
+              await assetClient.enterpriseCommand('evolution/nominate',{id:item.id});
+            } else {
+              await assetClient.enterpriseCommand('evolution/advance',{id:item.id,stage:transitions[item.stage],note});
+            }
+            await reloadEvolution();
+          })}>{item.stage==='verified'&&item.scope!=='framework-candidate'?'提名 Framework 候选':'推进并保存证据'}</button>
+        </div>)}
+      </section> : null}
       {snapshots.length > 0 ? <div className="workspace-card">
         <h3>版本对比与验证</h3>
         <div className="topbar-actions">

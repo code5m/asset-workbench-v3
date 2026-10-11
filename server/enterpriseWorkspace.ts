@@ -139,9 +139,15 @@ export function discoverEnterpriseWorkspace(inputRoot: string): EnterpriseDiscov
     // .git can be a worktree/submodule file or a normal directory.
     if (fs.existsSync(path.join(directory, '.git'))) {
       const repo = inspectGit(directory, relative);
-      if (repo) { repositories.push(repo); return; }
-      warnings.push('发现无法读取的 Git 仓库：' + (relative || '.'));
-      return;
+      if (repo) {
+        repositories.push(repo);
+        // Enterprise checkout roots can themselves have .git while containing
+        // many independent nested repositories (backV8 is one such layout).
+        if (relative) return;
+      } else {
+        warnings.push('发现无法读取的 Git 仓库：' + (relative || '.'));
+        if (relative) return;
+      }
     }
     if (depth >= MAX_DEPTH) {
       warnings.push('达到目录扫描深度上限：' + (relative || '.'));
