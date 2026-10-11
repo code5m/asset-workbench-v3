@@ -164,6 +164,25 @@ export interface InstanceSelfTestView {
 }
 
 export const assetClient = {
+  enterpriseDiscovery(): Promise<{ root: string; scannedAt: string; repositories: Array<{ path: string; remote?: string; branch: string | null; headCommit: string; dirty: boolean; modifiedCount: number; untrackedCount: number }>; warnings: string[] }> {
+    return getJson(`${BASE}/enterprise/discovery`);
+  },
+  enterpriseSnapshots(): Promise<{ snapshots: Array<{ snapshotId: string; createdAt: string; source: string; repositories: Array<{ path: string; commit: string; tree: string; sourceRef: string }>; warnings: string[] }> }> {
+    return getJson(`${BASE}/enterprise/snapshots`);
+  },
+  async freezeEnterprise(source: 'head' | 'origin-tracking'): Promise<{ snapshotId: string; repositories: Array<{ path: string; commit: string }>; warnings: string[] }> {
+    const res = await fetch(`${BASE}/enterprise/snapshots/freeze`, { method: 'POST',
+      headers: { 'content-type': 'application/json' }, body: JSON.stringify({ source }) });
+    const data = await res.json() as { snapshotId: string; repositories: Array<{ path: string; commit: string }>; warnings: string[]; error?: string };
+    if (!res.ok) throw new ApiError(res.status, data.error ?? res.statusText);
+    return data;
+  },
+  enterpriseVerify(id: string): Promise<{ ok: boolean; checked: number; missing: string[] }> {
+    return getJson(`${BASE}/enterprise/snapshots/verify?id=${encodeURIComponent(id)}`);
+  },
+  enterpriseCompare(before: string, after: string): Promise<{ changedRepositories: number; rows: Array<{ path: string; status: string; from?: string; to?: string; changedFiles?: string[]; diffComplete: boolean; note?: string }> }> {
+    return getJson(`${BASE}/enterprise/snapshots/compare?before=${encodeURIComponent(before)}&after=${encodeURIComponent(after)}`);
+  },
   workspace(): Promise<ProjectWorkspace> {
     return getJson<ProjectWorkspace>(`${BASE}/workspace`);
   },
