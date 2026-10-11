@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { createInstance, frameworkIdentity } from '../packages/creator-core/src/index.ts';
 import { publishFrameworkRelease, RELEASE_HOME, verifyFrameworkRelease } from '../server/frameworkRelease.ts';
 import { loadConfig } from '../server/config.ts';
-import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime } from '../server/instanceRuntimeManager.ts';
+import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime, resumeRequestedInstances } from '../server/instanceRuntimeManager.ts';
 
 test('separate process gets one pinned business project, shares V3 UI, then stops', async () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-independent-'));
@@ -57,6 +57,9 @@ test('separate process gets one pinned business project, shares V3 UI, then stop
   } finally {
     if (started) await stopInstanceRuntime(root);
     assert.equal((await instanceRuntimeStatus(root)).status, 'stopped');
+    await resumeRequestedInstances();
+    assert.equal((await instanceRuntimeStatus(root)).status, 'stopped',
+      'Explicit Stop must disable automatic restart');
     assert.ok((await listInstanceRuntimes()).some((item) => item.projectRoot === root && item.status === 'stopped'));
     fs.rmSync(parent, { recursive: true, force: true });
   }
