@@ -30,7 +30,7 @@ import {
 import { detectProviders } from './providerAdapterService.ts';
 import { deleteCredentials, deleteCustomDefinition, getProviderDetail, listProviderDefinitions, listProviderStatuses, redetectProviderStatuses, runProviderVerification, saveCredentials, saveCustomDefinition, setProviderEnabled, verifyProviderAuth } from './providerPlatformService.ts';
 import { publishFrameworkRelease, currentFrameworkRelease } from './frameworkRelease.ts';
-import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime, reconcileLegacyInstanceUi } from './instanceRuntimeManager.ts';
+import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime, reconcileLegacyInstanceUi, resumeRequestedInstances } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { setupProjectProviders } from './providerSetup.ts';
 import { createKnowledge, verifyKnowledge } from '../packages/starter/src/index.ts';
@@ -541,7 +541,15 @@ function bootstrap(server: ViteDevServer | PreviewServer): void {
   if (!process.env.AWB_INSTANCE_PROJECT_ROOT) {
     void reconcileLegacyInstanceUi().catch((error) => {
       console.error('[shared-ui] Legacy Instance migration failed:', error);
+    }).finally(() => {
+      void resumeRequestedInstances().catch((error) => console.error('[instance-recovery]', error));
     });
+    // PID files are not authoritative: periodic health checks only resume
+    // projects the user previously chose to keep running.
+    const recoveryTimer = setInterval(() => {
+      void resumeRequestedInstances().catch((error) => console.error('[instance-recovery]', error));
+    }, 60_000);
+    recoveryTimer.unref();
   }
   server.middlewares.use('/api', createHandler());
 }
