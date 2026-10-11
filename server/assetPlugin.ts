@@ -33,6 +33,7 @@ import { publishFrameworkRelease, currentFrameworkRelease } from './frameworkRel
 import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime, reconcileLegacyInstanceUi, resumeRequestedInstances } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { setupProjectProviders } from './providerSetup.ts';
+import { discoverEnterpriseWorkspace, freezeEnterpriseWorkspace, listEnterpriseSnapshots, verifyEnterpriseSnapshot, compareEnterpriseSnapshots } from './enterpriseWorkspace.ts';
 import { createKnowledge, verifyKnowledge } from '../packages/starter/src/index.ts';
 import {
   applyInstanceUpgrade,
@@ -132,6 +133,33 @@ export function createHandler() {
         await assetService.ensureScanned();
         const id = new URLSearchParams(query).get('id') ?? '';
         sendJson(res, 200, assetService.getContent(decodeURIComponent(id)));
+        return;
+      }
+      // Enterprise read-only multi-repository evidence. Never fetch, checkout, or
+      // mutate source repos; snapshots reside in central managed storage.
+      if (req.method === 'GET' && pathPart === '/enterprise/discovery') {
+        sendJson(res, 200, discoverEnterpriseWorkspace(getProjectRoot()));
+        return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/snapshots') {
+        sendJson(res, 200, { snapshots: listEnterpriseSnapshots(getProjectRoot()) });
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/snapshots/freeze') {
+        const body = await readBody(req);
+        const source = body.source === 'origin-tracking' ? 'origin-tracking' : body.source === 'head' ? 'head' : null;
+        if (!source) { sendJson(res, 400, { error: 'source must be head or origin-tracking' }); return; }
+        sendJson(res, 201, freezeEnterpriseWorkspace(getProjectRoot(), source));
+        return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/snapshots/verify') {
+        const id = new URLSearchParams(query || '').get('id') ?? '';
+        sendJson(res, 200, verifyEnterpriseSnapshot(getProjectRoot(), id));
+        return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/snapshots/compare') {
+        const params = new URLSearchParams(query || '');
+        sendJson(res, 200, compareEnterpriseSnapshots(getProjectRoot(), params.get('before') ?? '', params.get('after') ?? ''));
         return;
       }
       if (req.method === 'GET' && pathPart === '/repositories') {
