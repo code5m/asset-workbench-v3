@@ -36,7 +36,7 @@ type LocalApiRequest = {
 export function isLocalApiRequest(req: LocalApiRequest): boolean {
   if (!isLoopbackAddress(req.socket?.remoteAddress)) return false;
   const host = req.headers?.host;
-  if (!host || !/^(?:localhost|127(?:\\.\\d{1,3}){3}|\\[::1\\]):\\d{1,5}$/i.test(host)) return false;
+  if (!host || !/^(?:localhost|127(?:\.\d{1,3}){3}|\[::1\]):\d{1,5}$/i.test(host)) return false;
   const rawPort = host.slice(host.lastIndexOf(':') + 1);
   const port = Number(rawPort);
   if (!Number.isInteger(port) || port < 1 || port > 65535) return false;
