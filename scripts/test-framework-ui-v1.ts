@@ -906,3 +906,13 @@ test('central-only Instance actions are not rendered in an independent project W
   assert.match(inventory, /instanceRuntime\(item\.projectRoot, 'stop'\)/);
   assert.doesNotMatch(creator, /creator-create-shortcut/);
 });
+
+test('shared UI must refuse an incompatible frozen Instance backend', () => {
+  const runtime = read('server/standaloneRuntime.ts');
+  const contract = read('server/runtimeContract.ts');
+  const manager = read('server/instanceRuntimeManager.ts');
+  assert.match(runtime, /INCOMPATIBLE_BACKEND/);
+  assert.match(runtime, /checkRuntimeCompatibility\(\)/);
+  assert.match(contract, /minimumBackendLevel/);
+  assert.match(manager, /BACKEND_RUNTIME_MARKER/);
+});
