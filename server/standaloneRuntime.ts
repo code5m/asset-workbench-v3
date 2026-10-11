@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { loadConfig } from './config.ts';
+import { checkRuntimeCompatibility } from './runtimeContract.ts';
 import { resolveUiSource, proxyCentralDevUi, proxyCentralDevUpgrade, sharedUiHeaders, sharedUiRevision } from './sharedUi.ts';
 import { assetService } from './assetService.ts';
 import { createHandler } from './assetPlugin.ts';
@@ -56,6 +57,11 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === '/_runtime/compatibility') {
+    respond(res, 200, checkRuntimeCompatibility());
+    return;
+  }
+
   if (url.pathname === '/_runtime/ui-source') {
     const source = await resolveUiSource();
     respond(res, source.kind === 'unavailable' ? 503 : 200, {
@@ -85,6 +91,12 @@ const server = http.createServer(async (req, res) => {
     respond(res, 405, { error: 'Read-only static server' }); return;
   }
 
+  const compatibility = checkRuntimeCompatibility();
+  if (!compatibility.compatible) {
+    respond(res, 503, { code: 'INCOMPATIBLE_BACKEND', ...compatibility,
+      error: '当前独立工作台需要升级后端，中央 V3 已阻止加载不兼容的 UI。' });
+    return;
+  }
   const ui = await resolveUiSource();
   if (ui.kind === 'central-dev') {
     await proxyCentralDevUi(req, res, ui.dev);
