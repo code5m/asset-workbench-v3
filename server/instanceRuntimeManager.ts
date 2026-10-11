@@ -19,7 +19,7 @@ interface RuntimeRecord { projectRoot: string; instanceId: string; pid: number; 
 const registryDir = () => path.join(APP_ROOT, '.asset-workbench-data', 'instance-runtimes');
 const registryIndex = () => path.join(registryDir(), 'registered.json');
 
-interface RegisteredInstance { projectRoot: string; instanceId: string; projectName: string; registeredAt: string; }
+interface RegisteredInstance { projectRoot: string; instanceId: string; projectName: string; registeredAt: string; autoResume?: boolean; }
 function readRegistry(): RegisteredInstance[] {
   try {
     const value = JSON.parse(fs.readFileSync(registryIndex(), 'utf8')) as unknown;
@@ -36,13 +36,24 @@ export function registerInstanceRuntime(project: string): void {
   const manifest = readInstanceManifest(root);
   if (!manifest || manifest.projectRoot !== root) throw new Error('Valid Instance Manifest required for registration');
   const entries = readRegistry().filter((entry) => entry.projectRoot !== root);
-  entries.push({ projectRoot: root, instanceId: manifest.instanceId, projectName: manifest.projectName, registeredAt: new Date().toISOString() });
+  const previous = readRegistry().find((entry) => entry.projectRoot === root);
+  entries.push({ projectRoot: root, instanceId: manifest.instanceId, projectName: manifest.projectName, registeredAt: previous?.registeredAt ?? new Date().toISOString(), autoResume: previous?.autoResume ?? false });
   fs.mkdirSync(registryDir(), { recursive: true, mode: 0o700 });
   const temp = registryIndex() + '.tmp-' + process.pid;
   fs.writeFileSync(temp, JSON.stringify(entries, null, 2) + '\n', { mode: 0o600 });
   fs.renameSync(temp, registryIndex());
 }
 
+/** Auto-resume expresses user intent, not merely whether a PID file exists. */
+function setAutoResume(project: string, enabled: boolean): void {
+  const root = resolveRoot(project);
+  registerInstanceRuntime(root);
+  const entries = readRegistry().map((entry) => entry.projectRoot === root
+    ? { ...entry, autoResume: enabled } : entry);
+  const tmp = registryIndex() + '.intent-' + process.pid;
+  fs.writeFileSync(tmp, JSON.stringify(entries, null, 2) + '\n', { mode: 0o600 });
+  fs.renameSync(tmp, registryIndex());
+}
 type ReleaseSelection = { active: string; previous: string | null };
 function selectionFile(root: string): string {
   return filename(root).slice(0, -5) + '.release.json';
@@ -178,7 +189,10 @@ export async function startInstanceRuntime(project: string): Promise<InstanceRun
   registerInstanceRuntime(root);
   if (!selection) saveSelection(root, { active: verified.releaseId, previous: null });
   for (let attempt = 0; attempt < 60; attempt++) {
-    if (await responds(record)) return instanceRuntimeStatus(root);
+    if (await responds(record)) {
+      setAutoResume(root, true);
+      return instanceRuntimeStatus(root);
+    }
     if (!alive(record.pid)) break;
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
@@ -193,6 +207,7 @@ export async function stopInstanceRuntime(project: string): Promise<InstanceRunt
   if (current.status === 'running' && record) process.kill(record.pid, 'SIGTERM');
   else if (record && alive(record.pid)) throw new Error('Saved PID belongs to an unverified process; refused to kill');
   forget(root);
+  setAutoResume(root, false);
   return { ...current, status: 'stopped', url: null, port: null, pid: null };
 }
 export async function adoptInstanceRelease(project: string, releaseId: string): Promise<InstanceRuntimeView> {
@@ -236,6 +251,26 @@ export async function listInstanceRuntimes(): Promise<InstanceRuntimeView[]> {
   const result: InstanceRuntimeView[] = [];
   for (const root of roots) { try { result.push(await instanceRuntimeStatus(root)); } catch { /* moved project */ } }
   return result;
+}
+
+/** Called by central startup and periodically; never reopens workbenches intentionally stopped by the user. */
+let recoveryInFlight: Promise<void> | null = null;
+export function resumeRequestedInstances(): Promise<void> {
+  centralOnly();
+  if (recoveryInFlight) return recoveryInFlight;
+  recoveryInFlight = resumeInner().finally(() => { recoveryInFlight = null; });
+  return recoveryInFlight;
+}
+async function resumeInner(): Promise<void> {
+  for (const entry of readRegistry().filter((row) => row.autoResume === true)) {
+    try {
+      if ((await instanceRuntimeStatus(entry.projectRoot)).status === 'stopped') {
+        await startInstanceRuntime(entry.projectRoot);
+      }
+    } catch (error) {
+      console.error('[instance-recovery] Workbench ' + entry.instanceId + ' could not resume: ' + String(error));
+    }
+  }
 }
 
 /**
