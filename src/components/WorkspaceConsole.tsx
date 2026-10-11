@@ -7,6 +7,7 @@ import type { RepositoryRevision } from '../domain/asset';
 import { useI18n } from '../i18n/I18nProvider';
 import { StatusBadge } from './StatusBadge';
 import { CreatorWorkbench } from './CreatorWorkbench';
+import { EnterpriseWorkspacePanel } from './EnterpriseWorkspacePanel';
 
 interface WorkspaceConsoleProps {
   activeStep: string;
@@ -179,6 +180,7 @@ export function WorkspaceConsole({ activeStep, view, onViewChange, onActivated, 
         </div>
       </section>
 
+      <EnterpriseWorkspacePanel />
       <section className="work-grid">
         <article className="panel repositories-panel">
           <div className="section-heading">
