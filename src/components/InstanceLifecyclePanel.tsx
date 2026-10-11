@@ -24,7 +24,7 @@ export function InstanceLifecyclePanel() {
       const items = await assetClient.listInstanceRuntimes();
       setKnownInstances(items);
       setInventoryError('');
-    } catch (error) { setInventoryError(error instanceof Error ? error.message : String(error)); }
+    } catch (error) { setInventoryError(error instanceof Error ? (error.message.includes('This action is available only in central Framework management') ? '此操作只能在中央 Framework 管理界面执行，请返回主 V3 工作台的「独立工作台管理」。' : error.message) : String(error)); }
   };
   useEffect(() => {
     void loadInventory();
