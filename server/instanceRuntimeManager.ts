@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import net from 'node:net';
 import { createHash, randomBytes } from 'node:crypto';
+import { BACKEND_RUNTIME_MARKER } from './runtimeContract.ts';
 import { currentFrameworkRelease, verifyFrameworkRelease, publishFrameworkRelease } from './frameworkRelease.ts';
 import { spawn } from 'node:child_process';
 import { APP_ROOT, loadConfig } from './config.ts';
@@ -254,7 +255,7 @@ function hasSharedUiBridge(releaseId: string | null | undefined): boolean {
   try {
     const release = verifyFrameworkRelease(releaseId);
     const server = fs.readFileSync(path.join(APP_ROOT, '.asset-workbench-data', 'framework-releases', release.releaseId, 'server.mjs'), 'utf8');
-    return server.includes('central-shared-ui-v1');
+    return server.includes('central-shared-ui-v1') && server.includes(BACKEND_RUNTIME_MARKER);
   } catch { return false; }
 }
 async function migrateLegacyUiBridge(): Promise<void> {
