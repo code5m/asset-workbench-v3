@@ -22,6 +22,26 @@ export function isLoopbackAddress(address: string | null | undefined): boolean {
   return octets[0] === 127;
 }
 
-export function isLocalApiRequest(req: { socket?: { remoteAddress?: string | null } }): boolean {
-  return isLoopbackAddress(req.socket?.remoteAddress);
+type LocalApiRequest = {
+  socket?: { remoteAddress?: string | null };
+  headers?: { host?: string; origin?: string; 'sec-fetch-site'?: string };
+};
+
+/**
+ * DNS rebinding / cross-origin browser protection for the local write API.
+ * Loopback alone is not enough: hostile websites can issue browser requests
+ * to 127.0.0.1. CLI calls without Origin remain supported, but only from
+ * loopback and with a literal loopback Host header.
+ */
+export function isLocalApiRequest(req: LocalApiRequest): boolean {
+  if (!isLoopbackAddress(req.socket?.remoteAddress)) return false;
+  const host = req.headers?.host;
+  if (!host || !/^(?:localhost|127(?:\\.\\d{1,3}){3}|\\[::1\\]):\\d{1,5}$/i.test(host)) return false;
+  const rawPort = host.slice(host.lastIndexOf(':') + 1);
+  const port = Number(rawPort);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return false;
+  const origin = req.headers?.origin;
+  if (origin && origin !== 'http://' + host) return false;
+  if (req.headers?.['sec-fetch-site'] === 'cross-site') return false;
+  return true;
 }
