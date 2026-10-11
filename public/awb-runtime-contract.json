@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "minimumBackendLevel": 2,
+  "requiredApiPaths": [
+    "GET /api/config",
+    "GET /api/providers",
+    "GET /api/provider-manager/definitions",
+    "GET /api/workspace/tree",
+    "POST /api/capture/v1/sessions",
+    "POST /api/provider-manager/providers/:id/disable"
+  ]
+}
