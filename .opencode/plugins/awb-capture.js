@@ -18,7 +18,7 @@ function inboxPath(directory) {
 }
 
 export const AssetWorkbenchCapture = async (ctx) => {
-  const directory = ctx?.directory || process.cwd();
+  const directory = fs.realpathSync(ctx?.directory || process.cwd());
   const target = inboxPath(directory);
   let ready = false;
   const write = (line) => {
@@ -38,14 +38,14 @@ export const AssetWorkbenchCapture = async (ctx) => {
     event: async (input) => {
       const event = input?.event ?? input;
       if (!event || typeof event !== 'object') return;
-      write(JSON.stringify({ receivedAt: new Date().toISOString(), ...event }));
+      write(JSON.stringify({ receivedAt: new Date().toISOString(), projectDirectory: directory, ...event }));
     },
     // Tool lifecycle hooks keep tool evidence independent of text streaming.
     'tool.execute.before': async (input) => {
-      write(JSON.stringify({ receivedAt: new Date().toISOString(), type: 'tool.execute.before', properties: input ?? {} }));
+      write(JSON.stringify({ receivedAt: new Date().toISOString(), projectDirectory: directory, type: 'tool.execute.before', properties: input ?? {} }));
     },
     'tool.execute.after': async (input, output) => {
-      write(JSON.stringify({ receivedAt: new Date().toISOString(), type: 'tool.execute.after', properties: input ?? {}, output: output ?? null }));
+      write(JSON.stringify({ receivedAt: new Date().toISOString(), projectDirectory: directory, type: 'tool.execute.after', properties: input ?? {}, output: output ?? null }));
     },
   };
 };
