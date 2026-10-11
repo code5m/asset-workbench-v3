@@ -164,6 +164,16 @@ export interface InstanceSelfTestView {
 }
 
 export const assetClient = {
+  async enterpriseCommand<T>(action: string, body: Record<string, unknown>): Promise<T> {
+    const res = await fetch(`${BASE}/enterprise/${action}`, { method: 'POST',
+      headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const value = await res.json() as T & { error?: string };
+    if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
+    return value;
+  },
+  async enterpriseGet<T>(route: string): Promise<T> {
+    return getJson<T>(`${BASE}/enterprise/${route}`);
+  },
   enterpriseDiscovery(): Promise<{ root: string; scannedAt: string; repositories: Array<{ path: string; remote?: string; branch: string | null; headCommit: string; dirty: boolean; modifiedCount: number; untrackedCount: number }>; warnings: string[] }> {
     return getJson(`${BASE}/enterprise/discovery`);
   },

@@ -33,6 +33,10 @@ import { publishFrameworkRelease, currentFrameworkRelease } from './frameworkRel
 import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime, reconcileLegacyInstanceUi, resumeRequestedInstances } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { setupProjectProviders } from './providerSetup.ts';
+import { importEnterpriseRaw, verifyEnterpriseRaw } from './enterpriseImport.ts';
+import { mirrorEnterpriseSnapshot } from './enterpriseMirror.ts';
+import { buildEnterpriseMavenGraph } from './enterpriseGraph.ts';
+import { createEvolutionCase, listEvolutionCases, advanceEvolutionCase, nominateFrameworkCandidate } from './enterpriseEvolution.ts';
 import { discoverEnterpriseWorkspace, freezeEnterpriseWorkspace, listEnterpriseSnapshots, verifyEnterpriseSnapshot, compareEnterpriseSnapshots } from './enterpriseWorkspace.ts';
 import { createKnowledge, verifyKnowledge } from '../packages/starter/src/index.ts';
 import {
@@ -137,6 +141,52 @@ export function createHandler() {
       }
       // Enterprise read-only multi-repository evidence. Never fetch, checkout, or
       // mutate source repos; snapshots reside in central managed storage.
+      if (req.method === 'POST' && pathPart === '/enterprise/mirrors/sync') {
+        const body = await readBody(req);
+        if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
+        sendJson(res, 200, { results: mirrorEnterpriseSnapshot(getProjectRoot(), body.snapshotId) }); return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/raw/import') {
+        const body = await readBody(req);
+        if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
+        sendJson(res, 201, importEnterpriseRaw(getProjectRoot(), body.snapshotId));
+        return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/raw/verify') {
+        const id = new URLSearchParams(query || '').get('id') ?? '';
+        sendJson(res, 200, verifyEnterpriseRaw(getProjectRoot(), id)); return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/graph/build') {
+        const body = await readBody(req);
+        if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
+        sendJson(res, 201, buildEnterpriseMavenGraph(getProjectRoot(), body.snapshotId)); return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/evolution') {
+        sendJson(res, 200, { cases: listEvolutionCases(getProjectRoot()) }); return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/evolution/create') {
+        const body = await readBody(req);
+        if (typeof body.snapshotId !== 'string' || typeof body.title !== 'string'
+            || typeof body.problem !== 'string' || !Array.isArray(body.evidence)) {
+          throw new Error('Invalid evidence-based evolution case');
+        }
+        sendJson(res, 201, createEvolutionCase(getProjectRoot(), {
+          snapshotId: body.snapshotId, title: body.title, problem: body.problem,
+          evidence: body.evidence as Array<{ repository: string; path: string; commit: string }>,
+        })); return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/evolution/advance') {
+        const body = await readBody(req);
+        if (typeof body.id !== 'string' || typeof body.stage !== 'string' || typeof body.note !== 'string')
+          throw new Error('Invalid evolution transition');
+        sendJson(res, 200, advanceEvolutionCase(getProjectRoot(), body.id,
+          body.stage as Parameters<typeof advanceEvolutionCase>[2], body.note)); return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/evolution/nominate') {
+        const body = await readBody(req);
+        if (typeof body.id !== 'string') throw new Error('Invalid candidate');
+        sendJson(res, 200, nominateFrameworkCandidate(getProjectRoot(), body.id)); return;
+      }
       if (req.method === 'GET' && pathPart === '/enterprise/discovery') {
         sendJson(res, 200, discoverEnterpriseWorkspace(getProjectRoot()));
         return;
