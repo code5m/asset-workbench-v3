@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { getProjectRoot } from './config.ts';
-import { assertManagedWritable } from './managedPathPolicy.ts';
+import { assertManagedWritable, isManagedWritableRelative } from './managedPathPolicy.ts';
+import { resolveWithinRoot, assertWithinRoot, PathEscapeError } from './pathGuard.ts';
 import { assetService } from './assetService.ts';
 import { writeDirDurableAtomic, writeFileDurableAtomic, writePairDurableAtomic } from './durableWrite.ts';
 import type {
@@ -154,11 +155,20 @@ export function metadataRelForContent(contentRel: string): string {
 }
 
 function readMetadata(root: string, contentRel: string): ManagedAssetMetadata | null {
+  // A sidecar is only a managed asset when both the requested content and
+  // the resolved sidecar live inside an explicitly managed knowledge area.
+  if (!isManagedWritableRelative(contentRel)) {
+    throw new PathEscapeError(contentRel);
+  }
   const metaRel = metadataRelForContent(contentRel);
+  const absolute = resolveWithinRoot(root, metaRel);
+  assertWithinRoot(root, absolute);
   try {
-    return JSON.parse(fs.readFileSync(relToAbs(root, metaRel), 'utf8')) as ManagedAssetMetadata;
-  } catch {
-    return null;
+    return JSON.parse(fs.readFileSync(absolute, 'utf8')) as ManagedAssetMetadata;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT' || code === 'ENOTDIR') return null;
+    throw error;
   }
 }
 

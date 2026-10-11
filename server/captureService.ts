@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { getDataDir } from './config.ts';
+import { getDataDir, loadConfig } from './config.ts';
 import { createTranscript, findAssetById, patchAssetMetadataById } from './managedAssetService.ts';
 import { readSession, updateSession } from './agentSessionService.ts';
 import type {
@@ -105,12 +105,16 @@ export function createCaptureSession(input: CreateCaptureSessionInput): CaptureS
   const provider = assertProvider(input.provider);
   const captureSource = assertSource(input.captureSource);
   const providerSessionId = safeString(input.providerSessionId, 'providerSessionId');
+  const instance = loadConfig();
+  if (instance.lockedToInstance && input.workspaceId && input.workspaceId !== instance.instanceId) {
+    throw new CaptureError('Capture workspaceId does not match the bound Instance');
+  }
   const id = `capture_${crypto.randomUUID()}`;
   const dir = sessionDir(id);
   fs.mkdirSync(dir, { recursive: true });
   const state: CaptureSession = {
     schemaVersion: 1, captureSessionId: id, provider, providerSessionId,
-    workspaceId: input.workspaceId?.trim() || 'asset-workbench', captureSource, status: 'active',
+    workspaceId: instance.lockedToInstance ? instance.instanceId! : (input.workspaceId?.trim() || 'asset-workbench'), captureSource, status: 'active',
     sequenceGaps: [], orderingWarnings: [], startedAt: now(), agentSessionId: input.agentSessionId,
   };
   writeJsonAtomic(statePath(id), state);
