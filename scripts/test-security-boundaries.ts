@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { isLoopbackAddress, MAX_API_BODY_BYTES } from '../server/localApiSecurity.ts';
+import { isLoopbackAddress, isLocalApiRequest, MAX_API_BODY_BYTES } from '../server/localApiSecurity.ts';
 import { getProjectRoot, setProjectRoot } from '../server/config.ts';
 
 assert.equal(isLoopbackAddress('127.0.0.1'), true);
@@ -26,3 +26,8 @@ try {
 }
 
 console.log('SECURITY_BOUNDARIES_TEST PASS');
+
+assert.equal(isLocalApiRequest({ socket: { remoteAddress: '127.0.0.1' }, headers: { host: '127.0.0.1:5173' } }), true);
+assert.equal(isLocalApiRequest({ socket: { remoteAddress: '127.0.0.1' }, headers: { host: 'evil.example:5173' } }), false);
+assert.equal(isLocalApiRequest({ socket: { remoteAddress: '127.0.0.1' }, headers: { host: '127.0.0.1:5173', origin: 'https://evil.example' } }), false);
+assert.equal(isLocalApiRequest({ socket: { remoteAddress: '127.0.0.1' }, headers: { host: '127.0.0.1:5173', origin: 'http://127.0.0.1:5173' } }), true);
