@@ -36,6 +36,10 @@ import { setupProjectProviders } from './providerSetup.ts';
 import { importEnterpriseRaw, verifyEnterpriseRaw } from './enterpriseImport.ts';
 import { mirrorEnterpriseSnapshot } from './enterpriseMirror.ts';
 import { buildEnterpriseMavenGraph } from './enterpriseGraph.ts';
+import { analyzeEnterpriseQuality } from './enterpriseQuality.ts';
+import { planFrameworkRollout, applyFrameworkRollout } from './frameworkRollout.ts';
+import { buildEnterpriseSourceGraph } from './enterpriseSourceGraph.ts';
+import { runEnterpriseOptimizationExperiment } from './enterpriseOptimization.ts';
 import { createEvolutionCase, listEvolutionCases, advanceEvolutionCase, nominateFrameworkCandidate } from './enterpriseEvolution.ts';
 import { discoverEnterpriseWorkspace, freezeEnterpriseWorkspace, listEnterpriseSnapshots, verifyEnterpriseSnapshot, compareEnterpriseSnapshots } from './enterpriseWorkspace.ts';
 import { createKnowledge, verifyKnowledge } from '../packages/starter/src/index.ts';
@@ -156,6 +160,21 @@ export function createHandler() {
         const id = new URLSearchParams(query || '').get('id') ?? '';
         sendJson(res, 200, verifyEnterpriseRaw(getProjectRoot(), id)); return;
       }
+      if (req.method === 'POST' && pathPart === '/enterprise/sourcegraph/build') {
+        const body=await readBody(req);
+        if(typeof body.snapshotId!=='string')throw new Error('snapshotId required');
+        sendJson(res,200,buildEnterpriseSourceGraph(getProjectRoot(),body.snapshotId));return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/optimization/experiment') {
+        const body=await readBody(req);
+        if(typeof body.snapshotId!=='string')throw new Error('snapshotId required');
+        sendJson(res,200,runEnterpriseOptimizationExperiment(getProjectRoot(),body.snapshotId));return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/quality/analyze') {
+        const body = await readBody(req);
+        if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
+        sendJson(res, 200, analyzeEnterpriseQuality(getProjectRoot(), body.snapshotId)); return;
+      }
       if (req.method === 'POST' && pathPart === '/enterprise/graph/build') {
         const body = await readBody(req);
         if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
@@ -235,6 +254,15 @@ export function createHandler() {
         try { sendJson(res, 200, { release: await publishFrameworkRelease() }); }
         catch (e) { sendJson(res, 400, { error: (e as Error).message }); }
         return;
+      }
+      if (pathPart === '/creator/runtime/rollout/plan' && req.method === 'GET') {
+        if(process.env.AWB_INSTANCE_PROJECT_ROOT){sendJson(res,403,{code:'CENTRAL_ONLY',error:'只能在中央 Framework 管理界面执行'});return;}
+        sendJson(res,200,await planFrameworkRollout());return;
+      }
+      if (pathPart === '/creator/runtime/rollout/apply' && req.method === 'POST') {
+        if(process.env.AWB_INSTANCE_PROJECT_ROOT){sendJson(res,403,{code:'CENTRAL_ONLY',error:'只能在中央 Framework 管理界面执行'});return;}
+        const body=await readBody(req);
+        sendJson(res,200,await applyFrameworkRollout(typeof body.confirm==='string'?body.confirm:''));return;
       }
       if (pathPart === '/creator/runtime/list' && req.method === 'GET') {
         try { sendJson(res, 200, await listInstanceRuntimes()); }

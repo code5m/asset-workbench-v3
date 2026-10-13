@@ -19,6 +19,8 @@ export function InstanceLifecyclePanel() {
   const [published, setPublished] = useState<{ releaseId: string; totalBytes: number } | null>(null);
   const [knownInstances, setKnownInstances] = useState<Array<{ projectRoot: string; status: string; url: string | null }>>([]);
   const [inventoryError, setInventoryError] = useState('');
+  const [rolloutPreview, setRolloutPreview] = useState<Awaited<ReturnType<typeof assetClient.rolloutPlan>> | null>(null);
+
   const loadInventory = async () => {
     try {
       const items = await assetClient.listInstanceRuntimes();
@@ -478,6 +480,17 @@ export function InstanceLifecyclePanel() {
             ? '「发布运行版本」为中央 Framework 构建新的共享运行包，不是创建工作台，也不是启动按钮。「采用最新运行版本」会主动切换所选实例的程序版本；回退仅在存在旧版本记录时可用。'
             : 'Publish builds a shared Framework release; it does not create or start an Instance. Adopt switches the selected Instance release intentionally.'}</p>
           <div className="hero-actions">
+            <button className="secondary-button" disabled={busy} onClick={() => void run(async () => {
+              const result=await assetClient.rolloutPlan();setRolloutPreview(result);
+              setMessage(result.compatible ? '可升级 '+result.eligible+' 个实例；升级不会自动执行，请确认后手动触发。' : '升级存在阻塞：'+result.blockers.join(';'));
+            })}>预览全工作台升级</button>
+            <button className="secondary-button" disabled={busy || !rolloutPreview?.compatible || rolloutPreview.eligible===0} onClick={() => void run(async () => {
+              const response=window.confirm('确认依次升级 '+rolloutPreview!.eligible+' 个工作台吗？出现失败将停止并尝试回滚。');
+              if(!response)return;
+              const results=await assetClient.rolloutApply('UPGRADE_ALL_REGISTERED_INSTANCES');
+              setMessage('升级结果：'+results.results.map(r=>r.projectRoot+' '+r.status).join('；'));
+              setRolloutPreview(null);await loadInventory();
+            })}>确认批量升级（失败停止）</button>
             <button className="secondary-button" disabled={busy} onClick={() => void publish()}>{lang === 'zh-CN' ? '发布中央运行版本' : 'Publish Framework release'}</button>
             <button className="secondary-button" disabled={busy || !projectRoot.trim() || !manifest} onClick={() => void manageRuntime('status')}>{lang === 'zh-CN' ? '检查运行状态' : 'Runtime status'}</button>
             <button className="secondary-button" disabled={busy || !manifest} onClick={() => void manageRuntime('adopt')}>{lang === 'zh-CN' ? '采用最新运行版本' : 'Adopt latest release'}</button>

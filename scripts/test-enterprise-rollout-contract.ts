@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const load=(name:string)=>fs.readFileSync(new URL('../'+name,import.meta.url),'utf8');
+const rollout=load('server/frameworkRollout.ts');
+const client=load('src/services/assetClient.ts');
+const api=load('server/assetPlugin.ts');
+const ui=load('src/components/InstanceLifecyclePanel.tsx');
+assert.match(rollout,/UPGRADE_ALL_REGISTERED_INSTANCES/);
+assert.match(rollout,/verifyFrameworkRelease|checkRuntimeCompatibility/);
+assert.match(rollout,/rollbackInstanceRelease/);
+assert.match(rollout,/break;/);
+assert.match(api,/rollout\/plan/);
+assert.match(api,/rollout\/apply/);
+assert.match(ui,/window\.confirm/);
+assert.match(ui,/预览全工作台升级/);
+assert.match(client,/rolloutPlan/);
+assert.match(client,/rolloutApply/);
+console.log('ENTERPRISE_ROLLOUT_CONTRACT PASS');

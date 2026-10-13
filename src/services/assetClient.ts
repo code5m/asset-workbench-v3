@@ -250,6 +250,15 @@ export const assetClient = {
     if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
     return value;
   },
+  rolloutPlan():Promise<{releaseId:string;compatible:boolean;eligible:number;blockers:string[];instances:Array<{projectRoot:string;status:string;action:string}>}> {
+    return getJson(`${BASE}/creator/runtime/rollout/plan`);
+  },
+  async rolloutApply(confirm:string):Promise<{releaseId:string;results:Array<{projectRoot:string;status:string;detail:string}>}> {
+    const r=await fetch(`${BASE}/creator/runtime/rollout/apply`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({confirm})});
+    const result=await r.json() as {releaseId:string;results:Array<{projectRoot:string;status:string;detail:string}>;error?:string};
+    if(!r.ok)throw new ApiError(r.status,result.error??r.statusText);
+    return result;
+  },
   async listInstanceRuntimes(): Promise<Array<{ projectRoot: string; status: 'running' | 'stopped'; url: string | null }>> {
     const res = await fetch(`${BASE}/creator/runtime/list`);
     const value = await res.json() as Array<{ projectRoot: string; status: 'running' | 'stopped'; url: string | null }> | { error: string };
