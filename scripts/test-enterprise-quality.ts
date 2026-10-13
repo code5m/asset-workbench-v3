@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+import {freezeEnterpriseWorkspace} from '../server/enterpriseWorkspace.ts';
+import {importEnterpriseRaw} from '../server/enterpriseImport.ts';
+import {analyzeEnterpriseQuality} from '../server/enterpriseQuality.ts';
+import {buildEnterpriseSourceGraph} from '../server/enterpriseSourceGraph.ts';
+import {runEnterpriseOptimizationExperiment} from '../server/enterpriseOptimization.ts';
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'awb-quality-'));
+const git=(...a:string[])=>execFileSync('git',['-C',root,...a],{encoding:'utf8',env:{...process.env,GIT_AUTHOR_NAME:'Test',GIT_COMMITTER_NAME:'Test',GIT_AUTHOR_EMAIL:'a@b.com',GIT_COMMITTER_EMAIL:'a@b.com'}}).trim();
+try{
+ git('init','-q');
+ fs.writeFileSync(path.join(root,'Pay.java'),'public class Pay {\n public void pay() { System.out.println("x"); }\n public void find() { pay(); }\n}\n');
+ fs.writeFileSync(path.join(root,'find.sql'),'SELECT * FROM trade_order;\n');
+ git('add','.');git('commit','-qm','init');
+ const id=freezeEnterpriseWorkspace(root).snapshotId;
+ assert.equal(importEnterpriseRaw(root,id,{maxBytes:1000000}).status,'verified');
+ const q=analyzeEnterpriseQuality(root,id);
+ assert.ok(q.findings.some(f=>f.rule==='JAVA_SYSTEM_OUT'));
+ assert.ok(q.findings.some(f=>f.rule==='SQL_SELECT_STAR'));
+ const g=buildEnterpriseSourceGraph(root,id);
+ assert.ok(g.nodes.some(n=>n.kind==='java-class'));
+ assert.ok(g.edges.some(e=>e.kind==='sql-read'));
+ assert.ok(g.limitations.some(x=>x.includes('尚')));
+ const result=runEnterpriseOptimizationExperiment(root,id);
+ assert.equal(result.status,'verified-preview');
+ assert.ok(result.checked>=2);
+ console.log('ENTERPRISE_QUALITY_TEST PASS');
+}finally{fs.rmSync(root,{recursive:true,force:true});}

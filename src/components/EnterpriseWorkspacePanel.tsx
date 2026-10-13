@@ -84,6 +84,18 @@ export function EnterpriseWorkspacePanel() {
           })}>分析 Maven 模块关系</button>
         </div>
         {pipeline ? <p role="status">{pipeline}</p> : null}
+        <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
+          const result = await assetClient.enterpriseCommand<{ findings:Array<{summary:string;file:string;line:number}>;analyzed:number;status:string }>('quality/analyze',{snapshotId:selectedAfter});
+          setPipeline('静态质量分析：'+result.analyzed+' 个已归档代码文件，'+result.findings.length+' 个候选问题，状态 '+result.status+'；首个发现：'+(result.findings[0] ? result.findings[0].file+':'+result.findings[0].line+' '+result.findings[0].summary : '无'));
+        })}>扫描代码质量候选问题</button>
+        <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
+          const graph=await assetClient.enterpriseCommand<{nodes:unknown[];edges:unknown[];status:string}>('sourcegraph/build',{snapshotId:selectedAfter});
+          setPipeline('源码关系候选：'+graph.nodes.length+' 节点、'+graph.edges.length+' 边；'+graph.status+'。复杂 Java/SQL 解析尚未完成。');
+        })}>建立源码调用与 SQL 候选索引</button>
+        <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
+          const report=await assetClient.enterpriseCommand<{checked:number;changed:number;bytesRemoved:number;status:string}>('optimization/experiment',{snapshotId:selectedAfter});
+          setPipeline('隔离优化实验：'+report.checked+' 个文件，候选优化 '+report.changed+' 个，节约空白字节 '+report.bytesRemoved+'；未改动业务源码。');
+        })}>运行隔离优化实验</button>
         <h3>问题与 Framework 演进</h3>
         <p className="detail-summary">先绑定真实 Git 版本和文件证据。记录问题、实验、验证后才能提交通用能力候选。绝不自动修改业务代码。</p>
         <input aria-label="问题标题" value={title} placeholder="问题标题" onChange={e => setTitle(e.target.value)}/>
