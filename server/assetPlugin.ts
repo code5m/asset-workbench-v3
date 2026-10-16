@@ -35,7 +35,7 @@ import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { setupProjectProviders } from './providerSetup.ts';
 import { attachEnterpriseWorkspaceReadOnly, detachEnterpriseWorkspaceReadOnly, enableEnterpriseWorkspaceManaged, auditEnterpriseWorkspaceManaged, rollbackEnterpriseWorkspaceManaged, enterpriseApiRoot, listAttachedEnterpriseWorkspaces } from './enterpriseAttachment.ts';
 import { enterpriseEntryForRoot } from './enterpriseStorage.ts';
-import { enterpriseProviderStatuses, setupEnterpriseUserProviderHooks } from './enterpriseProviderSetup.ts';
+import { enterpriseProviderStatuses, setupEnterpriseUserProviderHooks, removeEnterpriseUserProviderHooks } from './enterpriseProviderSetup.ts';
 import { listEnterpriseProviderSessions, readEnterpriseCaptureEvents } from './enterpriseProviderCapture.ts';
 import { importEnterpriseCodexHistory } from './enterpriseProviderHistory.ts';
 import { createEnterpriseKnowledgeNote, listEnterpriseKnowledgeNotes } from './enterpriseKnowledge.ts';
@@ -255,6 +255,17 @@ export function createHandler() {
           if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') throw new Error('Only managed enterprise workspaces can view Provider captures');
           const id = params.get('id') || '';
           sendJson(res, 200, { events: readEnterpriseCaptureEvents(root, id) });
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/provider/hooks/remove') {
+        const body = await readBody(req);
+        try {
+          if (typeof body.workspaceId !== 'string') throw new Error('workspaceId required');
+          const root = enterpriseApiRoot(body.workspaceId, getProjectRoot());
+          if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') throw new Error('企业工作区必须先开启受管模式');
+          const confirmation = typeof body.confirm === 'string' ? body.confirm : '';
+          sendJson(res, 200, { results: removeEnterpriseUserProviderHooks(confirmation) });
         } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
         return;
       }

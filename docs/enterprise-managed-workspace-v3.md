@@ -71,6 +71,17 @@ node --experimental-strip-types scripts/import-enterprise-history.ts codex /home
 - **实时官方 Hook 的 SessionEnd** 流程不启用上述历史导入自动关闭，以免尚未处理原生结束事件就提前封存会话。
 - Provider 状态将「已导入历史会话」与「已记录实时 Hook 的 SessionEnd」分别展示；导入历史不能冒充用户级 Hook E2E 成功。代码模拟测试也不等于真实 Provider 进程亲测。
 
+## 用户级 Provider Hook 安全卸载（PR #50）
+
+在「项目工作台 → 企业多仓库 → Provider、聊天和知识资产」中，可以明确授权安装或**卸载 V3 用户级采集 Hook**。卸载前会提示：全局用户 HOME 配置影响当前用户的**全部**受管工作区，其它工作区随后不会再自动产生新事件。
+
+- Codex、CodeBuddy、Trae：逐项精确匹配当初 V3 安装的 Hook（命令、事件类型与匹配器），只删除属于 V3 的条目，用户原有 Hook、主题、配置和备份保留。
+- OpenCode：仅当插件字节内容**完整匹配**已知 V3 生成的新版或旧版插件模板时删除；用户修改过的同名插件一律 BLOCKED，不做覆盖式恢复。
+- 无 Hook 时报告 NOT_INSTALLED，重复卸载幂等。格式错误、符号链接或用户编辑过的 Hook 返回 BLOCKED；不会为了完成卸载而修改业务子仓库。
+- 移除 Hook 不删除已捕获的聊天记录、Agent 事件、知识、版本快照或其它工作台资产；之后仍可重新授权安装。
+- CLI/API 接口 `POST /api/enterprise/provider/hooks/remove` 必须附已登记受管工作区 ID 及 `REMOVE_USER_LEVEL_PROVIDER_HOOKS` 明确确认令牌。不得从业务 Instance 直接修改别的工作区。
+- CI 合成测试验证自定义 CodeBuddy Stop Hook 保留、用户修改过的 V3 Hook 拒绝误删、OpenCode 用户修改拒绝删除、历史会话不被删除、重复卸载及重装。
+
 ## 验收与安全
 
 ```bash

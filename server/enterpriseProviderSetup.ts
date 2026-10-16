@@ -20,6 +20,13 @@ const EVENTS: Record<SupportedHook, string[]> = {
 };
 const bridge = path.join(APP_ROOT, 'scripts', 'capture-enterprise-provider-event.ts');
 const SIGNATURE = 'capture-enterprise-provider-event.ts';
+function managedHookEntry(provider: SupportedHook, event: string): Record<string, unknown> {
+  const command = 'node --experimental-strip-types ' + JSON.stringify(bridge) + ' --provider=' + provider;
+  return {
+    ...(event === 'PreToolUse' || event === 'PostToolUse' || event === 'PostToolUseFailure' ? { matcher: '.*' } : {}),
+    hooks: [{ type: 'command', command, timeout: 3 }],
+  };
+}
 function home(): string {
   const raw = process.env.HOME;
   if (!raw || !path.isAbsolute(raw) || !fs.existsSync(raw)) throw new Error('HOME 目录不可用');
@@ -70,7 +77,6 @@ function installUserHooks(provider: SupportedHook): ProviderSetupReport {
     return { provider, status: 'blocked', detail: '已有 Hooks 格式不支持合并，保持原样', userLevel: true };
   }
   const hooks = { ...(current.hooks as Record<string, unknown> | undefined) };
-  const command = 'node --experimental-strip-types ' + JSON.stringify(bridge) + ' --provider=' + provider;
   let modified = false;
   for (const event of EVENTS[provider]) {
     const previous = hooks[event];
@@ -79,10 +85,7 @@ function installUserHooks(provider: SupportedHook): ProviderSetupReport {
     }
     const existing = (previous ?? []) as unknown[];
     if (JSON.stringify(existing).includes(SIGNATURE)) continue;
-    hooks[event] = [...existing, {
-      ...(event === 'PreToolUse' || event === 'PostToolUse' || event === 'PostToolUseFailure' ? { matcher: '.*' } : {}),
-      hooks: [{ type: 'command', command, timeout: 3 }],
-    }];
+    hooks[event] = [...existing, managedHookEntry(provider, event)];
     modified = true;
   }
   if (!modified) return { provider, status: 'already-configured', detail: '用户级采集 Hook 已存在，待真实会话验证', userLevel: true };
@@ -92,6 +95,60 @@ function installUserHooks(provider: SupportedHook): ProviderSetupReport {
   }
   safeAtomicUserWrite(file, JSON.stringify({ ...current, hooks }, null, 2) + '\n');
   return { provider, status: 'installed', detail: '已保留已有 Hooks；只在已登记受管工作区接受事件，仍需真实 Provider E2E', userLevel: true };
+}
+export interface ProviderRemovalReport {
+  provider: Integration;
+  status: 'removed' | 'not-installed' | 'blocked' | 'import-only';
+  detail: string;
+  userLevel: true;
+}
+/** Remove only an exact V3-owned hook, preserving all unrelated user entries.
+ * An edited V3 hook is blocked, never removed by substring matching.
+ */
+function removeUserHooks(provider: SupportedHook): ProviderRemovalReport {
+  const file = hooksPath(provider);
+  if (isSymlinkInPath(file)) {
+    return { provider, status: 'blocked', detail: '用户级配置路径存在符号链接，拒绝修改', userLevel: true };
+  }
+  if (!fs.existsSync(file)) {
+    return { provider, status: 'not-installed', detail: '没有用户级配置，无需卸载', userLevel: true };
+  }
+  let current: Record<string, unknown>;
+  try { current = readConfig(file); } catch {
+    return { provider, status: 'blocked', detail: '原始用户配置无效，保持原样', userLevel: true };
+  }
+  if (current.hooks === undefined) {
+    return { provider, status: 'not-installed', detail: '未发现用户 Hook', userLevel: true };
+  }
+  if (!current.hooks || typeof current.hooks !== 'object' || Array.isArray(current.hooks)) {
+    return { provider, status: 'blocked', detail: 'Hook 配置格式异常，保持原样', userLevel: true };
+  }
+  const hooks = { ...(current.hooks as Record<string, unknown>) };
+  let changed = false;
+  for (const event of EVENTS[provider]) {
+    const previous = hooks[event];
+    if (previous === undefined) continue;
+    if (!Array.isArray(previous)) {
+      return { provider, status: 'blocked', detail: event + ' Hook 不是数组，未修改配置', userLevel: true };
+    }
+    const canonical = JSON.stringify(managedHookEntry(provider, event));
+    const unexpected = previous.some(item => JSON.stringify(item).includes(SIGNATURE)
+      && JSON.stringify(item) !== canonical);
+    if (unexpected) {
+      return { provider, status: 'blocked', detail: event + ' 的 V3 Hook 已被自定义修改，拒绝误删', userLevel: true };
+    }
+    const remaining = previous.filter(item => JSON.stringify(item) !== canonical);
+    if (remaining.length !== previous.length) {
+      changed = true;
+      if (remaining.length === 0) delete hooks[event];
+      else hooks[event] = remaining;
+    }
+  }
+  if (!changed) {
+    return { provider, status: 'not-installed', detail: '没有发现 V3 安装的用户 Hook', userLevel: true };
+  }
+  safeAtomicUserWrite(file, JSON.stringify({ ...current, hooks }, null, 2) + '\n');
+  return { provider, status: 'removed', detail: '已移除 V3 自有 Hook；保留个人配置与原始备份', userLevel: true };
 }
 function globalOpenCodePlugin(): string {
   return path.join(home(), '.config', 'opencode', 'plugins', 'awb-enterprise-capture.js');
@@ -210,6 +267,39 @@ export function setupEnterpriseUserProviderHooks(confirmation: string): Provider
     result.push({ provider, status: 'import-only', detail: '不安装未经确认的用户级 Hook，需官方导出/API 或明确授权', userLevel: true });
   }
   return result;
+}
+function removeOpenCode(): ProviderRemovalReport {
+  const provider = 'opencode';
+  const target = globalOpenCodePlugin();
+  if (isSymlinkInPath(target)) {
+    return { provider, status: 'blocked', detail: '用户插件路径存在符号链接，拒绝修改', userLevel: true };
+  }
+  if (!fs.existsSync(target)) {
+    return { provider, status: 'not-installed', detail: '没有 V3 OpenCode 插件', userLevel: true };
+  }
+  let current: string;
+  try { current = fs.readFileSync(target, 'utf8'); } catch {
+    return { provider, status: 'blocked', detail: 'OpenCode 插件读取失败，保持原样', userLevel: true };
+  }
+  if (current !== openCodeSource() && current !== legacyOpenCodeSource()) {
+    return { provider, status: 'blocked', detail: '当前 OpenCode 插件与 V3 模板不一致，拒绝删除用户修改', userLevel: true };
+  }
+  fs.unlinkSync(target);
+  return { provider, status: 'removed', detail: '仅删除 V3 用户插件，保留聊天记录与备份', userLevel: true };
+}
+/** User-global change: the operator must explicitly acknowledge that other
+ * workspaces using the same HOME-level hook will stop receiving new events.
+ */
+export function removeEnterpriseUserProviderHooks(confirmation: string): ProviderRemovalReport[] {
+  if (process.env.AWB_INSTANCE_PROJECT_ROOT) throw new Error('只允许中央 Framework 管理用户级 Provider Hooks');
+  if (confirmation !== 'REMOVE_USER_LEVEL_PROVIDER_HOOKS') throw new Error('卸载用户级 Hooks 需要明确授权');
+  const results: ProviderRemovalReport[] = ['codex', 'codebuddy', 'trae']
+    .map(provider => removeUserHooks(provider as SupportedHook));
+  results.push(removeOpenCode());
+  for (const provider of ['chatgpt', 'codearts', 'workbuddy'] as Integration[]) {
+    results.push({ provider, status: 'import-only', detail: '从未配置用户级 Hook，无需卸载', userLevel: true });
+  }
+  return results;
 }
 export function enterpriseProviderStatuses(root: string): GlobalProviderStatus[] {
   const sessions = listEnterpriseProviderSessions(root);
