@@ -62,6 +62,15 @@ node --experimental-strip-types scripts/import-enterprise-history.ts codex /home
 
 只能写入元数据所归属的受管工作区，不能任意指定业务目标。
 
+
+## 跨仓库会话与历史归档语义（多模块企业工程）
+
+- 一个真实 Provider Session ID 可以从 `phantom-payment` 切换至 `phantom-operation`，只要两次真实 cwd 都位于**同一个**受管根工作区。会话仍保留最初的主要仓库和模块，同时独立记录 `repositories`、`modules`、最后工作目录和跨目录切换次数；每条事件保留当次实际仓库/模块。筛选与详情覆盖所有访问过的仓库，而不是遗漏后续事件。
+- 不允许把另一个 Workspace ID 的事件拼进同一个会话；会话身份仍由 `Workspace ID + Provider + 官方 Session ID` 确定。Hook 进程 cwd 与报告 cwd 不一致时拒绝采集，并始终重新检查根 Git 不得追踪 `.asset-workbench-data`，防止授权后被 `git add -f` 的目录遭到写入。
+- **用户主动导入历史 Codex JSONL** 时，先验证所有行可解析、`session_meta.cwd` 归属正确，再导入消息，最后以 `HistoryImportComplete` 专用事件关闭归档并生成 Markdown。它**不是**官方实时 `SessionEnd`。重复导入是幂等的，不会重复追加消息和另生成聊天。
+- **实时官方 Hook 的 SessionEnd** 流程不启用上述历史导入自动关闭，以免尚未处理原生结束事件就提前封存会话。
+- Provider 状态将「已导入历史会话」与「已记录实时 Hook 的 SessionEnd」分别展示；导入历史不能冒充用户级 Hook E2E 成功。代码模拟测试也不等于真实 Provider 进程亲测。
+
 ## 验收与安全
 
 ```bash
