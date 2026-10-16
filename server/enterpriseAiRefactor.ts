@@ -8,6 +8,7 @@ import type { RawImportManifest, RawEntry } from './enterpriseImport.ts';
 
 const sha = (data: Buffer | string) => createHash('sha256').update(data).digest('hex');
 const IMAGE = 'maven:3.9.11-eclipse-temurin-21';
+const activeValidations = new Set<string>();
 const safePath = (value: string) => {
   if (!value || value.startsWith('/') || value.includes('\\') || value.includes('\0')
     || value.split('/').some(x => !x || x === '.' || x === '..')) throw new Error('Unsafe refactoring path');
@@ -124,6 +125,11 @@ async function sandboxedMaven(root: string, repo: string): Promise<{ exit: numbe
     notes: (run.error || run.stderr || run.stdout || '').slice(-350) };
 }
 export async function validateEnterpriseAiRefactor(root: string, proposalId: string): Promise<AiRefactorValidation> {
+  if (activeValidations.has(proposalId)) return {
+    proposalId, status: 'blocked', reason: 'The same refactor is already being tested', originalSourceModified: false,
+  };
+  activeValidations.add(proposalId);
+  try {
   const store = enterpriseStoreFor(root);
   const proposal = JSON.parse(fs.readFileSync(proposalFile(store, proposalId), 'utf8')) as AiRefactorProposal;
   const { snap, manifest } = snapshotAndManifest(root, proposal.snapshotId);
@@ -151,7 +157,8 @@ export async function validateEnterpriseAiRefactor(root: string, proposalId: str
     for (const workspace of [baseline, candidate]) {
       const file = path.join(workspace, entry.repository, ...entry.path.split('/'));
       fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-      if (!fs.existsSync(file)) fs.writeFileSync(file, bytes, { mode: 0o600 });
+      // Always reset private staging to immutable Git Raw for safe, repeatable runs.
+      fs.writeFileSync(file, bytes, { mode: 0o600 });
     }
   }
   const target = path.join(candidate, proposal.repository, ...proposal.path.split('/'));
@@ -176,4 +183,5 @@ export async function validateEnterpriseAiRefactor(root: string, proposalId: str
   };
   atomicJson(path.join(store, 'refactors', proposalId + '-validation.json'), result);
   return result;
+  } finally { activeValidations.delete(proposalId); }
 }
