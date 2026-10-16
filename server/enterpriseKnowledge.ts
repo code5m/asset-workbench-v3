@@ -3,6 +3,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { assertSafeEnterpriseManagedPath, canonicalEnterpriseRoot, enterpriseEntryForRoot } from './enterpriseStorage.ts';
 import { discoverEnterpriseWorkspace } from './enterpriseWorkspace.ts';
+import { readEnterprisePrivateFile } from './enterprisePrivateIO.ts';
 
 export interface EnterpriseKnowledgeNote {
   id: string; workspaceId: string; title: string; content: string; repository: string | null;
@@ -27,7 +28,7 @@ export function listEnterpriseKnowledgeNotes(root: string): EnterpriseKnowledgeN
   return fs.readdirSync(dir).filter(x => /^knowledge_[0-9a-f-]{36}\.json$/.test(x))
     .flatMap(name => {
       try {
-        const note = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8')) as EnterpriseKnowledgeNote;
+        const note = JSON.parse(readEnterprisePrivateFile(path.join(dir, name), 256 * 1024).toString('utf8')) as EnterpriseKnowledgeNote;
         return note.workspaceId === enterpriseEntryForRoot(root)?.workspaceId ? [note] : [];
       } catch { return []; }
     }).sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 500);
