@@ -6,6 +6,7 @@ import { useI18n } from '../i18n/I18nProvider';
 export function InstanceLifecyclePanel() {
   const { t, lang } = useI18n();
   const [stage, setStage] = useState<'create' | 'status' | 'upgrade' | 'migration'>('create');
+  const [creationMode, setCreationMode] = useState<'readonly' | 'instance'>('readonly');
   const [projectRoot, setProjectRoot] = useState('');
   const [name, setName] = useState('');
   const [initializeKnowledge, setInitializeKnowledge] = useState(false);
@@ -378,7 +379,17 @@ export function InstanceLifecyclePanel() {
           <code>04-conversations/transcripts · 04-conversations/work-records · .asset-workbench-data/capture</code>
         </div>
       </section>
-      <section className="instance-guided-flow" aria-label={lang === 'zh-CN' ? '创建并打开独立工作台' : 'Create and open workbench'}>
+      <div className="instance-stage-nav" role="group" aria-label="业务项目接入模式">
+        <button type="button" className={`secondary-button ${creationMode === 'readonly' ? 'selected' : ''}`}
+          aria-pressed={creationMode === 'readonly'} onClick={() => setCreationMode('readonly')}>
+          接入现有企业项目（只读）
+        </button>
+        <button type="button" className={`secondary-button ${creationMode === 'instance' ? 'selected' : ''}`}
+          aria-pressed={creationMode === 'instance'} onClick={() => setCreationMode('instance')}>
+          创建或启动独立工作台（可写）
+        </button>
+      </div>
+      {creationMode === 'instance' ? <section className="instance-guided-flow" aria-label={lang === 'zh-CN' ? '创建并打开独立工作台' : 'Create and open workbench'}>
         <div className="instance-guided-head">
           <div>
             <h3>{lang === 'zh-CN' ? '创建或打开独立工作台' : 'Create or open a Workbench'}</h3>
@@ -442,9 +453,18 @@ export function InstanceLifecyclePanel() {
         ) : (
           <small className="instance-release-hint">{lang === 'zh-CN' ? '若首次使用尚无运行包，系统将在首次创建时自动发布。' : 'If no release exists, first-time setup will publish it automatically.'}</small>
         )}
-      </section>
-      <section className="workspace-card" aria-label="只读接入现有企业项目">
+      </section> : null}
+      {creationMode === 'readonly' ? <section className="workspace-card" aria-label="只读接入现有企业项目">
         <h3>接入现有企业项目（只读）</h3>
+        <label>已有业务项目目录
+          <input className="root-input" aria-label="只读接入业务目录" value={projectRoot}
+            onChange={e => selectProject(e.target.value)}
+            placeholder="/home/ainfinit/Documents/ProjectNoChinese/backV8" spellCheck={false} />
+        </label>
+        <label>工作区显示名称（可选）
+          <input className="root-input" value={name} onChange={e => setName(e.target.value)}
+            placeholder="backV8 · 企业业务系统" spellCheck={false} />
+        </label>
         <p className="detail-summary">适合 backV8 这样包含多个独立 Git 仓库的公司代码。使用上方业务目录，自动识别仓库并在中央建立只读入口。不会创建实例元数据、安装 Provider Hooks 或修改公司源码；与「一键创建独立工作台」是两种不同操作。</p>
         <button type="button" className="secondary-button" disabled={busy || !projectRoot.trim()}
           onClick={() => void run(async () => {
@@ -454,7 +474,7 @@ export function InstanceLifecyclePanel() {
           })}>
           只读接入此企业业务目录
         </button>
-      </section>
+      </section> : null}
       {message ? <p role="status" className="detail-summary starter-message">{message}</p> : null}
       <details className="instance-advanced-management">
         <summary>{lang === 'zh-CN' ? '高级管理 · 状态验证、版本发布、升级和回滚' : 'Advanced management · Verify, publish, upgrade and rollback'}</summary>
