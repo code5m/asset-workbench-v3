@@ -72,7 +72,7 @@ export function enableEnterpriseWorkspaceManaged(id: string) {
     const legacy = migrateEnterpriseLegacyKnowledge(item.projectRoot);
     return { ...storage, legacy };
   } catch (error) {
-    return { ...storage, warnings: [...storage.warnings,
+    return { ...storage, legacy: undefined, warnings: [...storage.warnings,
       '旧知识资产尚未完成迁移：' + (error as Error).message] };
   }
 }
