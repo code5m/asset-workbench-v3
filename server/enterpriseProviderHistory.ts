@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { appendEnterpriseProviderEvent, listEnterpriseProviderSessions } from './enterpriseProviderCapture.ts';
+import { appendEnterpriseProviderEvent, listEnterpriseProviderSessions, resolveEnterpriseProviderOrigin } from './enterpriseProviderCapture.ts';
 import { readEnterpriseRegistry } from './enterpriseStorage.ts';
 
 function under(base: string, source: string) {
@@ -16,7 +16,7 @@ const home = () => {
   return fs.realpathSync(value);
 };
 /** Codex official JSONL history carries its own session_meta.cwd. */
-export function importEnterpriseCodexHistory(source: string): { imported: number; duplicates: number; workspaceId: string; sessionId: string } {
+export function importEnterpriseCodexHistory(source: string, expectedWorkspaceId?: string): { imported: number; duplicates: number; workspaceId: string; sessionId: string } {
   const root = path.join(home(), '.codex', 'sessions');
   const file = under(root, source);
   const lines = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean);
@@ -27,6 +27,10 @@ export function importEnterpriseCodexHistory(source: string): { imported: number
   const meta = records.find(v => v.type === 'session_meta')?.payload;
   if (!meta || typeof meta.cwd !== 'string' || typeof meta.session_id !== 'string') {
     throw new Error('历史 Codex 会话缺少官方 cwd/session_id 证据，不允许自动归属');
+  }
+  const origin = resolveEnterpriseProviderOrigin(meta.cwd);
+  if (expectedWorkspaceId && origin.workspaceId !== expectedWorkspaceId) {
+    throw new Error('官方 Codex 来源工作区与用户选定的工作区不匹配；未导入任何数据');
   }
   let imported = 0, duplicates = 0, workspaceId = '';
   for (const [ordinal, row] of records.entries()) {
