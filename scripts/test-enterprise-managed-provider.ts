@@ -314,14 +314,14 @@ try {
   const ownStop = edited.hooks.Stop.find(row => row.hooks.some(h => h.command.includes('capture-enterprise-provider-event.ts')));
   assert.ok(ownStop);
   ownStop!.hooks[0].timeout = 11;
-  fs.writeFileSync(settings, JSON.stringify(edited, null, 2) + '\\n');
+  fs.writeFileSync(settings, JSON.stringify(edited, null, 2) + '\n');
   const blockedModified = removeEnterpriseUserProviderHooks('REMOVE_USER_LEVEL_PROVIDER_HOOKS');
   assert.equal(blockedModified.find(x => x.provider === 'codebuddy')?.status, 'blocked');
-  assert.equal(fs.readFileSync(settings, 'utf8'), JSON.stringify(edited, null, 2) + '\\n',
+  assert.equal(fs.readFileSync(settings, 'utf8'), JSON.stringify(edited, null, 2) + '\n',
     'Modified provider config must remain exactly intact when uninstall is blocked');
   fs.writeFileSync(settings, savedConfig);
   // Uninstalling a custom OpenCode file must never erase it.
-  fs.writeFileSync(opencodePlugin, '/* custom user code; do not remove */\\n');
+  fs.writeFileSync(opencodePlugin, '/* custom user code; do not remove */\n');
   const firstRemoval = removeEnterpriseUserProviderHooks('REMOVE_USER_LEVEL_PROVIDER_HOOKS');
   assert.equal(firstRemoval.find(x => x.provider === 'opencode')?.status, 'blocked');
   assert.equal(firstRemoval.find(x => x.provider === 'codebuddy')?.status, 'removed');
