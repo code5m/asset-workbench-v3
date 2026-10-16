@@ -16,7 +16,7 @@ if (provider !== 'codex' || !filename) {
   process.exitCode = 2;
 } else {
   try {
-    const result = importEnterpriseCodexHistory(filename);
+    const result = importEnterpriseCodexHistory(filename, undefined, { finalize: true });
     process.stdout.write(JSON.stringify({ ...result, originalWorkingDirectory: home }, null, 2) + '\n');
   } catch (error) {
     process.stderr.write('BLOCKED: ' + (error instanceof Error ? error.message : String(error)) + '\n');
