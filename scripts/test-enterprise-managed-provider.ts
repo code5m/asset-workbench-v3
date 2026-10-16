@@ -169,6 +169,42 @@ try {
   assert.equal(codebuddy.theme,'user-custom');
   assert.equal(codebuddy.hooks.Stop[0].hooks[0].command,'echo custom');
   assert.equal(enterpriseProviderStatuses(root).find(x=>x.provider==='codebuddy')?.captureVerified,true);
+  // The installed OpenCode observer MUST NOT synchronously spawn a fresh
+  // subprocess on every streaming token (that used to freeze the IDE).
+  const opencodePlugin = path.join(home, '.config', 'opencode', 'plugins', 'awb-enterprise-capture.js');
+  const pluginCode = fs.readFileSync(opencodePlugin, 'utf8');
+  assert.match(pluginCode, /spawn\\?\('node'/);
+  assert.match(pluginCode, /--stream/);
+  assert.doesNotMatch(pluginCode, /spawnSync\(/);
+  execFileSync('node', ['--check', opencodePlugin], { encoding: 'utf8', timeout: 10_000 });
+  const workerSource = path.join(process.cwd(), 'scripts', 'capture-enterprise-provider-event.ts');
+  const streamEvents = [
+    { type:'session.started', sessionID:'opencode-worker-session', eventId:'oc:1',
+      projectDirectory:b, timestamp:new Date().toISOString() },
+    { type:'message.part.updated', sessionID:'opencode-worker-session', eventId:'oc:2',
+      projectDirectory:b, properties:{ sessionID:'opencode-worker-session', part:{
+        id:'oc:part:1', text:'Hello from a live async capture stream' } } },
+    { type:'session.ended', sessionID:'opencode-worker-session', eventId:'oc:3',
+      projectDirectory:b, timestamp:new Date().toISOString() },
+  ];
+  execFileSync('node', ['--experimental-strip-types', workerSource, '--provider=opencode', '--stream'], {
+    cwd:b, timeout:20_000, encoding:'utf8', input:streamEvents.map(e=>JSON.stringify(e)).join('\n')+'\n',
+    env:process.env,
+  });
+  const opencodeSaved = listEnterpriseProviderSessions(root).find(s => s.provider === 'opencode'
+    && s.providerSessionId === 'opencode-worker-session');
+  assert.equal(opencodeSaved?.status, 'ended');
+  assert.equal(opencodeSaved?.acceptedEvents, 3);
+  assert.equal(opencodeSaved?.repository, 'phantom-operation');
+  assert.ok(fs.readFileSync(path.join(root,'.asset-workbench-data',opencodeSaved!.transcriptPath!), 'utf8')
+    .includes('Hello from a live async capture stream'));
+  // Never overwrite an existing user-customized plugin on the next setup run.
+  fs.writeFileSync(opencodePlugin, '/* user-modified OpenCode plugin */\n');
+  try {
+    const retry = setupEnterpriseUserProviderHooks('INSTALL_USER_LEVEL_PROVIDER_HOOKS');
+    assert.equal(retry.find(x => x.provider === 'opencode')?.status, 'blocked');
+    assert.equal(fs.readFileSync(opencodePlugin,'utf8'), '/* user-modified OpenCode plugin */\n');
+  } finally { fs.writeFileSync(opencodePlugin, pluginCode); }
   for (const dir of [a,b]) {
     assert.equal(fs.existsSync(path.join(dir, '.asset-workbench-data')), false);
     assert.equal(fs.existsSync(path.join(dir, '.codebuddy')), false);
