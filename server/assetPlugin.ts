@@ -188,7 +188,7 @@ export function createHandler() {
             || typeof body.workspaceId !== 'string') throw new Error('仅支持有官方 cwd 证据的 Codex JSONL 导入');
           const root = enterpriseApiRoot(body.workspaceId, getProjectRoot());
           if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') throw new Error('需要先启用受管模式');
-          const result = importEnterpriseCodexHistory(body.path, body.workspaceId);
+          const result = importEnterpriseCodexHistory(body.path, body.workspaceId, { finalize: true });
           sendJson(res, 200, result);
         } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
         return;
