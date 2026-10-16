@@ -220,7 +220,10 @@ export function createHandler() {
       if (req.method === 'POST' && pathPart === '/enterprise/raw/import') {
         const body = await readBody(req);
         if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
-        sendJson(res, 201, importEnterpriseRaw(enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.snapshotId));
+        sendJson(res, 201, importEnterpriseRaw(enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.snapshotId, {
+          maxBytes: typeof body.maxBytes === 'number' && Number.isFinite(body.maxBytes) ? body.maxBytes : undefined,
+          maxFiles: typeof body.maxFiles === 'number' && Number.isFinite(body.maxFiles) ? body.maxFiles : undefined,
+        }));
         return;
       }
       if (req.method === 'GET' && pathPart === '/enterprise/raw/verify') {
