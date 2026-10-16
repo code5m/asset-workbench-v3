@@ -136,6 +136,7 @@ function finalizeEndedEnterpriseCapture(root: string, state: EnterpriseCaptureSt
     .map(line => JSON.parse(line) as { kind: string; timestamp: string; content: string });
   const ended = records.find(row => row.kind === 'session.ended' || row.kind === 'history.import.completed');
   if (!ended) return false;
+  state.endedBy = ended.kind === 'history.import.completed' ? 'official-import' : 'native-hook';
   const conversation = assertSafeEnterpriseManagedPath(root, 'conversations/transcripts');
   fs.mkdirSync(conversation, { recursive: true, mode: 0o700 });
   const md = ['# Provider 会话记录', '', '- Workspace: ' + state.workspaceId,
@@ -152,7 +153,6 @@ function finalizeEndedEnterpriseCapture(root: string, state: EnterpriseCaptureSt
   writeEnterprisePrivateAtomic(path.join(conversation, name), md + '\n');
   state.transcriptPath = 'conversations/transcripts/' + name;
   state.status = 'ended'; state.endedAt = ended.timestamp;
-  state.endedBy = ended.kind === 'history.import.completed' ? 'official-import' : 'native-hook';
   return true;
 }
 function eventKind(name: string, role?: Role) {
@@ -192,9 +192,8 @@ export function appendEnterpriseProviderEvent(input: EnterpriseProviderEvent): E
     if (fs.existsSync(file)) {
       state = JSON.parse(readEnterprisePrivateFile(file, 512 * 1024).toString('utf8')) as EnterpriseCaptureState;
       if (state.workspaceId !== origin.workspaceId || state.projectRoot !== origin.projectRoot
-        || state.provider !== provider || state.providerSessionId !== providerSessionId
-        ) {
-        throw new Error('Provider session identity or repository changed (cross-project capture rejected)');
+        || state.provider !== provider || state.providerSessionId !== providerSessionId) {
+        throw new Error('Provider session identity changed (cross-workspace capture rejected)');
       }
     } else {
       state = {
