@@ -33,7 +33,7 @@ import { publishFrameworkRelease, currentFrameworkRelease } from './frameworkRel
 import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime, reconcileLegacyInstanceUi, resumeRequestedInstances } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { setupProjectProviders } from './providerSetup.ts';
-import { attachEnterpriseWorkspaceReadOnly, detachEnterpriseWorkspaceReadOnly, enableEnterpriseWorkspaceManaged, enterpriseApiRoot, listAttachedEnterpriseWorkspaces } from './enterpriseAttachment.ts';
+import { attachEnterpriseWorkspaceReadOnly, detachEnterpriseWorkspaceReadOnly, enableEnterpriseWorkspaceManaged, auditEnterpriseWorkspaceManaged, rollbackEnterpriseWorkspaceManaged, enterpriseApiRoot, listAttachedEnterpriseWorkspaces } from './enterpriseAttachment.ts';
 import { enterpriseEntryForRoot } from './enterpriseStorage.ts';
 import { enterpriseProviderStatuses, setupEnterpriseUserProviderHooks } from './enterpriseProviderSetup.ts';
 import { listEnterpriseProviderSessions, readEnterpriseCaptureEvents } from './enterpriseProviderCapture.ts';
@@ -155,6 +155,22 @@ export function createHandler() {
       }
       if (req.method === 'GET' && pathPart === '/enterprise/projects/list') {
         sendJson(res, 200, { workspaces: listAttachedEnterpriseWorkspaces() }); return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/projects/managed/audit') {
+        try {
+          const id = new URLSearchParams(query || '').get('workspaceId') || '';
+          sendJson(res, 200, auditEnterpriseWorkspaceManaged(id));
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/projects/managed/rollback') {
+        const body = await readBody(req);
+        try {
+          sendJson(res, 200, rollbackEnterpriseWorkspaceManaged(
+            typeof body.workspaceId === 'string' ? body.workspaceId : '',
+            typeof body.confirm === 'string' ? body.confirm : ''));
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
       }
       if (req.method === 'POST' && pathPart === '/enterprise/projects/managed/enable') {
         const body = await readBody(req);
