@@ -228,6 +228,12 @@ export const assetClient = {
     return this.enterpriseCommand('provider/hooks/setup',
       { workspaceId, confirm: 'INSTALL_USER_LEVEL_PROVIDER_HOOKS' });
   },
+  async removeEnterpriseProviderHooks(workspaceId: string): Promise<{
+    results: Array<{ provider: string; status: string; detail: string; userLevel: true }>;
+  }> {
+    return this.enterpriseCommand('provider/hooks/remove',
+      { workspaceId, confirm: 'REMOVE_USER_LEVEL_PROVIDER_HOOKS' });
+  },
   enterpriseDiscovery(workspaceId?: string): Promise<{ root: string; scannedAt: string; repositories: Array<{ path: string; remote?: string; branch: string | null; headCommit: string; dirty: boolean; modifiedCount: number; untrackedCount: number }>; warnings: string[] }> {
     return this.enterpriseGet('discovery', workspaceId);
   },
