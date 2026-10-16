@@ -197,7 +197,7 @@ try {
     providerSessionId: recoverySession, hookEventName: 'SessionStart', eventId: 'recovery:start' });
   fs.appendFileSync(path.join(privateSessions, recoveryStart.state.id, 'events.jsonl'),
     JSON.stringify({ eventId: 'recovery:end', kind: 'session.ended',
-      timestamp: new Date().toISOString(), content: '' }) + '\\n');
+      timestamp: new Date().toISOString(), content: '' }) + '\n');
   const retry = appendEnterpriseProviderEvent({ ...original, providerSessionId: recoverySession,
     hookEventName: 'SessionEnd', eventId: 'recovery:end', content: '' });
   assert.equal(retry.duplicate, true);
