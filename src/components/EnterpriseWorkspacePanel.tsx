@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { GitBranch, RefreshCw, ShieldCheck, GitCompareArrows } from 'lucide-react';
 import { assetClient } from '../services/assetClient';
+import { EnterpriseManagedProviderPanel } from './EnterpriseManagedProviderPanel';
 
 type Discovery = Awaited<ReturnType<typeof assetClient.enterpriseDiscovery>>;
 type Snapshot = Awaited<ReturnType<typeof assetClient.enterpriseSnapshots>>['snapshots'][number];
@@ -29,7 +30,7 @@ export function EnterpriseWorkspacePanel() {
   const [busy, setBusy] = useState(false);
   const [centralMode, setCentralMode] = useState(false);
   const [workspaceId, setWorkspaceId] = useState('');
-  const [attachedWorkspaces, setAttachedWorkspaces] = useState<Array<{ workspaceId: string; projectRoot: string; label: string }>>([]);
+  const [attachedWorkspaces, setAttachedWorkspaces] = useState<Array<{ workspaceId: string; projectRoot: string; label: string; sourcePolicy: 'read-only' | 'managed' }>>([]);
   const scope = centralMode ? workspaceId : undefined;
   const refresh = async (activeId: string | undefined = scope) => {
     if (centralMode && !activeId) return;
@@ -69,11 +70,11 @@ export function EnterpriseWorkspacePanel() {
         <h2>多仓库版本与演进基线</h2></div>
         <GitBranch size={25} /></div>
       {centralMode ? <div className="workspace-card">
-        <h3>接入现有企业项目 · 只读</h3>
-        <p className="detail-summary">这里只读取业务目录并在中央登记，不会创建 Instance、修改项目源码或写入 Provider Hooks。新建项目请使用独立工作台创建入口。</p>
+        <h3>已接入的企业工作区</h3>
+        <p className="detail-summary">企业受管模式把 Provider 会话、知识与版本资产集中保存到所选工作区根目录下 .asset-workbench-data；完全只读模式的分析数据仍保存在中央。两者都不会修改子仓库业务源码。</p>
         <select aria-label="选择已接入企业工作区" value={workspaceId} onChange={e => {setWorkspaceId(e.target.value); setDiscovery(null);setSnapshots([]);setSelectedBefore('');setSelectedAfter('');setEvolution([]);setPipeline('');setSemanticEvidence('');}}>
           <option value="">请选择业务工作区</option>
-          {attachedWorkspaces.map(w => <option key={w.workspaceId} value={w.workspaceId}>{w.label} · {w.projectRoot}</option>)}
+          {attachedWorkspaces.map(w => <option key={w.workspaceId} value={w.workspaceId}>{w.label} · {w.sourcePolicy === 'managed' ? '企业受管' : '完全只读'} · {w.projectRoot}</option>)}
         </select>
         {attachedWorkspaces.length === 0 ? <p role="status">尚未接入企业项目。请到中央「独立工作台」选择只读接入已有目录。</p> : null}
         {workspaceId ? <button type="button" className="secondary-button" disabled={busy}
@@ -86,7 +87,17 @@ export function EnterpriseWorkspacePanel() {
             setSelectedBefore('');setSelectedAfter('');setDiscovery(null);setSnapshots([]);
           })}>移除只读登记（保留代码及分析数据）</button> : null}
       </div> : null}
-      <p className="detail-summary">只读取本地 Git 对象，不执行 fetch、checkout 或修改业务代码。快照固定每个仓库的 commit 和 tree；元数据保存在中央管理目录。</p>
+      {centralMode && workspaceId ? <EnterpriseManagedProviderPanel
+        key={workspaceId + ':' + (attachedWorkspaces.find(x => x.workspaceId === workspaceId)?.sourcePolicy ?? '')}
+        workspaceId={workspaceId}
+        sourcePolicy={attachedWorkspaces.find(x => x.workspaceId === workspaceId)?.sourcePolicy ?? 'read-only'}
+        onManaged={async () => {
+          await assetClient.enableEnterpriseManaged(workspaceId);
+          const response = await assetClient.listAttachedEnterprise();
+          setAttachedWorkspaces(response.workspaces);
+        }}
+      /> : null}
+      <p className="detail-summary">只读取业务 Git 对象，不执行 fetch、checkout 或修改业务代码。快照固定各仓库的 commit/tree，分析结果保存在工作区当前授权的数据位置。</p>
       <div className="topbar-actions">
         <button type="button" className="secondary-button" disabled={busy} onClick={() => void action(refresh)}><RefreshCw size={16}/>重新发现仓库</button>
         <button type="button" className="secondary-button" disabled={busy || !discovery?.repositories.length} onClick={() => void action(async () => { await assetClient.freezeEnterprise('head', scope); await refresh(); })}><ShieldCheck size={16}/>冻结当前 HEAD</button>
