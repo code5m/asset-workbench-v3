@@ -48,7 +48,7 @@ try {
   fs.mkdirSync(oldTranscript, { recursive: true });
   fs.writeFileSync(path.join(oldTranscript, 'metadata.json'),
     JSON.stringify({ schemaVersion: 1, id: 'transcript_1234567890abcd', type: 'conversation-transcript',
-      title: 'Old session', source: 'codex' }));
+      title: 'Old session', source: 'codex', projectRoot: root }));
   fs.writeFileSync(path.join(oldTranscript, 'transcript.md'), '# Previous work record\n');
   const paymentBefore = git(a, 'status', '--porcelain');
   const operationBefore = git(b, 'status', '--porcelain');
