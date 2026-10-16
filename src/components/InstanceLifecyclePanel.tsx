@@ -483,7 +483,9 @@ export function InstanceLifecyclePanel() {
             if (creationMode === 'managed') {
               const migrated = await assetClient.enableEnterpriseManaged(result.workspace.workspaceId);
               setMessage('企业受管工作台已准备：' + result.workspace.label + ' · ' + result.repositoryCount +
-                ' 个 Git 仓库；已核对历史资产 ' + migrated.files + ' 项（保留中央原始备份）。受管目录：' + migrated.destination +
+                ' 个 Git 仓库；已核对中央旧分析资产 ' + migrated.files + ' 项（保留原始备份）。' +
+                '已确认旧聊天/知识 ' + (migrated.legacy?.copies ?? 0) + ' 项，待确认归属 ' +
+                (migrated.legacy?.skippedUnverified.length ?? 0) + ' 项（未自动混入）。受管目录：' + migrated.destination +
                 '。请到「项目工作台 → 企业多仓库」查看 Provider 会话和分析。' +
                 (migrated.warnings.length ? ' 提醒：' + migrated.warnings.join('；') : ''));
             } else {
