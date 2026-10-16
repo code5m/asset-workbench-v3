@@ -63,6 +63,7 @@ try {
   workspaceId = attached.workspace.workspaceId;
   assert.equal(attached.repositoryCount, 3);
   assert.equal(enterpriseEntryForRoot(root)?.sourcePolicy, 'read-only');
+  assert.throws(() => resolveEnterpriseProviderOrigin(module), /No registered managed/);
   assert.equal(fs.existsSync(path.join(root, '.asset-workbench-data')), false);
 
   const migration = enableEnterpriseWorkspaceManaged(workspaceId);
@@ -129,6 +130,7 @@ try {
   fs.writeFileSync(settings, JSON.stringify({ theme:'user-custom', hooks: {
     Stop:[{ hooks:[{type:'command',command:'echo custom'}] }],
   }}));
+  assert.throws(() => setupEnterpriseUserProviderHooks(''), /明确授权/);
   const installed = setupEnterpriseUserProviderHooks('INSTALL_USER_LEVEL_PROVIDER_HOOKS');
   assert.equal(installed.length, 7);
   assert.equal(installed.filter(x => x.status === 'installed').length, 4);
@@ -158,6 +160,7 @@ try {
   assert.equal(imported.imported,2);
   assert.equal(imported.workspaceId,workspaceId);
   assert.equal(importEnterpriseCodexHistory(source).duplicates,2);
+  assert.throws(() => importEnterpriseCodexHistory(source, 'enterprise-' + '0'.repeat(24)), /不匹配/);
   assert.ok(listEnterpriseProviderSessions(root).some(s => s.provider === 'codex' && s.repository === 'phantom-operation'));
 
   const note = createEnterpriseKnowledgeNote(root,{title:'Payment decision',content:'Use exactly-once transfer semantics',repository:'phantom-payment',module:'phantom-payment/service'});
