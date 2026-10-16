@@ -13,6 +13,7 @@ import { setupEnterpriseUserProviderHooks, enterpriseProviderStatuses } from '..
 import { importEnterpriseCodexHistory } from '../server/enterpriseProviderHistory.ts';
 import { createEnterpriseKnowledgeNote, listEnterpriseKnowledgeNotes } from '../server/enterpriseKnowledge.ts';
 import { isIgnoredRelativePath, shouldIgnoreEntry } from '../server/ignorePolicy.ts';
+import { listMigratedEnterpriseLegacyAssets, readMigratedEnterpriseLegacyAsset } from '../server/enterpriseLegacyMigration.ts';
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-enterprise-managed-'));
 const oldHome = process.env.HOME;
@@ -71,6 +72,12 @@ try {
   assert.equal(fs.existsSync(path.join(oldTranscript, 'transcript.md')), true);
   assert.ok(fs.existsSync(path.join(root, '.asset-workbench-data', 'knowledge', 'legacy-managed',
     '04-conversations', 'transcripts', 'codex', 'history', 'transcript.md')));
+  const legacyAssets = listMigratedEnterpriseLegacyAssets(root);
+  assert.equal(legacyAssets.length, 1);
+  assert.equal(legacyAssets[0].title, 'Old session');
+  assert.match(readMigratedEnterpriseLegacyAsset(root, legacyAssets[0].relative).content, /Previous work record/);
+  assert.throws(() => readMigratedEnterpriseLegacyAsset(root, '../phantom-payment'), /not verified/);
+
   assert.equal(migration.mode, 'managed');
   assert.equal(migration.sourcePreserved, true);
   assert.ok(migration.files >= 1);
