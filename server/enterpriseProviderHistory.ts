@@ -87,7 +87,7 @@ export function importEnterpriseCodeBuddyHistory(source: string, providerSession
     const message = path.join(folder, 'messages', id + '.json');
     if (!fs.existsSync(message)) { missing++; continue; }
     try {
-      const container = JSON.parse(fs.readFileSync(message, 'utf8')) as {
+      const container = JSON.parse(fs.readFileSync(under(base, message), 'utf8')) as {
         message?: string; createdAt?: string | number;
       };
       const value = JSON.parse(container.message || '{}') as {
