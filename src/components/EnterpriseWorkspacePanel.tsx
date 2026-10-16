@@ -23,19 +23,36 @@ export function EnterpriseWorkspacePanel() {
   const [note, setNote] = useState('');
 
   const [busy, setBusy] = useState(false);
-  const refresh = async () => {
-    const [result, versions] = await Promise.all([assetClient.enterpriseDiscovery(), assetClient.enterpriseSnapshots()]);
+  const [centralMode, setCentralMode] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState('');
+  const [attachedWorkspaces, setAttachedWorkspaces] = useState<Array<{ workspaceId: string; projectRoot: string; label: string }>>([]);
+  const scope = centralMode ? workspaceId : undefined;
+  const refresh = async (activeId: string | undefined = scope) => {
+    if (centralMode && !activeId) return;
+    const [result, versions] = await Promise.all([assetClient.enterpriseDiscovery(activeId), assetClient.enterpriseSnapshots(activeId)]);
     setDiscovery(result);
     setSnapshots(versions.snapshots);
     setSelectedAfter((s) => s || versions.snapshots[0]?.snapshotId || '');
     setSelectedBefore((s) => s || versions.snapshots[1]?.snapshotId || versions.snapshots[0]?.snapshotId || '');
   };
-  useEffect(() => { void refresh().catch((e: unknown) => setError(String(e))); }, []);
-  const reloadEvolution = async () => {
-    const answer = await assetClient.enterpriseGet<{ cases: Array<{ id: string; title: string; stage: string; scope: string }> }>('evolution');
+  useEffect(() => {
+    void assetClient.config().then(async config => {
+      if (config.mode === 'framework-self') {
+        setCentralMode(true);
+        const response = await assetClient.listAttachedEnterprise();
+        setAttachedWorkspaces(response.workspaces);
+        setWorkspaceId(response.workspaces[0]?.workspaceId || '');
+      } else { await refresh(undefined); }
+    }).catch((e: unknown) => setError(String(e)));
+  }, []);
+  useEffect(() => {
+    if (centralMode && workspaceId) { void refresh(workspaceId).then(() => reloadEvolution(workspaceId)).catch((e: unknown) => setError(String(e))); }
+  }, [centralMode, workspaceId]);
+  const reloadEvolution = async (activeId: string | undefined = scope) => {
+    const answer = await assetClient.enterpriseGet<{ cases: Array<{ id: string; title: string; stage: string; scope: string }> }>('evolution', activeId);
     setEvolution(answer.cases);
   };
-  useEffect(() => {void reloadEvolution().catch(() => undefined);}, []);
+  useEffect(() => { if (!centralMode) void reloadEvolution().catch(() => undefined); }, []);
 
   const action = async (fn: () => Promise<void>) => {
     setBusy(true); setError('');
@@ -47,11 +64,20 @@ export function EnterpriseWorkspacePanel() {
       <div className="section-heading"><div><p className="eyebrow">企业生产项目</p>
         <h2>多仓库版本与演进基线</h2></div>
         <GitBranch size={25} /></div>
+      {centralMode ? <div className="workspace-card">
+        <h3>接入现有企业项目 · 只读</h3>
+        <p className="detail-summary">这里只读取业务目录并在中央登记，不会创建 Instance、修改项目源码或写入 Provider Hooks。新建项目请使用独立工作台创建入口。</p>
+        <select aria-label="选择已接入企业工作区" value={workspaceId} onChange={e => {setWorkspaceId(e.target.value); setDiscovery(null);setSnapshots([]);}}>
+          <option value="">请选择业务工作区</option>
+          {attachedWorkspaces.map(w => <option key={w.workspaceId} value={w.workspaceId}>{w.label} · {w.projectRoot}</option>)}
+        </select>
+        {attachedWorkspaces.length === 0 ? <p role="status">尚未接入企业项目。请到中央「独立工作台」选择只读接入已有目录。</p> : null}
+      </div> : null}
       <p className="detail-summary">只读取本地 Git 对象，不执行 fetch、checkout 或修改业务代码。快照固定每个仓库的 commit 和 tree；元数据保存在中央管理目录。</p>
       <div className="topbar-actions">
         <button type="button" className="secondary-button" disabled={busy} onClick={() => void action(refresh)}><RefreshCw size={16}/>重新发现仓库</button>
-        <button type="button" className="secondary-button" disabled={busy || !discovery?.repositories.length} onClick={() => void action(async () => { await assetClient.freezeEnterprise('head'); await refresh(); })}><ShieldCheck size={16}/>冻结当前 HEAD</button>
-        <button type="button" className="secondary-button" disabled={busy || !discovery?.repositories.length} onClick={() => void action(async () => { await assetClient.freezeEnterprise('origin-tracking'); await refresh(); })}>冻结本地 origin 跟踪分支</button>
+        <button type="button" className="secondary-button" disabled={busy || !discovery?.repositories.length} onClick={() => void action(async () => { await assetClient.freezeEnterprise('head', scope); await refresh(); })}><ShieldCheck size={16}/>冻结当前 HEAD</button>
+        <button type="button" className="secondary-button" disabled={busy || !discovery?.repositories.length} onClick={() => void action(async () => { await assetClient.freezeEnterprise('origin-tracking', scope); await refresh(); })}>冻结本地 origin 跟踪分支</button>
       </div>
       <p className="detail-summary">发现 {discovery?.repositories.length ?? '—'} 个仓库；已冻结 {snapshots.length} 个不同版本。未执行远端刷新，不代表远端最新状态。</p>
       {discovery?.warnings.map((msg) => <p key={msg} role="status">{msg}</p>)}
@@ -70,30 +96,30 @@ export function EnterpriseWorkspacePanel() {
         <p className="detail-summary">从固定的 Git commit 导入受管 Raw；大小超限或缺失会标为 partial，不会伪装完整。只有实际导入的数据才能进入 Maven 模块分析。</p>
         <div className="topbar-actions">
           <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
-            const result = await assetClient.enterpriseCommand<{ results: Array<{status:string;reason?:string}> }>('mirrors/sync',{snapshotId:selectedAfter});
+            const result = await assetClient.enterpriseCommand<{ results: Array<{status:string;reason?:string}> }>('mirrors/sync',{snapshotId:selectedAfter},scope);
             const failed=result.results.filter(r=>r.status!=='verified');
             setPipeline('本地镜像归档：'+(result.results.length-failed.length)+'/'+result.results.length+' 已验证。'+(failed.length?'失败：'+failed.map(x=>x.reason).join('；'):''));
           })}>建立或更新本地受管 Git 镜像</button>
           <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
-            const result = await assetClient.enterpriseCommand<{ status: string; total: number; materialized: number; missing: number }>('raw/import', { snapshotId: selectedAfter });
+            const result = await assetClient.enterpriseCommand<{ status: string; total: number; materialized: number; missing: number }>('raw/import', { snapshotId: selectedAfter },scope);
             setPipeline('Raw '+result.status+'：'+result.materialized+'/'+result.total+' 文件；未物化 '+result.missing);
           })}>归档当前快照 Raw</button>
           <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
-            const graph = await assetClient.enterpriseCommand<{ status: string; modules: unknown[]; edges: unknown[] }>('graph/build',{snapshotId:selectedAfter});
+            const graph = await assetClient.enterpriseCommand<{ status: string; modules: unknown[]; edges: unknown[] }>('graph/build',{snapshotId:selectedAfter},scope);
             setPipeline('Maven '+graph.status+'：'+graph.modules.length+' 个 POM 模块，'+graph.edges.length+' 条可验证关系');
           })}>分析 Maven 模块关系</button>
         </div>
         {pipeline ? <p role="status">{pipeline}</p> : null}
         <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
-          const result = await assetClient.enterpriseCommand<{ findings:Array<{summary:string;file:string;line:number}>;analyzed:number;status:string }>('quality/analyze',{snapshotId:selectedAfter});
+          const result = await assetClient.enterpriseCommand<{ findings:Array<{summary:string;file:string;line:number}>;analyzed:number;status:string }>('quality/analyze',{snapshotId:selectedAfter},scope);
           setPipeline('静态质量分析：'+result.analyzed+' 个已归档代码文件，'+result.findings.length+' 个候选问题，状态 '+result.status+'；首个发现：'+(result.findings[0] ? result.findings[0].file+':'+result.findings[0].line+' '+result.findings[0].summary : '无'));
         })}>扫描代码质量候选问题</button>
         <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
-          const graph=await assetClient.enterpriseCommand<{nodes:unknown[];edges:unknown[];status:string}>('sourcegraph/build',{snapshotId:selectedAfter});
+          const graph=await assetClient.enterpriseCommand<{nodes:unknown[];edges:unknown[];status:string}>('sourcegraph/build',{snapshotId:selectedAfter},scope);
           setPipeline('源码关系候选：'+graph.nodes.length+' 节点、'+graph.edges.length+' 边；'+graph.status+'。复杂 Java/SQL 解析尚未完成。');
         })}>建立源码调用与 SQL 候选索引</button>
         <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
-          const report=await assetClient.enterpriseCommand<{checked:number;changed:number;bytesRemoved:number;status:string}>('optimization/experiment',{snapshotId:selectedAfter});
+          const report=await assetClient.enterpriseCommand<{checked:number;changed:number;bytesRemoved:number;status:string}>('optimization/experiment',{snapshotId:selectedAfter},scope);
           setPipeline('隔离优化实验：'+report.checked+' 个文件，候选优化 '+report.changed+' 个，节约空白字节 '+report.bytesRemoved+'；未改动业务源码。');
         })}>运行隔离优化实验</button>
         <h3>问题与 Framework 演进</h3>
@@ -110,7 +136,7 @@ export function EnterpriseWorkspacePanel() {
           const repo = snapshot?.repositories.find(r=>r.path===evidenceRepo);
           if (!repo) throw new Error('缺少快照仓库');
           await assetClient.enterpriseCommand('evolution/create', {snapshotId:selectedAfter,title,problem,
-            evidence:[{repository:repo.path,path:evidencePath.trim(),commit:repo.commit}]});
+            evidence:[{repository:repo.path,path:evidencePath.trim(),commit:repo.commit}]},scope);
           await reloadEvolution(); setTitle(''); setProblem(''); setEvidencePath('');
         })}>保存带版本来源的问题</button>
         <input aria-label="阶段依据" value={note} placeholder="记录实验、评估、验证依据" onChange={e=>setNote(e.target.value)}/>
@@ -119,9 +145,9 @@ export function EnterpriseWorkspacePanel() {
           <button className="secondary-button" disabled={busy || !note.trim() || ['promoted','rejected'].includes(item.stage)} onClick={()=>void action(async ()=>{
             const transitions:Record<string,string>={observed:'proposed',proposed:'experimented',experimented:'verified',verified:'promoted'};
             if(item.stage==='verified' && item.scope!=='framework-candidate'){
-              await assetClient.enterpriseCommand('evolution/nominate',{id:item.id});
+              await assetClient.enterpriseCommand('evolution/nominate',{id:item.id},scope);
             } else {
-              await assetClient.enterpriseCommand('evolution/advance',{id:item.id,stage:transitions[item.stage],note});
+              await assetClient.enterpriseCommand('evolution/advance',{id:item.id,stage:transitions[item.stage],note},scope);
             }
             await reloadEvolution();
           })}>{item.stage==='verified'&&item.scope!=='framework-candidate'?'提名 Framework 候选':'推进并保存证据'}</button>
@@ -136,8 +162,8 @@ export function EnterpriseWorkspacePanel() {
           <select aria-label="对比目标版本" value={selectedAfter} onChange={(e) => setSelectedAfter(e.target.value)}>
             {snapshots.map((s) => <option key={s.snapshotId} value={s.snapshotId}>{s.snapshotId} · {s.createdAt.slice(0,10)}</option>)}
           </select>
-          <button className="secondary-button" disabled={busy || !selectedBefore || !selectedAfter} onClick={() => void action(async () => {setComparison(await assetClient.enterpriseCompare(selectedBefore,selectedAfter));})}><GitCompareArrows size={16}/>比较</button>
-          <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {const r=await assetClient.enterpriseVerify(selectedAfter);setVerification(r.ok ? '已验证 '+r.checked+' 个仓库的本地 Git 对象' : '验证未通过：'+r.missing.join('；'));})}>验证快照</button>
+          <button className="secondary-button" disabled={busy || !selectedBefore || !selectedAfter} onClick={() => void action(async () => {setComparison(await assetClient.enterpriseCompare(selectedBefore,selectedAfter,scope));})}><GitCompareArrows size={16}/>比较</button>
+          <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {const r=await assetClient.enterpriseVerify(selectedAfter, scope);setVerification(r.ok ? '已验证 '+r.checked+' 个仓库的本地 Git 对象' : '验证未通过：'+r.missing.join('；'));})}>验证快照</button>
         </div>
         {verification ? <p role="status">{verification}</p> : null}
         {comparison ? <div><p>有变化的仓库：{comparison.changedRepositories}</p>
