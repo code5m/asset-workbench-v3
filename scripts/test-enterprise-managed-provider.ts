@@ -133,8 +133,17 @@ try {
   assert.equal(first.state.module, 'phantom-payment/service');
   assert.equal(first.state.acceptedEvents, 1);
   assert.equal(appendEnterpriseProviderEvent(original).duplicate, true);
-  assert.throws(() => appendEnterpriseProviderEvent({ ...original, cwd: b, observedCwd: b, eventId: 'cb:2' }),
-    /repository changed|session identity/);
+  const switched = appendEnterpriseProviderEvent({ ...original, cwd: b, observedCwd: b,
+    eventId: 'cb:2', content: 'Check operation contracts too' });
+  assert.equal(switched.state.repository, 'phantom-payment', 'primary source remains stable');
+  assert.deepEqual(switched.state.repositories, ['phantom-operation','phantom-payment'],
+    'one Provider session must span different Git repositories inside the same Workspace');
+  assert.ok(switched.state.modules?.includes('phantom-operation'));
+  assert.equal(switched.state.workdirTransitions, 1);
+  const returned = appendEnterpriseProviderEvent({ ...original,
+    eventId: 'cb:3', content: 'Back to the payment service' });
+  assert.equal(returned.state.workdirTransitions, 2);
+  assert.equal(returned.state.acceptedEvents, 3);
   assert.throws(() => appendEnterpriseProviderEvent({ ...original, cwd: home, eventId: 'cb:outside', observedCwd: home }),
     /No registered managed/);
   assert.throws(() => appendEnterpriseProviderEvent({ ...original, cwd: module, observedCwd: b, eventId: 'cb:bad' }),
@@ -150,6 +159,8 @@ try {
 
   const transcript = path.join(root, '.asset-workbench-data', ended.state.transcriptPath!);
   assert.ok(fs.readFileSync(transcript, 'utf8').includes('How does payment work?'));
+  assert.match(fs.readFileSync(transcript, 'utf8'), /Touched repositories: phantom-operation, phantom-payment/);
+  assert.match(fs.readFileSync(transcript, 'utf8'), /Completed by: native-hook/);
   assert.ok(!fs.readFileSync(path.join(root,'.asset-workbench-data','capture','sessions',ended.state.id,'events.jsonl'),'utf8')
     .includes('never-store-this'));
   assert.ok(listEnterpriseProviderSessions(root).some(s => s.id === ended.state.id && s.status === 'ended'));
@@ -279,12 +290,33 @@ try {
     { type:'response_item',timestamp:new Date().toISOString(),payload:{item:{role:'assistant',text:'Found a dependency'}} },
   ];
   fs.writeFileSync(source, rows.map(row=>JSON.stringify(row)).join('\n')+'\n');
-  const imported = importEnterpriseCodexHistory(source);
-  assert.equal(imported.imported,2);
-  assert.equal(imported.workspaceId,workspaceId);
-  assert.equal(importEnterpriseCodexHistory(source).duplicates,2);
-  assert.throws(() => importEnterpriseCodexHistory(source, 'enterprise-' + '0'.repeat(24)), /不匹配/);
-  assert.ok(listEnterpriseProviderSessions(root).some(s => s.provider === 'codex' && s.repository === 'phantom-operation'));
+  const imported = importEnterpriseCodexHistory(source, workspaceId, { finalize: true });
+  assert.equal(imported.imported, 2);
+  assert.equal(imported.workspaceId, workspaceId);
+  assert.equal(imported.finalized, true, 'an explicit official history import must produce a readable transcript');
+  const importedAgain = importEnterpriseCodexHistory(source, workspaceId, { finalize: true });
+  assert.equal(importedAgain.duplicates, 2);
+  assert.equal(importedAgain.finalized, true);
+  assert.throws(() => importEnterpriseCodexHistory(source, 'enterprise-' + '0'.repeat(24), { finalize: true }), /不匹配/);
+  const archived = listEnterpriseProviderSessions(root).find(s => s.provider === 'codex'
+    && s.providerSessionId === 'codex-official-001');
+  assert.equal(archived?.repository, 'phantom-operation');
+  assert.equal(archived?.status, 'ended');
+  assert.equal(archived?.endedBy, 'official-import');
+  assert.equal(archived?.captureSource, 'official-import');
+  assert.ok(archived?.transcriptPath);
+  assert.match(fs.readFileSync(path.join(root, '.asset-workbench-data', archived!.transcriptPath!), 'utf8'),
+    /Found a dependency/);
+  assert.match(fs.readFileSync(path.join(root, '.asset-workbench-data', archived!.transcriptPath!), 'utf8'),
+    /Completed by: official-import/);
+  const codexStatus = enterpriseProviderStatuses(root).find(p => p.provider === 'codex');
+  assert.equal(codexStatus?.captureVerified, false,
+    'an imported historical record must not falsely certify live Provider Hook operation');
+  assert.equal(codexStatus?.importedSessions, 1);
+  const corrupted = path.join(historyRoot, 'corrupted.jsonl');
+  fs.writeFileSync(corrupted, fs.readFileSync(source, 'utf8') + '{broken-jsonl\\n');
+  assert.throws(() => importEnterpriseCodexHistory(corrupted, workspaceId, { finalize: true }),
+    /invalid\/truncated/);
 
   const note = createEnterpriseKnowledgeNote(root,{title:'Payment decision',content:'Use exactly-once transfer semantics',repository:'phantom-payment',module:'phantom-payment/service'});
   assert.equal(listEnterpriseKnowledgeNotes(root)[0]?.id,note.id);
@@ -296,6 +328,15 @@ try {
   assert.equal(listEnterpriseKnowledgeNotes(root).some(item => item.id === linkedKnowledgeId), false);
   fs.unlinkSync(linkedKnowledge);
 
+  // Even after initial approval, a forced Git index addition must STOP the
+  // Provider observer instead of mutating now-tracked company files.
+  const trackedPath = '.asset-workbench-data/knowledge/notes/' + note.id + '.json';
+  git(root, 'add', '-f', '--', trackedPath);
+  assert.throws(() => appendEnterpriseProviderEvent({ ...original,
+    providerSessionId: 'after-forced-tracking', eventId: 'after-tracking:1' }),
+    /Git already tracks/);
+  git(root, 'reset', '-q', '--cached', '--', trackedPath);
+  assert.equal(git(root, 'status', '--porcelain'), rootBefore);
   assert.equal(git(a,'status','--porcelain'),paymentBefore);
   assert.equal(git(b,'status','--porcelain'),operationBefore);
   assert.equal(isIgnoredRelativePath('.asset-workbench-data/provider/events'),true);
