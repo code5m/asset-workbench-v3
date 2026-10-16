@@ -119,6 +119,9 @@ try {
     /No registered managed/);
   assert.throws(() => appendEnterpriseProviderEvent({ ...original, cwd: module, observedCwd: b, eventId: 'cb:bad' }),
     /disagree/);
+  assert.throws(() => appendEnterpriseProviderEvent({ ...original, cwd: module, observedCwd: home,
+    eventId: 'cb:spoofed-reported-cwd' }), /process cwd outside/);
+
   const ended = appendEnterpriseProviderEvent({ ...original, hookEventName:'SessionEnd', eventId:'cb:end', content:'' });
   assert.equal(ended.state.status, 'ended');
   assert.equal(auditEnterpriseWorkspaceManaged(workspaceId).rollbackSafe, false);
