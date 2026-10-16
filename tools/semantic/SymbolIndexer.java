@@ -73,6 +73,7 @@ public final class SymbolIndexer {
         if (!filePath.startsWith(root)) continue;
         String relative = root.relativize(filePath).toString().replace('\\', '/');
         new TreePathScanner<Void, Void>() {
+          String caller = "";
           long line(Tree node) {
             long pos = trees.getSourcePositions().getStartPosition(unit, node);
             return pos < 0 ? 0 : unit.getLineMap().getLineNumber(pos);
@@ -85,16 +86,23 @@ public final class SymbolIndexer {
           }
           @Override public Void visitMethod(MethodTree node, Void ignored) {
             Element element = trees.getElement(getCurrentPath());
-            if (element instanceof ExecutableElement method)
-              emit(output, "method", relative, line(node), symbol(method), node.getName().toString());
-            else emit(output, "unresolved-definition", relative, line(node), "", node.getName().toString());
-            return super.visitMethod(node, ignored);
+            String prior = caller;
+            if (element instanceof ExecutableElement method) {
+              caller = symbol(method);
+              emit(output, "method", relative, line(node), caller, node.getName().toString());
+            } else {
+              caller = "";
+              emit(output, "unresolved-definition", relative, line(node), "", node.getName().toString());
+            }
+            Void result = super.visitMethod(node, ignored);
+            caller = prior;
+            return result;
           }
           @Override public Void visitMethodInvocation(MethodInvocationTree node, Void ignored) {
             Element element = trees.getElement(getCurrentPath());
             if (element instanceof ExecutableElement method)
-              emit(output, "call", relative, line(node), symbol(method), node.getMethodSelect().toString());
-            else emit(output, "unresolved-call", relative, line(node), "", node.getMethodSelect().toString());
+              emit(output, "call", relative, line(node), symbol(method), node.getMethodSelect().toString(), caller);
+            else emit(output, "unresolved-call", relative, line(node), "", node.getMethodSelect().toString(), caller);
             return super.visitMethodInvocation(node, ignored);
           }
         }.scan(unit, null);
