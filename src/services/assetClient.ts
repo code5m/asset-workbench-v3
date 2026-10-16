@@ -186,6 +186,8 @@ export const assetClient = {
   async enableEnterpriseManaged(workspaceId: string): Promise<{
     mode: 'managed'; files: number; bytes: number; digest: string; sourcePreserved: true;
     destination: string; gitExclude: string; warnings: string[];
+    legacy?: { copies: number; bytes: number; status: 'verified' | 'partial';
+      skippedUnverified: string[]; sourcePreserved: true };
   }> {
     return this.enterpriseCommand('projects/managed/enable', { workspaceId });
   },
