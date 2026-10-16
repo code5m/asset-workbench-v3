@@ -189,6 +189,16 @@ export const assetClient = {
   }> {
     return this.enterpriseCommand('projects/managed/enable', { workspaceId });
   },
+  enterpriseManagedAudit(workspaceId: string): Promise<{
+    mode: 'read-only' | 'managed'; sourcePreserved: boolean; expectedFiles: number;
+    verifiedFiles: number; mismatches: string[]; newManagedFiles: number; rollbackSafe: boolean;
+  }> {
+    return this.enterpriseGet('projects/managed/audit', workspaceId);
+  },
+  enterpriseManagedRollback(workspaceId: string): Promise<{ mode: 'read-only'; dataPreserved: true; detail: string }> {
+    return this.enterpriseCommand('projects/managed/rollback',
+      { workspaceId, confirm: 'ROLLBACK_MANAGED_ROUTING' });
+  },
   enterpriseProviderStatus(workspaceId: string): Promise<{
     mode: 'managed' | 'read-only'; detail?: string;
     providers: Array<{ provider: string; configuration: string; captureVerified: boolean; completedSessions: number; detail: string }>;
