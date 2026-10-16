@@ -39,6 +39,7 @@ import { enterpriseProviderStatuses, setupEnterpriseUserProviderHooks } from './
 import { listEnterpriseProviderSessions, readEnterpriseCaptureEvents } from './enterpriseProviderCapture.ts';
 import { importEnterpriseCodexHistory } from './enterpriseProviderHistory.ts';
 import { createEnterpriseKnowledgeNote, listEnterpriseKnowledgeNotes } from './enterpriseKnowledge.ts';
+import { listMigratedEnterpriseLegacyAssets, readMigratedEnterpriseLegacyAsset } from './enterpriseLegacyMigration.ts';
 import { buildEnterpriseJavaSymbolGraph } from './enterpriseSemanticJava.ts';
 import { buildEnterpriseDynamicSqlLineage } from './enterpriseSqlLineage.ts';
 import { proposeEnterpriseAiRefactor, validateEnterpriseAiRefactor } from './enterpriseAiRefactor.ts';
@@ -189,6 +190,24 @@ export function createHandler() {
           if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') throw new Error('需要先启用受管模式');
           const result = importEnterpriseCodexHistory(body.path, body.workspaceId);
           sendJson(res, 200, result);
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/knowledge/legacy') {
+        try {
+          const params = new URLSearchParams(query || '');
+          const root = enterpriseApiRoot(params.get('workspaceId'), getProjectRoot());
+          if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') throw new Error('仅企业受管工作区可查看迁移资产');
+          sendJson(res, 200, { assets: listMigratedEnterpriseLegacyAssets(root) });
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/knowledge/legacy/content') {
+        try {
+          const params = new URLSearchParams(query || '');
+          const root = enterpriseApiRoot(params.get('workspaceId'), getProjectRoot());
+          if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') throw new Error('仅企业受管工作区可查看迁移资产');
+          sendJson(res, 200, readMigratedEnterpriseLegacyAsset(root, params.get('relative') || ''));
         } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
         return;
       }
