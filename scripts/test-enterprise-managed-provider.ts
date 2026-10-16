@@ -317,6 +317,32 @@ try {
   fs.writeFileSync(corrupted, fs.readFileSync(source, 'utf8') + '{broken-jsonl\\n');
   assert.throws(() => importEnterpriseCodexHistory(corrupted, workspaceId, { finalize: true }),
     /invalid\/truncated/);
+  // A deliberate historical import must never close a concurrently active
+  // native Codex Hook session before its real SessionEnd arrives.
+  const liveSource = path.join(historyRoot, 'live-in-progress.jsonl');
+  const liveSessionId = 'codex-live-in-progress';
+  fs.writeFileSync(liveSource, [
+    { type: 'session_meta', payload: { session_id: liveSessionId, cwd: b } },
+    { type: 'response_item', payload: { item: { role: 'user', text: 'Native hook still running' } } },
+  ].map(row => JSON.stringify(row)).join('\n') + '\n');
+  appendEnterpriseProviderEvent({
+    provider: 'codex', providerSessionId: liveSessionId, hookEventName: 'SessionStart',
+    cwd: b, observedCwd: b, eventId: 'codex-native:start',
+  });
+  const liveImported = importEnterpriseCodexHistory(liveSource, workspaceId, { finalize: true });
+  assert.equal(liveImported.imported, 1);
+  assert.equal(liveImported.finalized, false);
+  assert.equal(listEnterpriseProviderSessions(root).find(s => s.providerSessionId === liveSessionId)?.status, 'active');
+  const liveEnded = appendEnterpriseProviderEvent({
+    provider: 'codex', providerSessionId: liveSessionId, hookEventName: 'SessionEnd',
+    cwd: b, observedCwd: b, eventId: 'codex-native:end',
+  });
+  assert.equal(liveEnded.state.status, 'ended');
+  assert.equal(liveEnded.state.endedBy, 'native-hook');
+  assert.equal(liveEnded.state.captureSource, 'native-hook');
+  assert.match(fs.readFileSync(path.join(root,'.asset-workbench-data', liveEnded.state.transcriptPath!), 'utf8'),
+    /Native hook still running/);
+
 
   const note = createEnterpriseKnowledgeNote(root,{title:'Payment decision',content:'Use exactly-once transfer semantics',repository:'phantom-payment',module:'phantom-payment/service'});
   assert.equal(listEnterpriseKnowledgeNotes(root)[0]?.id,note.id);
