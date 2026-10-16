@@ -9,7 +9,7 @@ import { freezeEnterpriseWorkspace } from '../server/enterpriseWorkspace.ts';
 import { importEnterpriseRaw } from '../server/enterpriseImport.ts';
 import { buildEnterpriseJavaSymbolGraph } from '../server/enterpriseSemanticJava.ts';
 import { buildEnterpriseDynamicSqlLineage } from '../server/enterpriseSqlLineage.ts';
-import { validateEnterpriseAiRefactor } from '../server/enterpriseAiRefactor.ts';
+import { proposeEnterpriseAiRefactor, validateEnterpriseAiRefactor } from '../server/enterpriseAiRefactor.ts';
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-enterprise-semantic-'));
 let attached = '';
@@ -68,6 +68,28 @@ try {
   assert.ok(sql.statements.some(s => s.conditions.some(x => x.includes('status != null'))));
   assert.ok(sql.statements.every(s => s.provenance?.commit));
   assert.throws(() => validateEnterpriseAiRefactor(root, '../wrong'), /Invalid proposal ID/);
+  // CI does not need production Ollama credentials: stub the *local-only* model
+  // response while exercising the real exact-hunk patch and SHA gates.
+  const savedFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ response: JSON.stringify({
+    oldText: 'return "ok";', newText: 'return "ok".trim();',
+    rationale: 'Test-only benign candidate',
+  }) }), { status: 200, headers: { 'content-type': 'application/json' } });
+  let proposalId = '';
+  try {
+    const proposed = await proposeEnterpriseAiRefactor(root, {
+      snapshotId: snap.snapshotId, repository: 'phantom-payment',
+      path: 'src/main/java/example/Pay.java', model: 'mock-model:1',
+    });
+    proposalId = proposed.id;
+    assert.notEqual(proposed.candidateSha256, proposed.originalSha256);
+    assert.equal(proposed.commit, snap.repositories.find(v => v.path === 'phantom-payment')?.commit);
+  } finally { globalThis.fetch = savedFetch; }
+  const validation = validateEnterpriseAiRefactor(root, proposalId);
+  assert.equal(validation.originalSourceModified, false);
+  assert.ok(['blocked', 'rejected', 'verified'].includes(validation.status));
+  assert.ok(validation.reason.length > 10);
+
   for (const dir of [payment, operation]) assert.equal(git(dir, 'status', '--porcelain'), '');
   assert.equal(fs.existsSync(path.join(root, '.asset-workbench-data')), false);
   console.log('ENTERPRISE_SEMANTIC_INTEGRATION PASS');
