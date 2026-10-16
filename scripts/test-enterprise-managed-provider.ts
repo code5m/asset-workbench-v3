@@ -10,7 +10,7 @@ import { centralEnterpriseStore, enterpriseEntryForRoot, enableManagedEnterprise
 import { enterpriseStoreFor, freezeEnterpriseWorkspace, listEnterpriseSnapshots } from '../server/enterpriseWorkspace.ts';
 import { appendEnterpriseProviderEvent, listEnterpriseProviderSessions, readEnterpriseCaptureEvents,
   resolveEnterpriseProviderOrigin } from '../server/enterpriseProviderCapture.ts';
-import { setupEnterpriseUserProviderHooks, enterpriseProviderStatuses } from '../server/enterpriseProviderSetup.ts';
+import { setupEnterpriseUserProviderHooks, removeEnterpriseUserProviderHooks, enterpriseProviderStatuses } from '../server/enterpriseProviderSetup.ts';
 import { importEnterpriseCodexHistory } from '../server/enterpriseProviderHistory.ts';
 import { createEnterpriseKnowledgeNote, listEnterpriseKnowledgeNotes } from '../server/enterpriseKnowledge.ts';
 import { isIgnoredRelativePath, shouldIgnoreEntry } from '../server/ignorePolicy.ts';
@@ -304,6 +304,45 @@ try {
     assert.equal(retry.find(x => x.provider === 'opencode')?.status, 'blocked');
     assert.equal(fs.readFileSync(opencodePlugin,'utf8'), '/* user-modified OpenCode plugin */\n');
   } finally { fs.writeFileSync(opencodePlugin, pluginCode); }
+  // Global Provider configuration is reversible without deleting the user's
+  // original custom commands, backups, or any captured conversation data.
+  assert.throws(() => removeEnterpriseUserProviderHooks(''), /明确授权/);
+  const edited = JSON.parse(fs.readFileSync(settings, 'utf8')) as {
+    hooks: Record<string, Array<{ hooks: Array<{ type: string; command: string; timeout?: number }> }>>;
+  };
+  const savedConfig = fs.readFileSync(settings, 'utf8');
+  const ownStop = edited.hooks.Stop.find(row => row.hooks.some(h => h.command.includes('capture-enterprise-provider-event.ts')));
+  assert.ok(ownStop);
+  ownStop!.hooks[0].timeout = 11;
+  fs.writeFileSync(settings, JSON.stringify(edited, null, 2) + '\\n');
+  const blockedModified = removeEnterpriseUserProviderHooks('REMOVE_USER_LEVEL_PROVIDER_HOOKS');
+  assert.equal(blockedModified.find(x => x.provider === 'codebuddy')?.status, 'blocked');
+  assert.equal(fs.readFileSync(settings, 'utf8'), JSON.stringify(edited, null, 2) + '\\n',
+    'Modified provider config must remain exactly intact when uninstall is blocked');
+  fs.writeFileSync(settings, savedConfig);
+  // Uninstalling a custom OpenCode file must never erase it.
+  fs.writeFileSync(opencodePlugin, '/* custom user code; do not remove */\\n');
+  const firstRemoval = removeEnterpriseUserProviderHooks('REMOVE_USER_LEVEL_PROVIDER_HOOKS');
+  assert.equal(firstRemoval.find(x => x.provider === 'opencode')?.status, 'blocked');
+  assert.equal(firstRemoval.find(x => x.provider === 'codebuddy')?.status, 'removed');
+  assert.match(fs.readFileSync(opencodePlugin, 'utf8'), /custom user code/);
+  const withoutV3 = JSON.parse(fs.readFileSync(settings, 'utf8')) as {
+    theme: string; hooks: { Stop: Array<{ hooks: Array<{ command: string }> }> };
+  };
+  assert.equal(withoutV3.theme, 'user-custom');
+  assert.equal(withoutV3.hooks.Stop.length, 1);
+  assert.equal(withoutV3.hooks.Stop[0].hooks[0].command, 'echo custom');
+  assert.equal(enterpriseProviderStatuses(root).find(x => x.provider === 'codebuddy')?.captureVerified, true,
+    'Uninstall must never remove historical capture evidence');
+  fs.writeFileSync(opencodePlugin, pluginCode);
+  const finalRemoval = removeEnterpriseUserProviderHooks('REMOVE_USER_LEVEL_PROVIDER_HOOKS');
+  assert.equal(finalRemoval.find(x => x.provider === 'opencode')?.status, 'removed');
+  assert.equal(fs.existsSync(opencodePlugin), false);
+  assert.ok(removeEnterpriseUserProviderHooks('REMOVE_USER_LEVEL_PROVIDER_HOOKS')
+    .every(x => x.status === 'not-installed' || x.status === 'import-only'));
+  // Installation stays possible later without affecting original provider hooks.
+  assert.equal(setupEnterpriseUserProviderHooks('INSTALL_USER_LEVEL_PROVIDER_HOOKS')
+    .filter(x => x.status === 'installed').length, 4);
   for (const dir of [a,b]) {
     assert.equal(fs.existsSync(path.join(dir, '.asset-workbench-data')), false);
     assert.equal(fs.existsSync(path.join(dir, '.codebuddy')), false);
