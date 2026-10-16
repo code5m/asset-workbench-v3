@@ -226,7 +226,7 @@ try {
     properties: { sessionID: incrementalSession, part: { text: 'A second process added this event' } } };
   execFileSync('node', ['--experimental-strip-types', externalWorker, '--provider=opencode', '--stream'], {
     cwd: b, timeout: 20_000, encoding: 'utf8',
-    input: JSON.stringify(externalEvent) + '\\n', env: process.env,
+    input: JSON.stringify(externalEvent) + '\n', env: process.env,
   });
   const duplicateRemote = appendEnterpriseProviderEvent({ ...original, provider: 'opencode',
     providerSessionId: incrementalSession, cwd: b, observedCwd: b,
