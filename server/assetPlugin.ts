@@ -33,6 +33,11 @@ import { publishFrameworkRelease, currentFrameworkRelease } from './frameworkRel
 import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime, reconcileLegacyInstanceUi, resumeRequestedInstances } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { setupProjectProviders } from './providerSetup.ts';
+import { attachEnterpriseWorkspaceReadOnly, detachEnterpriseWorkspaceReadOnly, enterpriseApiRoot, listAttachedEnterpriseWorkspaces } from './enterpriseAttachment.ts';
+import { buildEnterpriseJavaSymbolGraph } from './enterpriseSemanticJava.ts';
+import { buildEnterpriseDynamicSqlLineage } from './enterpriseSqlLineage.ts';
+import { proposeEnterpriseAiRefactor, validateEnterpriseAiRefactor } from './enterpriseAiRefactor.ts';
+import { semanticToolchainStatus } from './enterpriseToolchain.ts';
 import { importEnterpriseRaw, verifyEnterpriseRaw } from './enterpriseImport.ts';
 import { mirrorEnterpriseSnapshot } from './enterpriseMirror.ts';
 import { buildEnterpriseMavenGraph } from './enterpriseGraph.ts';
@@ -143,45 +148,110 @@ export function createHandler() {
         sendJson(res, 200, assetService.getContent(decodeURIComponent(id)));
         return;
       }
+      if (req.method === 'GET' && pathPart === '/enterprise/projects/list') {
+        sendJson(res, 200, { workspaces: listAttachedEnterpriseWorkspaces() }); return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/projects/detach') {
+        const body = await readBody(req);
+        try {
+          sendJson(res, 200, detachEnterpriseWorkspaceReadOnly(
+            typeof body.workspaceId === 'string' ? body.workspaceId : ''));
+        } catch (e) { sendJson(res, 400, { error: (e as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/projects/attach') {
+        const body = await readBody(req);
+        try {
+          const result = attachEnterpriseWorkspaceReadOnly(
+            typeof body.projectRoot === 'string' ? body.projectRoot : '',
+            typeof body.label === 'string' ? body.label : undefined,
+          );
+          sendJson(res, 201, result);
+        } catch (e) { sendJson(res, 400, { error: (e as Error).message }); }
+        return;
+      }
       // Enterprise read-only multi-repository evidence. Never fetch, checkout, or
       // mutate source repos; snapshots reside in central managed storage.
+      if (req.method === 'GET' && pathPart === '/enterprise/semantic/toolchain') {
+        sendJson(res, 200, await semanticToolchainStatus());
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/semantic/java') {
+        const body = await readBody(req);
+        if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
+        sendJson(res, 200, await buildEnterpriseJavaSymbolGraph(
+          enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.snapshotId,
+          typeof body.maxFiles === 'number' ? body.maxFiles : undefined)); return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/semantic/sql') {
+        const body = await readBody(req);
+        if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
+        sendJson(res, 200, await buildEnterpriseDynamicSqlLineage(
+          enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.snapshotId,
+          typeof body.maxFiles === 'number' ? body.maxFiles : undefined)); return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/refactor/propose') {
+        const body = await readBody(req);
+        if (typeof body.snapshotId !== 'string' || typeof body.repository !== 'string'
+          || typeof body.path !== 'string') throw new Error('snapshotId, repository and path required');
+        try {
+          sendJson(res, 200, await proposeEnterpriseAiRefactor(
+            enterpriseApiRoot(body.workspaceId, getProjectRoot()), {
+              snapshotId: body.snapshotId, repository: body.repository, path: body.path,
+              model: typeof body.model === 'string' ? body.model : undefined,
+            }));
+        } catch (e) { sendJson(res, 422, { status: 'blocked', error: (e as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/refactor/validate') {
+        const body = await readBody(req);
+        if (typeof body.proposalId !== 'string') throw new Error('proposalId required');
+        try {
+          sendJson(res, 200, await validateEnterpriseAiRefactor(
+            enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.proposalId));
+        } catch (e) { sendJson(res, 422, { status: 'blocked', error: (e as Error).message }); }
+        return;
+      }
       if (req.method === 'POST' && pathPart === '/enterprise/mirrors/sync') {
         const body = await readBody(req);
         if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
-        sendJson(res, 200, { results: mirrorEnterpriseSnapshot(getProjectRoot(), body.snapshotId) }); return;
+        sendJson(res, 200, { results: mirrorEnterpriseSnapshot(enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.snapshotId) }); return;
       }
       if (req.method === 'POST' && pathPart === '/enterprise/raw/import') {
         const body = await readBody(req);
         if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
-        sendJson(res, 201, importEnterpriseRaw(getProjectRoot(), body.snapshotId));
+        sendJson(res, 201, importEnterpriseRaw(enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.snapshotId, {
+          maxBytes: typeof body.maxBytes === 'number' && Number.isFinite(body.maxBytes) ? body.maxBytes : undefined,
+          maxFiles: typeof body.maxFiles === 'number' && Number.isFinite(body.maxFiles) ? body.maxFiles : undefined,
+        }));
         return;
       }
       if (req.method === 'GET' && pathPart === '/enterprise/raw/verify') {
         const id = new URLSearchParams(query || '').get('id') ?? '';
-        sendJson(res, 200, verifyEnterpriseRaw(getProjectRoot(), id)); return;
+        sendJson(res, 200, verifyEnterpriseRaw(enterpriseApiRoot(new URLSearchParams(query || '').get('workspaceId'), getProjectRoot()), id)); return;
       }
       if (req.method === 'POST' && pathPart === '/enterprise/sourcegraph/build') {
         const body=await readBody(req);
         if(typeof body.snapshotId!=='string')throw new Error('snapshotId required');
-        sendJson(res,200,buildEnterpriseSourceGraph(getProjectRoot(),body.snapshotId));return;
+        sendJson(res,200,buildEnterpriseSourceGraph(enterpriseApiRoot(body.workspaceId, getProjectRoot()),body.snapshotId));return;
       }
       if (req.method === 'POST' && pathPart === '/enterprise/optimization/experiment') {
         const body=await readBody(req);
         if(typeof body.snapshotId!=='string')throw new Error('snapshotId required');
-        sendJson(res,200,runEnterpriseOptimizationExperiment(getProjectRoot(),body.snapshotId));return;
+        sendJson(res,200,runEnterpriseOptimizationExperiment(enterpriseApiRoot(body.workspaceId, getProjectRoot()),body.snapshotId));return;
       }
       if (req.method === 'POST' && pathPart === '/enterprise/quality/analyze') {
         const body = await readBody(req);
         if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
-        sendJson(res, 200, analyzeEnterpriseQuality(getProjectRoot(), body.snapshotId)); return;
+        sendJson(res, 200, analyzeEnterpriseQuality(enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.snapshotId)); return;
       }
       if (req.method === 'POST' && pathPart === '/enterprise/graph/build') {
         const body = await readBody(req);
         if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
-        sendJson(res, 201, buildEnterpriseMavenGraph(getProjectRoot(), body.snapshotId)); return;
+        sendJson(res, 201, buildEnterpriseMavenGraph(enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.snapshotId)); return;
       }
       if (req.method === 'GET' && pathPart === '/enterprise/evolution') {
-        sendJson(res, 200, { cases: listEvolutionCases(getProjectRoot()) }); return;
+        sendJson(res, 200, { cases: listEvolutionCases(enterpriseApiRoot(new URLSearchParams(query || '').get('workspaceId'), getProjectRoot())) }); return;
       }
       if (req.method === 'POST' && pathPart === '/enterprise/evolution/create') {
         const body = await readBody(req);
@@ -189,7 +259,7 @@ export function createHandler() {
             || typeof body.problem !== 'string' || !Array.isArray(body.evidence)) {
           throw new Error('Invalid evidence-based evolution case');
         }
-        sendJson(res, 201, createEvolutionCase(getProjectRoot(), {
+        sendJson(res, 201, createEvolutionCase(enterpriseApiRoot(body.workspaceId, getProjectRoot()), {
           snapshotId: body.snapshotId, title: body.title, problem: body.problem,
           evidence: body.evidence as Array<{ repository: string; path: string; commit: string }>,
         })); return;
@@ -198,37 +268,37 @@ export function createHandler() {
         const body = await readBody(req);
         if (typeof body.id !== 'string' || typeof body.stage !== 'string' || typeof body.note !== 'string')
           throw new Error('Invalid evolution transition');
-        sendJson(res, 200, advanceEvolutionCase(getProjectRoot(), body.id,
+        sendJson(res, 200, advanceEvolutionCase(enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.id,
           body.stage as Parameters<typeof advanceEvolutionCase>[2], body.note)); return;
       }
       if (req.method === 'POST' && pathPart === '/enterprise/evolution/nominate') {
         const body = await readBody(req);
         if (typeof body.id !== 'string') throw new Error('Invalid candidate');
-        sendJson(res, 200, nominateFrameworkCandidate(getProjectRoot(), body.id)); return;
+        sendJson(res, 200, nominateFrameworkCandidate(enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.id)); return;
       }
       if (req.method === 'GET' && pathPart === '/enterprise/discovery') {
-        sendJson(res, 200, discoverEnterpriseWorkspace(getProjectRoot()));
+        sendJson(res, 200, discoverEnterpriseWorkspace(enterpriseApiRoot(new URLSearchParams(query || '').get('workspaceId'), getProjectRoot())));
         return;
       }
       if (req.method === 'GET' && pathPart === '/enterprise/snapshots') {
-        sendJson(res, 200, { snapshots: listEnterpriseSnapshots(getProjectRoot()) });
+        sendJson(res, 200, { snapshots: listEnterpriseSnapshots(enterpriseApiRoot(new URLSearchParams(query || '').get('workspaceId'), getProjectRoot())) });
         return;
       }
       if (req.method === 'POST' && pathPart === '/enterprise/snapshots/freeze') {
         const body = await readBody(req);
         const source = body.source === 'origin-tracking' ? 'origin-tracking' : body.source === 'head' ? 'head' : null;
         if (!source) { sendJson(res, 400, { error: 'source must be head or origin-tracking' }); return; }
-        sendJson(res, 201, freezeEnterpriseWorkspace(getProjectRoot(), source));
+        sendJson(res, 201, freezeEnterpriseWorkspace(enterpriseApiRoot(body.workspaceId, getProjectRoot()), source));
         return;
       }
       if (req.method === 'GET' && pathPart === '/enterprise/snapshots/verify') {
         const id = new URLSearchParams(query || '').get('id') ?? '';
-        sendJson(res, 200, verifyEnterpriseSnapshot(getProjectRoot(), id));
+        sendJson(res, 200, verifyEnterpriseSnapshot(enterpriseApiRoot(new URLSearchParams(query || '').get('workspaceId'), getProjectRoot()), id));
         return;
       }
       if (req.method === 'GET' && pathPart === '/enterprise/snapshots/compare') {
         const params = new URLSearchParams(query || '');
-        sendJson(res, 200, compareEnterpriseSnapshots(getProjectRoot(), params.get('before') ?? '', params.get('after') ?? ''));
+        sendJson(res, 200, compareEnterpriseSnapshots(enterpriseApiRoot(new URLSearchParams(query || '').get('workspaceId'), getProjectRoot()), params.get('before') ?? '', params.get('after') ?? ''));
         return;
       }
       if (req.method === 'GET' && pathPart === '/repositories') {
