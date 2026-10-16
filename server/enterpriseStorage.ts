@@ -121,6 +121,59 @@ function appendLocalGitExclude(root: string): ManagedMigrationReport['gitExclude
  * A one-way, copy-and-verify migration. Legacy central data NEVER gets deleted.
  * Any target conflict stops activation rather than combining unrelated assets.
  */
+
+export interface ManagedStorageAudit {
+  mode: EnterpriseMode; sourcePreserved: boolean; expectedFiles: number;
+  verifiedFiles: number; mismatches: string[];
+  newManagedFiles: number; rollbackSafe: boolean;
+}
+export function auditManagedEnterpriseStorage(input: string): ManagedStorageAudit {
+  const root = canonicalEnterpriseRoot(input);
+  const entry = enterpriseEntryForRoot(root);
+  if (!entry) throw new Error('Unknown enterprise workspace');
+  const central = centralEnterpriseStore(root), target = checkManagedDirectory(root);
+  const originals = scanRegularFiles(central);
+  const copies = scanRegularFiles(target).filter(x => x.relative !== 'managed-migration.json');
+  const inTarget = new Map(copies.map(item => [item.relative, item.digest]));
+  const missing = originals.filter(file => inTarget.get(file.relative) !== file.digest)
+    .map(item => item.relative);
+  const originalSet = new Set(originals.map(x => x.relative));
+  const extra = copies.filter(file => !originalSet.has(file.relative));
+  // Detect new provider sessions / knowledge created after opting in.
+  const data = path.join(root, ROOT_DATA);
+  const sessionDir = path.join(data, 'capture', 'sessions');
+  const hasEnterpriseSessions = fs.existsSync(sessionDir)
+    && fs.readdirSync(sessionDir).some(x => x.startsWith('enterprise_capture_'));
+  const notes = path.join(data, 'knowledge', 'notes');
+  const hasNewNotes = fs.existsSync(notes) && fs.readdirSync(notes).some(x => /^knowledge_/.test(x));
+  return {
+    mode: entry.sourcePolicy,
+    sourcePreserved: originals.every(file => {
+      const absolute = path.join(central, ...file.relative.split('/'));
+      return fs.existsSync(absolute) && hash(fs.readFileSync(absolute)) === file.digest;
+    }),
+    expectedFiles: originals.length, verifiedFiles: originals.length - missing.length,
+    mismatches: missing,
+    newManagedFiles: extra.length + Number(hasEnterpriseSessions) + Number(hasNewNotes),
+    rollbackSafe: missing.length === 0 && extra.length === 0 && !hasEnterpriseSessions && !hasNewNotes,
+  };
+}
+/** Revert only the storage routing; never delete any company or saved asset bytes. */
+export function rollbackManagedEnterpriseStorage(input: string, confirmation: string) {
+  if (process.env.AWB_INSTANCE_PROJECT_ROOT) throw new Error('中央 Framework Only');
+  if (confirmation !== 'ROLLBACK_MANAGED_ROUTING') throw new Error('请确认回滚企业受管存储路由');
+  const root = canonicalEnterpriseRoot(input);
+  const audit = auditManagedEnterpriseStorage(root);
+  if (!audit.rollbackSafe || !audit.sourcePreserved) {
+    throw new Error('工作区受管期产生了新资产或备份不一致。为防止会话丢失，拒绝自动回滚；保留全部数据等待核对。');
+  }
+  const item = enterpriseEntryForRoot(root);
+  if (!item || item.sourcePolicy !== 'managed') throw new Error('Workspace is not managed');
+  writeEnterpriseRegistry(readEnterpriseRegistry().map(entry => entry.workspaceId === item.workspaceId
+    ? { ...entry, sourcePolicy: 'read-only' as const, managedAt: undefined } : entry));
+  return { mode: 'read-only' as const, dataPreserved: true as const,
+    detail: '仅切回中央受管路径，根目录的复制资产仍保留，不删除、不覆盖。' };
+}
 export function enableManagedEnterpriseStorage(input: string): ManagedMigrationReport {
   if (process.env.AWB_INSTANCE_PROJECT_ROOT) throw new Error('业务 Instance 不能开启其他工作区的受管模式');
   const root = canonicalEnterpriseRoot(input);
