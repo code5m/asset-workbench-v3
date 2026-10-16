@@ -179,14 +179,14 @@ export function createHandler() {
       if (req.method === 'POST' && pathPart === '/enterprise/semantic/java') {
         const body = await readBody(req);
         if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
-        sendJson(res, 200, buildEnterpriseJavaSymbolGraph(
+        sendJson(res, 200, await buildEnterpriseJavaSymbolGraph(
           enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.snapshotId,
           typeof body.maxFiles === 'number' ? body.maxFiles : undefined)); return;
       }
       if (req.method === 'POST' && pathPart === '/enterprise/semantic/sql') {
         const body = await readBody(req);
         if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
-        sendJson(res, 200, buildEnterpriseDynamicSqlLineage(
+        sendJson(res, 200, await buildEnterpriseDynamicSqlLineage(
           enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.snapshotId,
           typeof body.maxFiles === 'number' ? body.maxFiles : undefined)); return;
       }
@@ -207,7 +207,7 @@ export function createHandler() {
         const body = await readBody(req);
         if (typeof body.proposalId !== 'string') throw new Error('proposalId required');
         try {
-          sendJson(res, 200, validateEnterpriseAiRefactor(
+          sendJson(res, 200, await validateEnterpriseAiRefactor(
             enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.proposalId));
         } catch (e) { sendJson(res, 422, { status: 'blocked', error: (e as Error).message }); }
         return;
