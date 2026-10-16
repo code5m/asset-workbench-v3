@@ -6,7 +6,8 @@ import { useI18n } from '../i18n/I18nProvider';
 export function InstanceLifecyclePanel() {
   const { t, lang } = useI18n();
   const [stage, setStage] = useState<'create' | 'status' | 'upgrade' | 'migration'>('create');
-  const [creationMode, setCreationMode] = useState<'readonly' | 'instance'>('readonly');
+  const [creationMode, setCreationMode] = useState<'managed' | 'readonly' | 'instance'>('managed');
+  const [managedConsent, setManagedConsent] = useState(false);
   const [projectRoot, setProjectRoot] = useState('');
   const [name, setName] = useState('');
   const [initializeKnowledge, setInitializeKnowledge] = useState(false);
@@ -380,6 +381,10 @@ export function InstanceLifecyclePanel() {
         </div>
       </section>
       <div className="instance-stage-nav" role="group" aria-label="业务项目接入模式">
+        <button type="button" className={`secondary-button ${creationMode === 'managed' ? 'selected' : ''}`}
+          aria-pressed={creationMode === 'managed'} onClick={() => setCreationMode('managed')}>
+          企业受管模式（推荐多仓库）
+        </button>
         <button type="button" className={`secondary-button ${creationMode === 'readonly' ? 'selected' : ''}`}
           aria-pressed={creationMode === 'readonly'} onClick={() => setCreationMode('readonly')}>
           接入现有企业项目（只读）
@@ -454,8 +459,8 @@ export function InstanceLifecyclePanel() {
           <small className="instance-release-hint">{lang === 'zh-CN' ? '若首次使用尚无运行包，系统将在首次创建时自动发布。' : 'If no release exists, first-time setup will publish it automatically.'}</small>
         )}
       </section> : null}
-      {creationMode === 'readonly' ? <section className="workspace-card" aria-label="只读接入现有企业项目">
-        <h3>接入现有企业项目（只读）</h3>
+      {creationMode !== 'instance' ? <section className="workspace-card" aria-label="企业业务项目接入">
+        <h3>{creationMode === 'managed' ? '企业受管工作台：一个根目录管理全部仓库' : '接入现有企业项目（完全只读）'}</h3>
         <label>已有业务项目目录
           <input className="root-input" aria-label="只读接入业务目录" value={projectRoot}
             onChange={e => selectProject(e.target.value)}
@@ -465,14 +470,28 @@ export function InstanceLifecyclePanel() {
           <input className="root-input" value={name} onChange={e => setName(e.target.value)}
             placeholder="backV8 · 企业业务系统" spellCheck={false} />
         </label>
-        <p className="detail-summary">适合 backV8 这样包含多个独立 Git 仓库的公司代码。使用上方业务目录，自动识别仓库并在中央建立只读入口。不会创建实例元数据、安装 Provider Hooks 或修改公司源码；与「一键创建独立工作台」是两种不同操作。</p>
-        <button type="button" className="secondary-button" disabled={busy || !projectRoot.trim()}
+        <p className="detail-summary">{creationMode === 'managed'
+          ? '适合 backV8：仅在业务根目录新建 .asset-workbench-data 保存 Provider 会话、聊天、知识与分析结果。子 Git 仓库源码、设置、Hooks 保持不变；旧中央分析资产会复制、校验并保留原副本。'
+          : '严格只读，只在中央 Framework 保留登记与分析资料。不改业务目录，不能在业务根目录保存 Provider 会话。'}</p>
+        {creationMode === 'managed' ? <label className="instance-checkbox">
+          <input type="checkbox" checked={managedConsent} onChange={event => setManagedConsent(event.target.checked)} />
+          我授权仅在所选业务根目录的 .asset-workbench-data 中保存 V3 数据，并允许更新根仓库本机 Git exclude（不修改 .gitignore 和子仓库）
+        </label> : null}
+        <button type="button" className="secondary-button" disabled={busy || !projectRoot.trim() || (creationMode === 'managed' && !managedConsent)}
           onClick={() => void run(async () => {
             const result = await assetClient.attachEnterpriseReadOnly(projectRoot.trim(), name.trim() || undefined);
-            setMessage('只读接入成功：' + result.workspace.label + ' · ' + result.repositoryCount + ' 个 Git 仓库。请到「项目工作台 → 企业多仓库」选择该项目进行快照、分析和实验。' +
-              (result.warnings.length ? ' 扫描提醒：' + result.warnings.slice(0, 3).join('；') : ''));
+            if (creationMode === 'managed') {
+              const migrated = await assetClient.enableEnterpriseManaged(result.workspace.workspaceId);
+              setMessage('企业受管工作台已准备：' + result.workspace.label + ' · ' + result.repositoryCount +
+                ' 个 Git 仓库；已核对历史资产 ' + migrated.files + ' 项（保留中央原始备份）。受管目录：' + migrated.destination +
+                '。请到「项目工作台 → 企业多仓库」查看 Provider 会话和分析。' +
+                (migrated.warnings.length ? ' 提醒：' + migrated.warnings.join('；') : ''));
+            } else {
+              setMessage('完全只读接入成功：' + result.workspace.label + ' · ' + result.repositoryCount +
+                ' 个 Git 仓库。到「项目工作台 → 企业多仓库」选择此项目。');
+            }
           })}>
-          只读接入此企业业务目录
+          {creationMode === 'managed' ? '启用企业受管工作台（只写受管目录）' : '完全只读接入此企业业务目录'}
         </button>
       </section> : null}
       {message ? <p role="status" className="detail-summary starter-message">{message}</p> : null}
