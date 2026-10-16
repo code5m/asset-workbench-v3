@@ -66,12 +66,12 @@ export function assertSafeEnterpriseManagedPath(rootInput: string, relative: str
   }
   const parts = [ROOT_DATA, ...relative.split('/')];
   let current = root;
-  for (const part of parts) {
+  for (const [index, part] of parts.entries()) {
     current = path.join(current, part);
     if (fs.existsSync(current)) {
       const stats = fs.lstatSync(current);
       if (stats.isSymbolicLink()) throw new Error('Managed path symlink is forbidden: ' + part);
-      if (part !== parts[parts.length - 1] && !stats.isDirectory()) {
+      if (index !== parts.length - 1 && !stats.isDirectory()) {
         throw new Error('Managed path ancestor is not a directory: ' + part);
       }
     }
