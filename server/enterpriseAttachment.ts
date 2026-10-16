@@ -67,6 +67,14 @@ export function attachEnterpriseWorkspaceReadOnly(input: string, label?: string)
   // No Instance Manifest or Provider Hooks; registration is stored ONLY in Framework.
   return { workspace, repositoryCount: found.repositories.length, warnings: found.warnings, sourceFilesModified: false };
 }
+export function detachEnterpriseWorkspaceReadOnly(id: string): { detached: boolean; cachedAssetsPreserved: true } {
+  centralOnly();
+  if (!/^enterprise-[0-9a-f]{24}$/.test(id)) throw new Error('Invalid enterprise workspace ID');
+  const current = read(), remaining = current.filter(w => w.workspaceId !== id);
+  if (remaining.length !== current.length) save(remaining);
+  // Intentionally never touch the business tree or delete its analysis/cache artifacts.
+  return { detached: remaining.length !== current.length, cachedAssetsPreserved: true };
+}
 /**
  * An attached ID is server-resolved; never trust arbitrary paths in API bodies.
  * A business Instance may only operate on its own bound root.
