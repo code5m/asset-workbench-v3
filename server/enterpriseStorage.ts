@@ -89,10 +89,35 @@ function checkManagedDirectory(root: string): string {
   }
   return target;
 }
+const PROTECTED_STORES = ['raw', 'mirrors', 'snapshots', 'imports', 'derived',
+  'semantic', 'evolution', 'experiments', 'refactors'];
+function ensureManagedAnalysisChildrenSafe(root: string, directory: string): void {
+  for (const sub of PROTECTED_STORES) {
+    const child = path.join(directory, sub);
+    if (!fs.existsSync(child)) continue;
+    const kind = fs.lstatSync(child);
+    if (kind.isSymbolicLink() || !kind.isDirectory()) {
+      throw new Error('企业分析受管路径不是独立普通目录: ' + sub);
+    }
+    // Raw two-char sharding and local bare Git mirrors are particularly
+    // sensitive: a symlink here would write into the company's checkout.
+    if (sub === 'raw' || sub === 'mirrors') {
+      for (const name of fs.readdirSync(child)) {
+        const segment = fs.lstatSync(path.join(child, name));
+        if (segment.isSymbolicLink()) throw new Error('禁止企业镜像或 Raw 存储符号链接: ' + sub + '/' + name);
+      }
+    }
+  }
+}
 export function enterpriseStorageFor(input: string): string {
   const root = canonicalEnterpriseRoot(input);
   const entry = enterpriseEntryForRoot(root);
-  return entry?.sourcePolicy === 'managed' ? checkManagedDirectory(root) : centralEnterpriseStore(root);
+  if (entry?.sourcePolicy === 'managed') {
+    const dir = checkManagedDirectory(root);
+    ensureManagedAnalysisChildrenSafe(root, dir);
+    return dir;
+  }
+  return centralEnterpriseStore(root);
 }
 function scanRegularFiles(dir: string): Array<{ relative: string; bytes: number; digest: string }> {
   if (!fs.existsSync(dir)) return [];
