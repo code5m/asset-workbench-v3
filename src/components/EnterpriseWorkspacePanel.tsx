@@ -132,6 +132,8 @@ export function EnterpriseWorkspacePanel() {
           })}>分析 Maven 模块关系</button>
         </div>
         {pipeline ? <p role="status">{pipeline}</p> : null}
+        <details className="creator-advanced-cli">
+          <summary>轻量静态规则与旧版候选索引（高级工具）</summary>
         <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
           const result = await assetClient.enterpriseCommand<{ findings:Array<{summary:string;file:string;line:number}>;analyzed:number;status:string }>('quality/analyze',{snapshotId:selectedAfter},scope);
           setPipeline('静态质量分析：'+result.analyzed+' 个已归档代码文件，'+result.findings.length+' 个候选问题，状态 '+result.status+'；首个发现：'+(result.findings[0] ? result.findings[0].file+':'+result.findings[0].line+' '+result.findings[0].summary : '无'));
@@ -144,6 +146,7 @@ export function EnterpriseWorkspacePanel() {
           const report=await assetClient.enterpriseCommand<{checked:number;changed:number;bytesRemoved:number;status:string}>('optimization/experiment',{snapshotId:selectedAfter},scope);
           setPipeline('隔离优化实验：'+report.checked+' 个文件，候选优化 '+report.changed+' 个，节约空白字节 '+report.bytesRemoved+'；未改动业务源码。');
         })}>运行隔离优化实验</button>
+        </details>
         <button className="secondary-button" disabled={busy}
           onClick={() => void action(async () => {
             const info = await assetClient.enterpriseGet<{
