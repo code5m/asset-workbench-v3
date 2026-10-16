@@ -28,6 +28,41 @@ try {
   const mirrors=mirrorEnterpriseSnapshot(parent,snap.snapshotId);
   assert.equal(mirrors.length,2);
   assert.ok(mirrors.every(m=>m.status==='verified'),JSON.stringify(mirrors));
+  // An attacker-controlled or accidentally linked mirror must never allow Git
+  // operations to write through into an independent company checkout.
+  const mirror = mirrors[0].mirrorPath!;
+  const companyPom = path.join(parent, mirrors[0].repository, 'pom.xml');
+  const preserved = fs.readFileSync(companyPom);
+  const symlink = path.join(mirror, 'objects', 'linked-company-file');
+  fs.symlinkSync(companyPom, symlink);
+  assert.equal(mirrorEnterpriseSnapshot(parent, snap.snapshotId)[0].status, 'blocked',
+    'a nested mirror symlink must block fetch');
+  assert.ok(fs.readFileSync(companyPom).equals(preserved));
+  fs.unlinkSync(symlink);
+
+  const hardlink = path.join(mirror, 'objects', 'hardlinked-company-file');
+  fs.linkSync(companyPom, hardlink);
+  assert.equal(mirrorEnterpriseSnapshot(parent, snap.snapshotId)[0].status, 'blocked',
+    'a hard link from a company checkout must block mirror operations');
+  fs.unlinkSync(hardlink);
+
+  const alternate = path.join(mirror, 'objects', 'info', 'alternates');
+  fs.mkdirSync(path.dirname(alternate), { recursive: true });
+  fs.writeFileSync(alternate, path.join(parent, mirrors[0].repository, '.git', 'objects') + '\n');
+  assert.equal(mirrorEnterpriseSnapshot(parent, snap.snapshotId)[0].status, 'blocked',
+    'external object alternates must not silently reference company Git data');
+  fs.unlinkSync(alternate);
+
+  const hook = path.join(mirror, 'hooks', 'reference-transaction');
+  fs.mkdirSync(path.dirname(hook), { recursive: true });
+  fs.writeFileSync(hook, '#!/bin/sh\nexit 1\n');
+  assert.equal(mirrorEnterpriseSnapshot(parent, snap.snapshotId)[0].status, 'blocked',
+    'a planted executable Git hook must block fetch');
+  fs.unlinkSync(hook);
+  assert.ok(mirrorEnterpriseSnapshot(parent, snap.snapshotId).every(m => m.status === 'verified'),
+    'archive should recover after removing unsafe files');
+  assert.ok(fs.readFileSync(companyPom).equals(preserved));
+
   const manifest=importEnterpriseRaw(parent,snap.snapshotId,{maxBytes:1024*1024});
   assert.equal(manifest.status,'verified');
   assert.equal(manifest.materialized,2);

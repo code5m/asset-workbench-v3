@@ -23,6 +23,41 @@ export function readEnterprisePrivateFile(filename: string, limitBytes = 64 * 10
   }
 }
 
+export interface EnterpriseEventLogCheckpoint {
+  size: number; dev: number; ino: number; ctimeMs: number; mtimeMs: number;
+}
+/**
+ * Read only bytes appended since a known-good JSONL checkpoint.
+ * Validate the file descriptor itself before reading: following a symlink
+ * or reading a hard-linked company file is forbidden.
+ */
+export function readEnterpriseEventLogDelta(filename: string,
+  checkpoint?: EnterpriseEventLogCheckpoint,
+  limitBytes = 64 * 1024 * 1024,
+): { text: string; checkpoint: EnterpriseEventLogCheckpoint; reset: boolean } {
+  const fd = fs.openSync(filename, fs.constants.O_RDONLY | NOFOLLOW);
+  try {
+    const stat = fs.fstatSync(fd);
+    if (!stat.isFile() || stat.nlink !== 1 || stat.size > limitBytes) {
+      throw new Error('Enterprise event log is linked, non-regular, or exceeds the safety limit');
+    }
+    const reset = !checkpoint || checkpoint.dev !== stat.dev
+      || checkpoint.ino !== stat.ino || checkpoint.size > stat.size
+      || (checkpoint.size === stat.size && (checkpoint.ctimeMs !== stat.ctimeMs || checkpoint.mtimeMs !== stat.mtimeMs));
+    const start = reset ? 0 : checkpoint.size;
+    const count = stat.size - start;
+    const buffer = Buffer.alloc(count);
+    let offset = 0;
+    while (offset < count) {
+      const n = fs.readSync(fd, buffer, offset, count - offset, start + offset);
+      if (n === 0) throw new Error('Enterprise event log was truncated during read');
+      offset += n;
+    }
+    const next = { size: stat.size, dev: stat.dev, ino: stat.ino, ctimeMs: stat.ctimeMs, mtimeMs: stat.mtimeMs };
+    return { text: buffer.toString('utf8'), checkpoint: next, reset };
+  } finally { fs.closeSync(fd); }
+}
+
 export function appendEnterprisePrivateFile(filename: string, body: Buffer | string, limitBytes = 64 * 1024 * 1024): void {
   const content = Buffer.isBuffer(body) ? body : Buffer.from(body, 'utf8');
   if (content.length > 512 * 1024) throw new Error('Provider event exceeds the safety limit');
