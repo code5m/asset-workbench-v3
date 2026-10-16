@@ -24,7 +24,7 @@ export function readEnterprisePrivateFile(filename: string, limitBytes = 64 * 10
 }
 
 export interface EnterpriseEventLogCheckpoint {
-  size: number; dev: number; ino: number; ctimeMs: number;
+  size: number; dev: number; ino: number; ctimeMs: number; mtimeMs: number;
 }
 /**
  * Read only bytes appended since a known-good JSONL checkpoint.
@@ -43,7 +43,7 @@ export function readEnterpriseEventLogDelta(filename: string,
     }
     const reset = !checkpoint || checkpoint.dev !== stat.dev
       || checkpoint.ino !== stat.ino || checkpoint.size > stat.size
-      || (checkpoint.size === stat.size && checkpoint.ctimeMs !== stat.ctimeMs);
+      || (checkpoint.size === stat.size && (checkpoint.ctimeMs !== stat.ctimeMs || checkpoint.mtimeMs !== stat.mtimeMs));
     const start = reset ? 0 : checkpoint.size;
     const count = stat.size - start;
     const buffer = Buffer.alloc(count);
@@ -53,7 +53,7 @@ export function readEnterpriseEventLogDelta(filename: string,
       if (n === 0) throw new Error('Enterprise event log was truncated during read');
       offset += n;
     }
-    const next = { size: stat.size, dev: stat.dev, ino: stat.ino, ctimeMs: stat.ctimeMs };
+    const next = { size: stat.size, dev: stat.dev, ino: stat.ino, ctimeMs: stat.ctimeMs, mtimeMs: stat.mtimeMs };
     return { text: buffer.toString('utf8'), checkpoint: next, reset };
   } finally { fs.closeSync(fd); }
 }
