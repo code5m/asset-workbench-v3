@@ -34,6 +34,9 @@ import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adopt
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { setupProjectProviders } from './providerSetup.ts';
 import { attachEnterpriseWorkspaceReadOnly, enterpriseApiRoot, listAttachedEnterpriseWorkspaces } from './enterpriseAttachment.ts';
+import { buildEnterpriseJavaSymbolGraph } from './enterpriseSemanticJava.ts';
+import { buildEnterpriseDynamicSqlLineage } from './enterpriseSqlLineage.ts';
+import { proposeEnterpriseAiRefactor, validateEnterpriseAiRefactor } from './enterpriseAiRefactor.ts';
 import { importEnterpriseRaw, verifyEnterpriseRaw } from './enterpriseImport.ts';
 import { mirrorEnterpriseSnapshot } from './enterpriseMirror.ts';
 import { buildEnterpriseMavenGraph } from './enterpriseGraph.ts';
@@ -160,6 +163,42 @@ export function createHandler() {
       }
       // Enterprise read-only multi-repository evidence. Never fetch, checkout, or
       // mutate source repos; snapshots reside in central managed storage.
+      if (req.method === 'POST' && pathPart === '/enterprise/semantic/java') {
+        const body = await readBody(req);
+        if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
+        sendJson(res, 200, buildEnterpriseJavaSymbolGraph(
+          enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.snapshotId,
+          typeof body.maxFiles === 'number' ? body.maxFiles : undefined)); return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/semantic/sql') {
+        const body = await readBody(req);
+        if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
+        sendJson(res, 200, buildEnterpriseDynamicSqlLineage(
+          enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.snapshotId,
+          typeof body.maxFiles === 'number' ? body.maxFiles : undefined)); return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/refactor/propose') {
+        const body = await readBody(req);
+        if (typeof body.snapshotId !== 'string' || typeof body.repository !== 'string'
+          || typeof body.path !== 'string') throw new Error('snapshotId, repository and path required');
+        try {
+          sendJson(res, 200, await proposeEnterpriseAiRefactor(
+            enterpriseApiRoot(body.workspaceId, getProjectRoot()), {
+              snapshotId: body.snapshotId, repository: body.repository, path: body.path,
+              model: typeof body.model === 'string' ? body.model : undefined,
+            }));
+        } catch (e) { sendJson(res, 422, { status: 'blocked', error: (e as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/refactor/validate') {
+        const body = await readBody(req);
+        if (typeof body.proposalId !== 'string') throw new Error('proposalId required');
+        try {
+          sendJson(res, 200, validateEnterpriseAiRefactor(
+            enterpriseApiRoot(body.workspaceId, getProjectRoot()), body.proposalId));
+        } catch (e) { sendJson(res, 422, { status: 'blocked', error: (e as Error).message }); }
+        return;
+      }
       if (req.method === 'POST' && pathPart === '/enterprise/mirrors/sync') {
         const body = await readBody(req);
         if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
