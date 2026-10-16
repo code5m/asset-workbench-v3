@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { runGuardedProcess } from './enterpriseSubprocess.ts';
 import { APP_ROOT } from './config.ts';
 import { enterpriseStoreFor, listEnterpriseSnapshots } from './enterpriseWorkspace.ts';
 import type { RawImportManifest } from './enterpriseImport.ts';
@@ -23,7 +23,7 @@ function checkedRelative(value: string) {
   if (!value || value.startsWith('/') || value.includes('\\') || value.includes('\0')
     || value.split('/').some(x => !x || x === '.' || x === '..')) throw new Error('Unsafe source path');
 }
-export function buildEnterpriseDynamicSqlLineage(root: string, snapshotId: string, maxFiles = 2000): DynamicSqlReport {
+export async function buildEnterpriseDynamicSqlLineage(root: string, snapshotId: string, maxFiles = 2000): Promise<DynamicSqlReport> {
   const snapshot = listEnterpriseSnapshots(root).find(v => v.snapshotId === snapshotId);
   if (!snapshot) throw new Error('Unknown immutable workspace snapshot');
   const store = enterpriseStoreFor(root);
@@ -57,14 +57,14 @@ export function buildEnterpriseDynamicSqlLineage(root: string, snapshotId: strin
   const output = path.join(store, 'semantic', snapshotId, 'dynamic-sql.json');
   const venvPython = path.join(APP_ROOT, '.asset-workbench-data', 'toolchains', 'sql-python', 'bin', 'python3');
   const python = fs.existsSync(venvPython) ? venvPython : 'python3';
-  const run = spawnSync(python,
+  const run = await runGuardedProcess(python,
     [path.join(APP_ROOT, 'tools', 'semantic', 'mybatis_lineage.py'), stage, output], {
-    cwd: APP_ROOT, encoding: 'utf8', maxBuffer: 1024 * 1024, timeout: 150_000,
+    cwd: APP_ROOT, maxOutputBytes: 1024 * 1024, timeoutMs: 150_000,
     env: { PATH: process.env.PATH || '', HOME: process.env.HOME || '', LANG: 'C.UTF-8', PYTHONNOUSERSITE: '0' },
   });
-  if (run.error || run.status !== 0 || !fs.existsSync(output)) {
+  if (run.error || run.exit !== 0 || !fs.existsSync(output)) {
     return { ...base, reason: 'MyBatis / SQLGlot 解析引擎不可用。请安装 Python3 和 tools/semantic/requirements.txt。',
-      errors: [(run.error?.message || run.stderr || 'SQL parser failed').slice(0, 600)] };
+      errors: [(run.error || run.stderr || 'SQL parser failed').slice(0, 600)] };
   }
   const report = JSON.parse(fs.readFileSync(output, 'utf8')) as DynamicSqlReport;
   for (const statement of report.statements) {
