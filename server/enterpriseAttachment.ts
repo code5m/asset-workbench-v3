@@ -84,7 +84,9 @@ export function enterpriseApiRoot(workspaceId: unknown, activeRoot: string): str
     if (workspaceId !== undefined && workspaceId !== null && workspaceId !== '') throw new Error('业务实例不能访问其他工作区');
     return activeRoot;
   }
-  if (workspaceId === undefined || workspaceId === null || workspaceId === '') return activeRoot;
+  if (workspaceId === undefined || workspaceId === null || workspaceId === '') {
+    throw new Error('中央 Framework 必须先只读接入企业项目并选择其工作区 ID；不允许隐式使用全局项目目录');
+  }
   centralOnly();
   if (typeof workspaceId !== 'string' || !/^enterprise-[0-9a-f]{24}$/.test(workspaceId)) throw new Error('Invalid workspace ID');
   const item = read().find(x => x.workspaceId === workspaceId);
