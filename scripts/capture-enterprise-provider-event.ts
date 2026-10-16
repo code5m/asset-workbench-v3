@@ -19,17 +19,17 @@ function firstText(...values: unknown[]): string {
 const args = process.argv.slice(2);
 const providerIndex = args.findIndex(a => a === '--provider');
 const provider = (providerIndex >= 0 ? args[providerIndex + 1] : args.find(a => a.startsWith('--provider='))?.slice(11)) || 'codex';
-const input = fs.readFileSync(0, 'utf8');
-if (!input.trim() || Buffer.byteLength(input) > 2_000_000) process.exit(0);
-try {
+async function processPayload(input: string): Promise<void> {
+  if (!input.trim() || Buffer.byteLength(input) > 2_000_000) return;
+  try {
   const event = JSON.parse(input) as Record<string, any>;
   const properties = (event.properties ?? event.event?.properties ?? {}) as Record<string, any>;
   const hookEventName = firstText(event.hook_event_name, event.hookEventName, event.type,
     event.event?.type, properties.hook_event_name) || 'Notification';
   const providerSessionId = firstText(event.session_id, event.sessionId, event.sessionID,
     properties.sessionID, properties.sessionId, properties.info?.sessionID,
-    properties.message?.sessionID, properties.part?.sessionID);
-  if (!providerSessionId) process.exit(0);
+    properties.message?.sessionID, properties.part?.sessionID, properties.info?.id, properties.session?.id);
+  if (!providerSessionId) return;
   const cwd = firstText(event.cwd, event.projectDirectory, event.directory,
     event.project?.directory, properties.cwd, properties.directory, observedCwd);
   const stamp = firstText(event.timestamp, event.receivedAt) || new Date().toISOString();
@@ -66,6 +66,17 @@ try {
       properties.part?.text, properties.message?.text),
   });
 } catch {
-  // Hook integrations are observation-only. A rejected/malformed event must
-  // never interrupt the user's Codex/CodeBuddy/OpenCode/Trae work.
+    // Observation-only: source programs must never depend on capture success.
+  }
+}
+if (args.includes('--stream')) {
+  // A single helper handles all events in the OpenCode plugin lifetime.
+  // This avoids hundreds of synchronous subprocesses for streamed tokens.
+  const { createInterface } = await import('node:readline');
+  const reader = createInterface({ input: process.stdin, crlfDelay: Infinity });
+  for await (const line of reader) {
+    await processPayload(line);
+  }
+} else {
+  await processPayload(fs.readFileSync(0, 'utf8'));
 }
