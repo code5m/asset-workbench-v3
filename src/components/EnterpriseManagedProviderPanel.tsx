@@ -94,6 +94,14 @@ export function EnterpriseManagedProviderPanel(props: {
             '。需要在真实 Provider 内结束一次会话后才可以确认自动采集是否有效。');
           await load();
         })}>安装用户级采集 Hook（需授权）</button>
+      <button className="secondary-button" disabled={busy}
+        onClick={() => void action(async () => {
+          if (!window.confirm('将停用当前系统用户 HOME 中 V3 自己安装的 Codex、CodeBuddy、Trae 和 OpenCode Hooks。其他受管工作区也会停止新增采集，但历史会话、聊天、知识和原有自定义 Hooks 全部保留。确定卸载吗？')) return;
+          const result = await assetClient.removeEnterpriseProviderHooks(workspaceId);
+          setMessage(result.results.map(x => x.provider + '：' + x.status).join('；') +
+            '。已保留所有历史记录与用户级配置备份。');
+          await load();
+        })}>卸载 V3 用户级采集 Hook（保留个人配置）</button>
     </div>
     {providers.length > 0 ? <div className="repository-list">
       {providers.map(p => <div className="repository-row" key={p.provider}>
