@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { runGuardedProcess } from './enterpriseSubprocess.ts';
 import { APP_ROOT } from './config.ts';
 import { enterpriseStoreFor, listEnterpriseSnapshots } from './enterpriseWorkspace.ts';
 import type { RawImportManifest } from './enterpriseImport.ts';
@@ -29,7 +29,7 @@ function safeRelative(p: string) {
   if (!p || p.startsWith('/') || p.includes('\\') || p.includes('\0')
     || p.split('/').some(x => !x || x === '.' || x === '..')) throw new Error('Unsafe source path in Raw manifest');
 }
-export function buildEnterpriseJavaSymbolGraph(root: string, snapshotId: string, maxFiles = 3500): SymbolIndexResult {
+export async function buildEnterpriseJavaSymbolGraph(root: string, snapshotId: string, maxFiles = 3500): Promise<SymbolIndexResult> {
   const snapshot = listEnterpriseSnapshots(root).find(x => x.snapshotId === snapshotId);
   if (!snapshot) throw new Error('Unknown frozen Snapshot');
   const store = enterpriseStoreFor(root);
@@ -73,13 +73,13 @@ export function buildEnterpriseJavaSymbolGraph(root: string, snapshotId: string,
   };
   if (!byStagedPath.size) return { ...base, reason: '没有可分析的 Java Raw 文件。请先完整归档快照。' };
   const javaFile = path.join(APP_ROOT, 'tools', 'semantic', 'SymbolIndexer.java');
-  const run = spawnSync('java', ['-Xmx1024m', javaFile, sourceRoot, outputFile], {
-    cwd: APP_ROOT, timeout: 180_000, encoding: 'utf8', maxBuffer: 2 * 1024 * 1024,
+  const run = await runGuardedProcess('java', ['-Xmx1024m', javaFile, sourceRoot, outputFile], {
+    cwd: APP_ROOT, timeoutMs: 180_000, maxOutputBytes: 2 * 1024 * 1024,
     env: { PATH: process.env.PATH || '', HOME: process.env.HOME || '', LANG: 'C.UTF-8' },
   });
-  if (run.error || run.status !== 0 || !fs.existsSync(outputFile)) {
+  if (run.error || run.exit !== 0 || !fs.existsSync(outputFile)) {
     return { ...base, reason: 'JavaCompiler 语义解析不可用，请检查 JDK 17+ 和分析预算。',
-      diagnostics: [(run.error?.message || run.stderr || 'JavaCompiler failed').slice(0, 600)] };
+      diagnostics: [(run.error || run.stderr || 'JavaCompiler failed').slice(0, 600)] };
   }
   const events = fs.readFileSync(outputFile, 'utf8').split('\n').filter(Boolean).map(x => JSON.parse(x) as RawEvent);
   const methods = new Map<string, Array<{ repository: string; path: string; commit: string; line: number }>>();
