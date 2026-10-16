@@ -12,6 +12,7 @@ export interface EnterpriseProviderEvent {
   cwd?: string; observedCwd?: string; eventId?: string;
   timestamp?: string; rawPayload?: Record<string, unknown>;
   role?: Role; content?: string;
+  captureSource?: 'native-hook' | 'official-import';
 }
 export interface EnterpriseCaptureState {
   schemaVersion: 1; id: string; workspaceId: string; projectRoot: string;
@@ -168,7 +169,7 @@ export function appendEnterpriseProviderEvent(input: EnterpriseProviderEvent): E
       state = {
         schemaVersion: 1, id, workspaceId: origin.workspaceId, projectRoot: origin.projectRoot,
         repository: origin.repository, module: origin.module, cwd: origin.cwd,
-        provider, providerSessionId, captureSource: 'native-hook', status: 'active',
+        provider, providerSessionId, captureSource: input.captureSource || 'native-hook', status: 'active',
         startedAt: time, updatedAt: time, acceptedEvents: 0, duplicates: 0,
         attribution: origin.attribution,
       };
