@@ -48,14 +48,14 @@ try {
 
   const alternate = path.join(mirror, 'objects', 'info', 'alternates');
   fs.mkdirSync(path.dirname(alternate), { recursive: true });
-  fs.writeFileSync(alternate, path.join(parent, mirrors[0].repository, '.git', 'objects') + '\\n');
+  fs.writeFileSync(alternate, path.join(parent, mirrors[0].repository, '.git', 'objects') + '\n');
   assert.equal(mirrorEnterpriseSnapshot(parent, snap.snapshotId)[0].status, 'blocked',
     'external object alternates must not silently reference company Git data');
   fs.unlinkSync(alternate);
 
   const hook = path.join(mirror, 'hooks', 'reference-transaction');
   fs.mkdirSync(path.dirname(hook), { recursive: true });
-  fs.writeFileSync(hook, '#!/bin/sh\\nexit 1\\n');
+  fs.writeFileSync(hook, '#!/bin/sh\nexit 1\n');
   assert.equal(mirrorEnterpriseSnapshot(parent, snap.snapshotId)[0].status, 'blocked',
     'a planted executable Git hook must block fetch');
   fs.unlinkSync(hook);
