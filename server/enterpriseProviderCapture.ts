@@ -75,10 +75,11 @@ export function resolveEnterpriseProviderOrigin(cwd: string, observedCwd?: strin
   let attribution: EnterpriseCaptureState['attribution'] = 'provider-reported-cwd';
   if (observedCwd) {
     const seen = canonicalDir(observedCwd);
-    if (within(seen, projectRoot)) {
-      if (seen !== actual) throw new Error('Hook process cwd and reported project cwd disagree');
-      attribution = 'observed-process-cwd';
+    if (!within(seen, projectRoot)) {
+      throw new Error('Hook process cwd outside the provider-reported managed workspace');
     }
+    if (seen !== actual) throw new Error('Hook process cwd and reported project cwd disagree');
+    attribution = 'observed-process-cwd';
   }
   const repo = gitRepo(actual, projectRoot);
   const relativeRepo = repo ? path.relative(projectRoot, repo).split(path.sep).join('/') || '.' : null;
