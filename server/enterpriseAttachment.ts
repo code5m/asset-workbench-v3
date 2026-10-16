@@ -89,5 +89,7 @@ export function enterpriseApiRoot(workspaceId: unknown, activeRoot: string): str
   if (typeof workspaceId !== 'string' || !/^enterprise-[0-9a-f]{24}$/.test(workspaceId)) throw new Error('Invalid workspace ID');
   const item = read().find(x => x.workspaceId === workspaceId);
   if (!item || digest(item.projectRoot) !== workspaceId.slice('enterprise-'.length)) throw new Error('Unknown attached enterprise workspace');
-  return validatedRoot(item.projectRoot);
+  const canonical = validatedRoot(item.projectRoot);
+  if (canonical !== item.projectRoot) throw new Error('Attached enterprise root identity changed; re-register the project');
+  return canonical;
 }
