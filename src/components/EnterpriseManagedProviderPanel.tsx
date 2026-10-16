@@ -3,12 +3,13 @@ import { assetClient } from '../services/assetClient';
 
 type Session = {
   id: string; repository: string | null; module: string | null; provider: string;
+  repositories?: string[]; modules?: string[]; endedBy?: 'native-hook' | 'official-import';
   providerSessionId: string; status: string; acceptedEvents: number; updatedAt: string;
   transcriptPath?: string;
 };
 type Provider = {
   provider: string; configuration: string; captureVerified: boolean;
-  completedSessions: number; detail: string;
+  completedSessions: number; importedSessions?: number; detail: string;
 };
 type Note = {
   id: string; title: string; content: string; repository: string | null; module: string | null;
@@ -30,7 +31,7 @@ export function EnterpriseManagedProviderPanel(props: {
   const [legacySelected, setLegacySelected] = useState('');
   const [repositories, setRepositories] = useState<string[]>([]);
   const [filter, setFilter] = useState('');
-  const [sessionEvents, setSessionEvents] = useState<Array<{ kind: string; content: string; timestamp: string }>>([]);
+  const [sessionEvents, setSessionEvents] = useState<Array<{ kind: string; content: string; timestamp: string; repository?: string | null; module?: string | null }>>([]);
   const [selectedId, setSelectedId] = useState('');
   const [knowledgeTitle, setKnowledgeTitle] = useState('');
   const [knowledgeContent, setKnowledgeContent] = useState('');
@@ -77,7 +78,8 @@ export function EnterpriseManagedProviderPanel(props: {
     </section>;
   }
   const visible = sessions.filter(s => !filter
-    || [s.repository, s.module, s.provider, s.providerSessionId]
+    || [s.repository, s.module, s.provider, s.providerSessionId,
+        ...(s.repositories ?? []), ...(s.modules ?? [])]
       .some(value => value?.toLowerCase().includes(filter.trim().toLowerCase())));
   return <section className="workspace-card" aria-label="企业 Provider 与知识工作台">
     <h3>Provider、聊天和知识资产（统一归属）</h3>
@@ -97,7 +99,8 @@ export function EnterpriseManagedProviderPanel(props: {
       {providers.map(p => <div className="repository-row" key={p.provider}>
         <strong>{p.provider}</strong>
         <span>{p.configuration === 'configured' ? '已配置' : p.configuration === 'import-only' ? '仅导入/授权' : '未配置'}</span>
-        <span>{p.captureVerified ? '存在已结束会话' : '等待真实会话'}</span>
+        <span>{p.captureVerified ? '有 Hook 完成记录（待官方 E2E）'
+          : p.importedSessions ? '仅历史导入 · ' + p.importedSessions + ' 份' : '等待真实 Hook 会话'}</span>
         <small>{p.detail}</small>
       </div>)}
     </div> : <p className="detail-summary">尚无 Provider 诊断结果；点击刷新。</p>}
@@ -108,7 +111,10 @@ export function EnterpriseManagedProviderPanel(props: {
     <div className="repository-list">
       {visible.slice(0, 80).map(session => <div className="repository-row" key={session.id}>
         <div><strong>{session.provider}</strong> · {session.status} · {session.acceptedEvents} 条事件
-          <small>{session.repository || '根工作区'} / {session.module || '模块尚未确权'}</small></div>
+          <small>主归属：{session.repository || '根工作区'} / {session.module || '模块尚未确权'}</small>
+          {(session.repositories?.length ?? 0) > 1 || (session.modules?.length ?? 0) > 1
+            ? <small>跨仓库：{session.repositories?.join('、')}；涉及模块：{session.modules?.join('、')}</small> : null}
+          {session.endedBy === 'official-import' ? <small>官方历史导入归档（非实时 Hook SessionEnd）</small> : null}</div>
         <button type="button" className="secondary-button" disabled={busy} onClick={() => void action(async () => {
           const result = await assetClient.enterpriseProviderEvents(workspaceId, session.id);
           setSelectedId(session.id);
@@ -119,7 +125,9 @@ export function EnterpriseManagedProviderPanel(props: {
     </div>
     {selectedId ? <div className="workspace-card"><h3>会话详情 · {selectedId}</h3>
       {sessionEvents.map((event, i) => <p key={i} className="detail-summary">
-        <strong>{event.kind}</strong> · {event.timestamp} · {event.content?.slice(0, 500) || '事件元数据'}
+        <strong>{event.kind}</strong> · {event.timestamp}
+        {event.repository ? ' · ' + event.repository : ''}{event.module ? '/' + event.module : ''}
+        {' · '}{event.content?.slice(0, 500) || '事件元数据'}
       </p>)}
     </div> : null}
     <h3>导入历史 Codex 会话</h3>
@@ -130,9 +138,10 @@ export function EnterpriseManagedProviderPanel(props: {
       <button className="secondary-button" disabled={busy || !historyPath.trim()}
         onClick={() => void action(async () => {
           const result = await assetClient.enterpriseCommand<{
-            imported: number; duplicates: number; workspaceId: string;
+            imported: number; duplicates: number; workspaceId: string; finalized: boolean;
           }>('provider/history/import', { provider: 'codex', path: historyPath.trim() }, workspaceId);
-          setMessage('Codex 已导入 ' + result.imported + ' 条真实记录，重复跳过 ' + result.duplicates + ' 条。');
+          setMessage('Codex 已导入 ' + result.imported + ' 条历史消息，重复跳过 ' + result.duplicates
+            + ' 条；' + (result.finalized ? '聊天文档已归档（历史导入，不代表实时 Hook 已验证）。' : '未生成完整会话，请核对官方来源。'));
           await load();
         })}>按真实 cwd 导入</button>
     </div>
