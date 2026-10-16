@@ -3,11 +3,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createHash, randomUUID } from 'node:crypto';
 import { attachEnterpriseWorkspaceReadOnly, detachEnterpriseWorkspaceReadOnly, enableEnterpriseWorkspaceManaged,
   auditEnterpriseWorkspaceManaged, rollbackEnterpriseWorkspaceManaged } from '../server/enterpriseAttachment.ts';
 import { centralEnterpriseStore, enterpriseEntryForRoot, enableManagedEnterpriseStorage } from '../server/enterpriseStorage.ts';
 import { enterpriseStoreFor, freezeEnterpriseWorkspace, listEnterpriseSnapshots } from '../server/enterpriseWorkspace.ts';
-import { appendEnterpriseProviderEvent, listEnterpriseProviderSessions,
+import { appendEnterpriseProviderEvent, listEnterpriseProviderSessions, readEnterpriseCaptureEvents,
   resolveEnterpriseProviderOrigin } from '../server/enterpriseProviderCapture.ts';
 import { setupEnterpriseUserProviderHooks, enterpriseProviderStatuses } from '../server/enterpriseProviderSetup.ts';
 import { importEnterpriseCodexHistory } from '../server/enterpriseProviderHistory.ts';
@@ -152,6 +153,63 @@ try {
   assert.ok(!fs.readFileSync(path.join(root,'.asset-workbench-data','capture','sessions',ended.state.id,'events.jsonl'),'utf8')
     .includes('never-store-this'));
   assert.ok(listEnterpriseProviderSessions(root).some(s => s.id === ended.state.id && s.status === 'ended'));
+  // Adversarial file-level boundaries: directory checks must also protect
+  // individual events.jsonl, state.json, transcripts and knowledge files.
+  const originalPom = fs.readFileSync(path.join(module, 'pom.xml'));
+  const captureId = (provider: string, sid: string) =>
+    'enterprise_capture_' + createHash('sha256')
+      .update(workspaceId + ':' + provider + ':' + sid).digest('hex').slice(0, 48);
+  const privateSessions = path.join(root, '.asset-workbench-data', 'capture', 'sessions');
+  const eventSymlinkId = captureId('codebuddy', 'symlink-event-test');
+  const eventSymlinkDir = path.join(privateSessions, eventSymlinkId);
+  fs.mkdirSync(eventSymlinkDir, { recursive: true });
+  const eventSymlink = path.join(eventSymlinkDir, 'events.jsonl');
+  fs.symlinkSync(path.join(module, 'pom.xml'), eventSymlink);
+  assert.throws(() => appendEnterpriseProviderEvent({
+    ...original, providerSessionId: 'symlink-event-test', eventId: 'symlink:event',
+  }), /ELOOP|symbolic|symlink|linked|file/i);
+  fs.unlinkSync(eventSymlink);
+  assert.ok(fs.readFileSync(path.join(module, 'pom.xml')).equals(originalPom),
+    'A symlinked enterprise event log must NEVER write the Maven source file');
+  // A hard link is equally dangerous even though it is not a symlink.
+  fs.linkSync(path.join(module, 'pom.xml'), eventSymlink);
+  assert.throws(() => appendEnterpriseProviderEvent({
+    ...original, providerSessionId: 'symlink-event-test', eventId: 'hardlink:event',
+  }), /linked|non-regular/i);
+  fs.unlinkSync(eventSymlink);
+  assert.ok(fs.readFileSync(path.join(module, 'pom.xml')).equals(originalPom));
+  // Transcript replacement uses an atomic rename, never overwrites its target.
+  const transcriptId = 'symlink-transcript-test';
+  appendEnterpriseProviderEvent({ ...original, providerSessionId: transcriptId,
+    hookEventName: 'SessionStart', eventId: 'link:start' });
+  const transcriptFile = path.join(root, '.asset-workbench-data', 'conversations', 'transcripts',
+    captureId('codebuddy', transcriptId) + '.md');
+  fs.mkdirSync(path.dirname(transcriptFile), { recursive: true });
+  fs.symlinkSync(path.join(module, 'pom.xml'), transcriptFile);
+  const safeEnd = appendEnterpriseProviderEvent({ ...original, providerSessionId: transcriptId,
+    hookEventName: 'SessionEnd', eventId: 'link:end' });
+  assert.equal(safeEnd.state.status, 'ended');
+  assert.equal(fs.lstatSync(transcriptFile).isSymbolicLink(), false);
+  assert.ok(fs.readFileSync(path.join(module, 'pom.xml')).equals(originalPom));
+  // Retry an End event interrupted between durable log append and state update.
+  const recoverySession = 'recover-ended-session';
+  const recoveryStart = appendEnterpriseProviderEvent({ ...original,
+    providerSessionId: recoverySession, hookEventName: 'SessionStart', eventId: 'recovery:start' });
+  fs.appendFileSync(path.join(privateSessions, recoveryStart.state.id, 'events.jsonl'),
+    JSON.stringify({ eventId: 'recovery:end', kind: 'session.ended',
+      timestamp: new Date().toISOString(), content: '' }) + '\n');
+  const retry = appendEnterpriseProviderEvent({ ...original, providerSessionId: recoverySession,
+    hookEventName: 'SessionEnd', eventId: 'recovery:end', content: '' });
+  assert.equal(retry.duplicate, true);
+  assert.equal(retry.state.status, 'ended');
+  assert.ok(fs.existsSync(path.join(root, '.asset-workbench-data', retry.state.transcriptPath!)));
+  // The UI endpoint may expose conversational content but must NEVER expose
+  // complete raw provider payloads containing unrecognized secret fields.
+  const visible = readEnterpriseCaptureEvents(root, ended.state.id) as Array<Record<string, unknown>>;
+  assert.ok(visible.length >= 2);
+  assert.ok(visible.every(row => !Object.hasOwn(row, 'rawPayload')));
+  assert.ok(!JSON.stringify(visible).includes('never-store-this'));
+
 
   // User-level global hooks: existing personal settings preserved, no child repository configuration.
   const settings = path.join(home, '.codebuddy', 'settings.json');
@@ -231,6 +289,13 @@ try {
   const note = createEnterpriseKnowledgeNote(root,{title:'Payment decision',content:'Use exactly-once transfer semantics',repository:'phantom-payment',module:'phantom-payment/service'});
   assert.equal(listEnterpriseKnowledgeNotes(root)[0]?.id,note.id);
   assert.ok(fs.existsSync(path.join(root,'.asset-workbench-data','knowledge','notes',note.id+'.json')));
+  const linkedKnowledgeId = 'knowledge_' + randomUUID();
+  const linkedKnowledge = path.join(root, '.asset-workbench-data', 'knowledge', 'notes',
+    linkedKnowledgeId + '.json');
+  fs.symlinkSync(path.join(module, 'pom.xml'), linkedKnowledge);
+  assert.equal(listEnterpriseKnowledgeNotes(root).some(item => item.id === linkedKnowledgeId), false);
+  fs.unlinkSync(linkedKnowledge);
+
   assert.equal(git(a,'status','--porcelain'),paymentBefore);
   assert.equal(git(b,'status','--porcelain'),operationBefore);
   assert.equal(isIgnoredRelativePath('.asset-workbench-data/provider/events'),true);
