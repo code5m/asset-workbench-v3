@@ -9,8 +9,41 @@ export interface MirrorResult {
   mirrorPath?: string; reason?: string; bytes?: number;
 }
 const hash = (s: string) => createHash('sha256').update(s).digest('hex');
+
+/**
+ * A bare Git mirror is an implementation detail of V3, not a trusted user
+ * checkout. A symlink, hard link, Git object alternate or planted Git hook
+ * inside it may write to/read from a separate company Git repository.
+ * Fail closed before allowing any Git operation in that mirror.
+ */
+function assertIsolatedManagedMirror(directory: string): void {
+  const top = fs.lstatSync(directory);
+  if (!top.isDirectory() || top.isSymbolicLink()) throw new Error('Managed Git mirror is not a private ordinary directory');
+  const pending: Array<{ file: string; relative: string }> = [{ file: directory, relative: '' }];
+  let inspected = 0;
+  while (pending.length) {
+    const current = pending.pop()!;
+    for (const entry of fs.readdirSync(current.file, { withFileTypes: true })) {
+      const filename = path.join(current.file, entry.name);
+      const relative = current.relative ? current.relative + '/' + entry.name : entry.name;
+      const stat = fs.lstatSync(filename);
+      if (++inspected > 150_000) throw new Error('Managed Git mirror exceeded safety inspection limit');
+      if (stat.isSymbolicLink()) throw new Error('Managed Git mirror contains unsafe symlink: ' + relative);
+      if (stat.isDirectory()) { pending.push({ file: filename, relative }); continue; }
+      if (!stat.isFile() || stat.nlink !== 1)
+        throw new Error('Managed Git mirror contains linked or special file: ' + relative);
+      if (relative === 'objects/info/alternates')
+        throw new Error('Managed Git mirror relies on an external object store: ' + relative);
+      // No hooks are necessary for an archive Mirror. Even a legitimate hook
+      // must not execute while V3 is updating its own Git object database.
+      if (relative.startsWith('hooks/') && !relative.endsWith('.sample'))
+        throw new Error('Managed Git mirror contains executable hook configuration: ' + relative);
+    }
+  }
+}
+
 function git(dir: string, args: string[], timeout = 120_000): string {
-  return execFileSync('git', ['-C', dir, ...args], {
+  return execFileSync('git', ['-c', 'core.hooksPath=/dev/null', '-C', dir, ...args], {
     encoding: 'utf8', timeout, maxBuffer: 4 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_OPTIONAL_LOCKS: '0' },
   }).trim();
@@ -33,18 +66,21 @@ export function mirrorEnterpriseSnapshot(rootInput: string, snapshotId: string, 
         const temp = path.join(home, '.stage-' + randomUUID());
         try {
           // No hard links, no network, no mutations in original checkout.
-          execFileSync('git', ['clone', '--mirror', '--no-hardlinks', '--local', source, temp], {
+          execFileSync('git', ['-c', 'core.hooksPath=/dev/null', 'clone', '--mirror', '--no-hardlinks', '--local', source, temp], {
             encoding: 'utf8', timeout: 120_000, maxBuffer: 4 * 1024 * 1024,
             stdio: ['ignore', 'pipe', 'pipe'],
             env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_OPTIONAL_LOCKS: '0' },
           });
+          assertIsolatedManagedMirror(temp);
           fs.renameSync(temp, destination);
         } finally { if (fs.existsSync(temp)) fs.rmSync(temp, { recursive: true, force: true }); }
       } else {
+        assertIsolatedManagedMirror(destination);
         // Fetch only from the authorized local checkout; never from remote.origin.url.
         git(destination, ['fetch', '--no-tags', '--force', source,
           '+refs/heads/*:refs/heads/*', '+refs/tags/*:refs/tags/*']);
       }
+      assertIsolatedManagedMirror(destination);
       // Pinned commit can be reachable without a branch in a local checkout.
       // Reject rather than claiming that a missing object was archived.
       const commit = git(destination, ['rev-parse', '--verify', repo.commit + '^{commit}']);
