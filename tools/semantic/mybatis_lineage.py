@@ -105,6 +105,11 @@ def render_children(node, fragments, namespace, predicates=(), depth=0):
     return possibilities
 
 
+def table_key(table):
+    """Canonical table identity without query-specific aliases."""
+    return ".".join(part for part in (table.catalog, table.db, table.name) if part)
+
+
 def table_lineage(sql):
     clean = PARAM.sub("?", sql)
     dynamic_identifiers = UNSAFE.findall(clean)
@@ -117,24 +122,29 @@ def table_lineage(sql):
     try:
         trees = sqlglot.parse(clean, read="mysql", error_level="RAISE")
         reads, writes, columns = set(), set(), set()
+        unsupported = []
         for tree in trees:
             if tree is None:
                 continue
+            if isinstance(tree, exp.Command):
+                unsupported.append("Unparsed SQL command")
             if isinstance(tree, (exp.Insert, exp.Update, exp.Delete, exp.Merge, exp.Create)):
                 target = tree.this
                 if isinstance(target, exp.Schema):
                     target = target.this
                 if isinstance(target, exp.Table):
-                    writes.add(target.sql(dialect="mysql"))
+                    writes.add(table_key(target))
             ctes = {cte.alias_or_name.lower() for cte in tree.find_all(exp.CTE)}
             for table in tree.find_all(exp.Table):
-                value = table.sql(dialect="mysql")
+                value = table_key(table)
                 if table.name.lower() not in ctes and value not in writes:
                     reads.add(value)
             for col in tree.find_all(exp.Column):
                 columns.add(col.sql(dialect="mysql"))
+        if not reads and not writes and re.search(r"\\b(?:FROM|JOIN|UPDATE|INTO)\\b", clean, re.I):
+            unsupported.append("Expected SQL table reference was not resolved")
         return {"reads": sorted(reads), "writes": sorted(writes), "columns": sorted(columns),
-                "parseError": None, "dynamicIdentifiers": dynamic_identifiers}
+                "parseError": "; ".join(unsupported) or None, "dynamicIdentifiers": dynamic_identifiers}
     except Exception as exc:
         return {"reads": [], "writes": [], "columns": [], "parseError": str(exc)[:260],
                 "dynamicIdentifiers": dynamic_identifiers}
@@ -183,7 +193,8 @@ def analyze(directory: Path):
         for statement, text, conditions in items:
             semantic = table_lineage(text or "")
             unresolved = bool(semantic["parseError"] or semantic["dynamicIdentifiers"]
-                              or any(x.startswith(("unresolved ", "recursive ", "foreach ")) for x in conditions))
+                              or any(x.startswith(("unresolved ", "recursive ", "foreach ",
+                                                   "if:", "else:", "when:", "otherwise")) for x in conditions))
             if unresolved: incomplete = True
             results.append({
                 "file": relative, "statement": statement, "conditions": list(conditions),
