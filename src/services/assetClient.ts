@@ -164,34 +164,43 @@ export interface InstanceSelfTestView {
 }
 
 export const assetClient = {
-  async enterpriseCommand<T>(action: string, body: Record<string, unknown>): Promise<T> {
+  async enterpriseCommand<T>(action: string, body: Record<string, unknown>, workspaceId?: string): Promise<T> {
     const res = await fetch(`${BASE}/enterprise/${action}`, { method: 'POST',
-      headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      headers: { 'content-type': 'application/json' }, body: JSON.stringify(workspaceId ? { ...body, workspaceId } : body) });
     const value = await res.json() as T & { error?: string };
     if (!res.ok) throw new ApiError(res.status, value.error ?? res.statusText);
     return value;
   },
-  async enterpriseGet<T>(route: string): Promise<T> {
-    return getJson<T>(`${BASE}/enterprise/${route}`);
+  async enterpriseGet<T>(route: string, workspaceId?: string): Promise<T> {
+    return getJson<T>(`${BASE}/enterprise/${route}${workspaceId ? (route.includes('?') ? '&' : '?') + 'workspaceId=' + encodeURIComponent(workspaceId) : ''}`);
   },
-  enterpriseDiscovery(): Promise<{ root: string; scannedAt: string; repositories: Array<{ path: string; remote?: string; branch: string | null; headCommit: string; dirty: boolean; modifiedCount: number; untrackedCount: number }>; warnings: string[] }> {
-    return getJson(`${BASE}/enterprise/discovery`);
+  listAttachedEnterprise(): Promise<{ workspaces: Array<{ workspaceId: string; projectRoot: string; label: string; sourcePolicy: 'read-only' }> }> {
+    return getJson(`${BASE}/enterprise/projects/list`);
   },
-  enterpriseSnapshots(): Promise<{ snapshots: Array<{ snapshotId: string; createdAt: string; source: string; repositories: Array<{ path: string; commit: string; tree: string; sourceRef: string }>; warnings: string[] }> }> {
-    return getJson(`${BASE}/enterprise/snapshots`);
+  async attachEnterpriseReadOnly(projectRoot: string, label?: string): Promise<{ workspace: { workspaceId: string; projectRoot: string; label: string }; repositoryCount: number; warnings: string[]; sourceFilesModified: false }> {
+    const res = await fetch(`${BASE}/enterprise/projects/attach`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ projectRoot, label }) });
+    const result = await res.json() as { workspace: { workspaceId: string; projectRoot: string; label: string }; repositoryCount: number; warnings: string[]; sourceFilesModified: false; error?: string };
+    if (!res.ok) throw new ApiError(res.status, result.error ?? res.statusText);
+    return result;
   },
-  async freezeEnterprise(source: 'head' | 'origin-tracking'): Promise<{ snapshotId: string; repositories: Array<{ path: string; commit: string }>; warnings: string[] }> {
+  enterpriseDiscovery(workspaceId?: string): Promise<{ root: string; scannedAt: string; repositories: Array<{ path: string; remote?: string; branch: string | null; headCommit: string; dirty: boolean; modifiedCount: number; untrackedCount: number }>; warnings: string[] }> {
+    return this.enterpriseGet('discovery', workspaceId);
+  },
+  enterpriseSnapshots(workspaceId?: string): Promise<{ snapshots: Array<{ snapshotId: string; createdAt: string; source: string; repositories: Array<{ path: string; commit: string; tree: string; sourceRef: string }>; warnings: string[] }> }> {
+    return this.enterpriseGet('snapshots', workspaceId);
+  },
+  async freezeEnterprise(source: 'head' | 'origin-tracking', workspaceId?: string): Promise<{ snapshotId: string; repositories: Array<{ path: string; commit: string }>; warnings: string[] }> {
     const res = await fetch(`${BASE}/enterprise/snapshots/freeze`, { method: 'POST',
-      headers: { 'content-type': 'application/json' }, body: JSON.stringify({ source }) });
+      headers: { 'content-type': 'application/json' }, body: JSON.stringify({ source, ...(workspaceId ? { workspaceId } : {}) }) });
     const data = await res.json() as { snapshotId: string; repositories: Array<{ path: string; commit: string }>; warnings: string[]; error?: string };
     if (!res.ok) throw new ApiError(res.status, data.error ?? res.statusText);
     return data;
   },
-  enterpriseVerify(id: string): Promise<{ ok: boolean; checked: number; missing: string[] }> {
-    return getJson(`${BASE}/enterprise/snapshots/verify?id=${encodeURIComponent(id)}`);
+  enterpriseVerify(id: string, workspaceId?: string): Promise<{ ok: boolean; checked: number; missing: string[] }> {
+    return this.enterpriseGet(`snapshots/verify?id=${encodeURIComponent(id)}`, workspaceId);
   },
-  enterpriseCompare(before: string, after: string): Promise<{ changedRepositories: number; rows: Array<{ path: string; status: string; from?: string; to?: string; changedFiles?: string[]; diffComplete: boolean; note?: string }> }> {
-    return getJson(`${BASE}/enterprise/snapshots/compare?before=${encodeURIComponent(before)}&after=${encodeURIComponent(after)}`);
+  enterpriseCompare(before: string, after: string, workspaceId?: string): Promise<{ changedRepositories: number; rows: Array<{ path: string; status: string; from?: string; to?: string; changedFiles?: string[]; diffComplete: boolean; note?: string }> }> {
+    return this.enterpriseGet(`snapshots/compare?before=${encodeURIComponent(before)}&after=${encodeURIComponent(after)}`, workspaceId);
   },
   workspace(): Promise<ProjectWorkspace> {
     return getJson<ProjectWorkspace>(`${BASE}/workspace`);
