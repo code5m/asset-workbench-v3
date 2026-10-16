@@ -34,6 +34,18 @@ try {
     event.project?.directory, properties.cwd, properties.directory, observedCwd);
   const stamp = firstText(event.timestamp, event.receivedAt) || new Date().toISOString();
   const rawPayload = JSON.parse(JSON.stringify(event)) as Record<string, unknown>;
+  if (provider === 'codex' && hookEventName === 'SessionEnd') {
+    const transcriptPath = firstText(event.transcript_path, event.agent_transcript_path);
+    if (transcriptPath) {
+      try {
+        const { importEnterpriseCodexHistory } = await import('../server/enterpriseProviderHistory.ts');
+        importEnterpriseCodexHistory(transcriptPath);
+      } catch {
+        // The official JSONL may be unavailable; still save actual native
+        // SessionEnd evidence without inventing a complete history.
+      }
+    }
+  }
   if (provider === 'codebuddy' && hookEventName === 'SessionEnd'
     && typeof event.transcript_path === 'string' && event.transcript_path) {
     try {
