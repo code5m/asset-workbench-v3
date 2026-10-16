@@ -67,6 +67,10 @@ export function importEnterpriseCodexHistory(source: string, expectedWorkspaceId
       .find(item => item.provider === 'codex' && item.providerSessionId === meta.session_id);
     if (state?.status === 'ended') {
       finalized = true;
+    } else if (state?.captureSource === 'native-hook') {
+      // Do not pre-empt a live Provider session merely because an operator
+      // imports its official history while the original Hook is still active.
+      finalized = false;
     } else {
       const done = appendEnterpriseProviderEvent({
         provider: 'codex', providerSessionId: meta.session_id, captureSource: 'official-import',
