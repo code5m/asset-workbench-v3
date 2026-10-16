@@ -7,10 +7,9 @@ type Candidate = { relative: string; files: Array<{ filename: string; sha256: st
 const sha = (content: Buffer | string) => createHash('sha256').update(content).digest('hex');
 const ROOTS = ['04-conversations', '02-design', '03-docs', '05-derived'];
 const TYPES = new Set(['agent-work-record', 'conversation-transcript', 'design', 'decision']);
-const ALLOWED = new Set(['conversation.md', 'transcript.md', 'design.md', 'decision.md', 'metadata.json']);
 const legacyDestination = (root: string) =>
   path.join(root, '.asset-workbench-data', 'knowledge', 'legacy-managed');
-function examineDirectory(dir: string, relative: string): Candidate | null {
+function examineDirectory(dir: string, root: string, relative: string): Candidate | null {
   const metaFile = path.join(dir, 'metadata.json');
   if (!fs.existsSync(metaFile)) return null;
   if (!fs.lstatSync(metaFile).isFile() || fs.lstatSync(metaFile).isSymbolicLink()) return null;
@@ -21,16 +20,20 @@ function examineDirectory(dir: string, relative: string): Candidate | null {
     };
     if (meta.schemaVersion !== 1 || !TYPES.has(meta.type || '') ||
       !/^(?:conv|transcript|design|decision)_[\w-]{8,90}$/.test(meta.id || '')) return null;
-    const root = fs.realpathSync(relative.split('|')[0]);
-    if (meta.projectRoot && fs.realpathSync(meta.projectRoot) !== root) return null;
-    if (meta.sourceMetadata?.projectRoot && fs.realpathSync(meta.sourceMetadata.projectRoot) !== root) return null;
+    // Never infer the project owner from a loose directory name. Historic
+    // assets without a verifiable original project identity stay untouched and
+    // appear in the migration review/skip report.
+    const attestedRoot = meta.projectRoot ?? meta.sourceMetadata?.projectRoot;
+    if (!attestedRoot || fs.realpathSync(attestedRoot) !== root) return null;
+    if (meta.projectRoot && meta.sourceMetadata?.projectRoot
+      && fs.realpathSync(meta.sourceMetadata.projectRoot) !== root) return null;
     const content = meta.type === 'conversation-transcript' ? 'transcript.md'
       : meta.type === 'agent-work-record' ? 'conversation.md'
       : meta.type === 'design' ? 'design.md' : 'decision.md';
     const contentPath = path.join(dir, content);
     if (!fs.existsSync(contentPath) || !fs.lstatSync(contentPath).isFile()
       || fs.lstatSync(contentPath).isSymbolicLink()) return null;
-    return { relative: relative.split('|').slice(1).join('|'),
+    return { relative,
       files: [metaFile, contentPath].map(filename => ({
         filename, sha256: sha(fs.readFileSync(filename)), bytes: fs.statSync(filename).size,
       })) };
@@ -38,7 +41,7 @@ function examineDirectory(dir: string, relative: string): Candidate | null {
 }
 function discover(root: string): { candidates: Candidate[]; unverified: string[] } {
   const candidates: Candidate[] = [], unverified: string[] = [];
-  const explore = (base: string, relative: string, depth: number) => {
+  const explore = (relative: string, depth: number) => {
     if (candidates.length > 30_000) throw new Error('Legacy capture migration file limit reached');
     if (depth > 7) { unverified.push(relative + ': directory depth cap'); return; }
     const dirname = path.join(root, ...relative.split('/'));
@@ -46,7 +49,7 @@ function discover(root: string): { candidates: Candidate[]; unverified: string[]
     if (fs.lstatSync(dirname).isSymbolicLink()) { unverified.push(relative + ': symlink'); return; }
     if (!fs.lstatSync(dirname).isDirectory()) return;
     if (fs.existsSync(path.join(dirname, '.git'))) { unverified.push(relative + ': independent repository boundary'); return; }
-    const checked = examineDirectory(dirname, root + '|' + relative);
+    const checked = examineDirectory(dirname, root, relative);
     if (checked) { candidates.push(checked); return; }
     if (fs.existsSync(path.join(dirname, 'metadata.json'))) {
       unverified.push(relative + ': unknown or unmatched legacy asset metadata');
@@ -54,10 +57,10 @@ function discover(root: string): { candidates: Candidate[]; unverified: string[]
     }
     for (const entry of fs.readdirSync(dirname, { withFileTypes: true })) {
       if (!entry.isDirectory() || entry.isSymbolicLink() || entry.name === '.git' || entry.name === '.asset-workbench-data') continue;
-      explore(base, relative + '/' + entry.name, depth + 1);
+      explore(relative + '/' + entry.name, depth + 1);
     }
   };
-  for (const entry of ROOTS) explore(root, entry, 0);
+  for (const entry of ROOTS) explore(entry, 0);
   return { candidates: candidates.sort((a,b) => a.relative.localeCompare(b.relative)), unverified };
 }
 export interface LegacyAssetMigrationReport {
