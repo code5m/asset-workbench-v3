@@ -8,7 +8,7 @@ const sha = (content: Buffer | string) => createHash('sha256').update(content).d
 const ROOTS = ['04-conversations', '02-design', '03-docs', '05-derived'];
 const TYPES = new Set(['agent-work-record', 'conversation-transcript', 'design', 'decision']);
 const legacyDestination = (root: string) =>
-  path.join(root, '.asset-workbench-data', 'knowledge', 'legacy-managed');
+  assertSafeEnterpriseManagedPath(root, 'knowledge/legacy-managed');
 function examineDirectory(dir: string, root: string, relative: string): Candidate | null {
   const metaFile = path.join(dir, 'metadata.json');
   if (!fs.existsSync(metaFile)) return null;
