@@ -99,6 +99,14 @@ try {
     'Legacy central evidence must survive migration');
   assert.deepEqual(listEnterpriseSnapshots(root).map(x => x.snapshotId), [snapshot.snapshotId]);
   assert.equal(enableManagedEnterpriseStorage(root).digest, migration.digest, 'Migration must be idempotent');
+  // A corrupt receipt must never cause silent adoption of an existing directory.
+  const receiptFile = path.join(root, '.asset-workbench-data', 'enterprise', 'managed-migration.json');
+  const originalReceipt = fs.readFileSync(receiptFile, 'utf8');
+  try {
+    const forged = { ...JSON.parse(originalReceipt) as Record<string, unknown>, digest: '0'.repeat(64) };
+    fs.writeFileSync(receiptFile, JSON.stringify(forged), 'utf8');
+    assert.throws(() => enableManagedEnterpriseStorage(root), /迁移回执|校验不一致/);
+  } finally { fs.writeFileSync(receiptFile, originalReceipt, 'utf8'); }
   const auditBeforeCapture = auditEnterpriseWorkspaceManaged(workspaceId);
   assert.equal(auditBeforeCapture.expectedFiles, auditBeforeCapture.verifiedFiles);
   assert.equal(auditBeforeCapture.rollbackSafe, true);
@@ -161,6 +169,42 @@ try {
   assert.equal(codebuddy.theme,'user-custom');
   assert.equal(codebuddy.hooks.Stop[0].hooks[0].command,'echo custom');
   assert.equal(enterpriseProviderStatuses(root).find(x=>x.provider==='codebuddy')?.captureVerified,true);
+  // The installed OpenCode observer MUST NOT synchronously spawn a fresh
+  // subprocess on every streaming token (that used to freeze the IDE).
+  const opencodePlugin = path.join(home, '.config', 'opencode', 'plugins', 'awb-enterprise-capture.js');
+  const pluginCode = fs.readFileSync(opencodePlugin, 'utf8');
+  assert.match(pluginCode, /spawn\\?\('node'/);
+  assert.match(pluginCode, /--stream/);
+  assert.doesNotMatch(pluginCode, /spawnSync\(/);
+  execFileSync('node', ['--check', opencodePlugin], { encoding: 'utf8', timeout: 10_000 });
+  const workerSource = path.join(process.cwd(), 'scripts', 'capture-enterprise-provider-event.ts');
+  const streamEvents = [
+    { type:'session.started', sessionID:'opencode-worker-session', eventId:'oc:1',
+      projectDirectory:b, timestamp:new Date().toISOString() },
+    { type:'message.part.updated', sessionID:'opencode-worker-session', eventId:'oc:2',
+      projectDirectory:b, properties:{ sessionID:'opencode-worker-session', part:{
+        id:'oc:part:1', text:'Hello from a live async capture stream' } } },
+    { type:'session.ended', sessionID:'opencode-worker-session', eventId:'oc:3',
+      projectDirectory:b, timestamp:new Date().toISOString() },
+  ];
+  execFileSync('node', ['--experimental-strip-types', workerSource, '--provider=opencode', '--stream'], {
+    cwd:b, timeout:20_000, encoding:'utf8', input:streamEvents.map(e=>JSON.stringify(e)).join('\n')+'\n',
+    env:process.env,
+  });
+  const opencodeSaved = listEnterpriseProviderSessions(root).find(s => s.provider === 'opencode'
+    && s.providerSessionId === 'opencode-worker-session');
+  assert.equal(opencodeSaved?.status, 'ended');
+  assert.equal(opencodeSaved?.acceptedEvents, 3);
+  assert.equal(opencodeSaved?.repository, 'phantom-operation');
+  assert.ok(fs.readFileSync(path.join(root,'.asset-workbench-data',opencodeSaved!.transcriptPath!), 'utf8')
+    .includes('Hello from a live async capture stream'));
+  // Never overwrite an existing user-customized plugin on the next setup run.
+  fs.writeFileSync(opencodePlugin, '/* user-modified OpenCode plugin */\n');
+  try {
+    const retry = setupEnterpriseUserProviderHooks('INSTALL_USER_LEVEL_PROVIDER_HOOKS');
+    assert.equal(retry.find(x => x.provider === 'opencode')?.status, 'blocked');
+    assert.equal(fs.readFileSync(opencodePlugin,'utf8'), '/* user-modified OpenCode plugin */\n');
+  } finally { fs.writeFileSync(opencodePlugin, pluginCode); }
   for (const dir of [a,b]) {
     assert.equal(fs.existsSync(path.join(dir, '.asset-workbench-data')), false);
     assert.equal(fs.existsSync(path.join(dir, '.codebuddy')), false);
@@ -191,6 +235,44 @@ try {
   assert.equal(git(b,'status','--porcelain'),operationBefore);
   assert.equal(isIgnoredRelativePath('.asset-workbench-data/provider/events'),true);
   assert.equal(shouldIgnoreEntry('', '.asset-workbench-data', true),true);
+  // Never overwrite a business directory that already has tracked V3 data.
+  const trackedRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-tracked-managed-'));
+  let trackedWorkspace = '';
+  try {
+    git(trackedRoot, 'init', '-q');
+    const trackedData = path.join(trackedRoot, '.asset-workbench-data');
+    fs.mkdirSync(trackedData, { recursive: true });
+    fs.writeFileSync(path.join(trackedData, 'tracked.json'), '{"keep":true}\n');
+    git(trackedRoot, 'add', '.asset-workbench-data/tracked.json');
+    git(trackedRoot, 'commit', '-qm', 'existing tracked company state');
+    trackedWorkspace = attachEnterpriseWorkspaceReadOnly(trackedRoot).workspace.workspaceId;
+    const before = git(trackedRoot, 'status', '--porcelain');
+    assert.throws(() => enableManagedEnterpriseStorage(trackedRoot), /Git already tracks/);
+    assert.equal(git(trackedRoot, 'status', '--porcelain'), before);
+    assert.equal(fs.readFileSync(path.join(trackedData, 'tracked.json'), 'utf8'), '{"keep":true}\n');
+  } finally {
+    if (trackedWorkspace) detachEnterpriseWorkspaceReadOnly(trackedWorkspace);
+    fs.rmSync(centralEnterpriseStore(trackedRoot), { recursive: true, force: true });
+    fs.rmSync(trackedRoot, { recursive: true, force: true });
+  }
+  // Never adopt a pre-existing enterprise/ directory without an owner receipt.
+  const foreignRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'awb-foreign-managed-'));
+  let foreignWorkspace = '';
+  try {
+    git(foreignRoot, 'init', '-q');
+    fs.writeFileSync(path.join(foreignRoot, 'README.md'), 'unrelated project\n');
+    git(foreignRoot, 'add', 'README.md'); git(foreignRoot, 'commit', '-qm', 'initial');
+    foreignWorkspace = attachEnterpriseWorkspaceReadOnly(foreignRoot).workspace.workspaceId;
+    const target = path.join(foreignRoot, '.asset-workbench-data', 'enterprise');
+    fs.mkdirSync(target, { recursive: true });
+    fs.writeFileSync(path.join(target, 'existing.txt'), 'not ours\n');
+    assert.throws(() => enableManagedEnterpriseStorage(foreignRoot), /没有可信迁移回执/);
+    assert.equal(fs.readFileSync(path.join(target, 'existing.txt'), 'utf8'), 'not ours\n');
+  } finally {
+    if (foreignWorkspace) detachEnterpriseWorkspaceReadOnly(foreignWorkspace);
+    fs.rmSync(centralEnterpriseStore(foreignRoot), { recursive: true, force: true });
+    fs.rmSync(foreignRoot, { recursive: true, force: true });
+  }
   console.log('ENTERPRISE_MANAGED_PROVIDER_E2E PASS');
 } finally {
   if (workspaceId) {

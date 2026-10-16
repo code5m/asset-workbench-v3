@@ -96,7 +96,7 @@ function installUserHooks(provider: SupportedHook): ProviderSetupReport {
 function globalOpenCodePlugin(): string {
   return path.join(home(), '.config', 'opencode', 'plugins', 'awb-enterprise-capture.js');
 }
-function openCodeSource(): string {
+function legacyOpenCodeSource(): string {
   const script = JSON.stringify(bridge);
   return `/**
  * Asset Workbench user-level OpenCode plugin: no writes to project directories.
@@ -126,15 +126,77 @@ export const AssetWorkbenchEnterpriseCapture = async (ctx) => {
 export default AssetWorkbenchEnterpriseCapture;
 `;
 }
+function openCodeSource(): string {
+  const script = JSON.stringify(bridge);
+  return `/**
+ * Asset Workbench user-level OpenCode plugin.
+ * One persistent asynchronous JSONL worker per plugin instance; no per-token
+ * spawnSync and no project-local configuration/data writes.
+ */
+import { spawn } from 'node:child_process';
+export const AssetWorkbenchEnterpriseCapture = async (ctx) => {
+  const directory = ctx?.directory || process.cwd();
+  let worker = null;
+  let blocked = false;
+  let dropped = 0;
+  const forward = (event) => {
+    try {
+      const info = event?.properties || {};
+      const sessionID = info.sessionID || info.sessionId || info.part?.sessionID
+        || info.message?.sessionID || info.info?.id || info.session?.id;
+      if (!sessionID) return;
+      const record = { ...event, sessionID, projectDirectory: directory, receivedAt: new Date().toISOString() };
+      const data = JSON.stringify(record);
+      if (!data || Buffer.byteLength(data) > 128 * 1024) { dropped += 1; return; }
+      if (!worker || worker.exitCode !== null || worker.killed) {
+        worker = spawn('node', ['--experimental-strip-types', ${script}, '--provider=opencode', '--stream'], {
+          cwd: directory, stdio: ['pipe', 'ignore', 'ignore'], windowsHide: true,
+        });
+        const active = worker;
+        active.on('error', () => { if (worker === active) { worker = null; blocked = false; } });
+        active.on('close', () => { if (worker === active) { worker = null; blocked = false; } });
+        active.stdin.on('error', () => { if (worker === active) { worker = null; blocked = false; } });
+        active.stdin.on('drain', () => { blocked = false; });
+      }
+      if (blocked) { dropped += 1; return; }
+      if (dropped > 0) {
+        const warning = { type: 'Notification', sessionID, projectDirectory: directory,
+          content: 'Provider capture overloaded; ' + dropped + ' events not persisted',
+          receivedAt: new Date().toISOString() };
+        dropped = 0;
+        blocked = !worker.stdin.write(JSON.stringify(warning) + String.fromCharCode(10));
+        if (blocked) return;
+      }
+      blocked = !worker.stdin.write(data + String.fromCharCode(10));
+    } catch { dropped += 1; /* observer must never interrupt the IDE */ }
+  };
+  return {
+    event: async (input) => forward(input?.event || input),
+    'tool.execute.before': async (input) => forward({ type: 'tool.execute.before', properties: input || {} }),
+    'tool.execute.after': async (input, output) => forward({
+      type: 'tool.execute.after', properties: input || {}, output,
+    }),
+  };
+};
+export default AssetWorkbenchEnterpriseCapture;
+`;
+}
+
 function installOpenCode(): ProviderSetupReport {
   const provider = 'opencode';
   const target = globalOpenCodePlugin();
   if (isSymlinkInPath(target)) return { provider, status: 'blocked', detail: '用户插件路径是符号链接，拒绝覆盖', userLevel: true };
   const content = openCodeSource();
   if (fs.existsSync(target)) {
-    return fs.readFileSync(target, 'utf8') === content
-      ? { provider, status: 'already-configured', detail: '用户级 OpenCode 插件已配置，待真实事件验证', userLevel: true }
-      : { provider, status: 'blocked', detail: '已有同名用户插件内容不同，拒绝覆盖', userLevel: true };
+    const installed = fs.readFileSync(target, 'utf8');
+    if (installed === content) return { provider, status: 'already-configured', detail: '异步流式 OpenCode 用户插件已配置，待真实会话验证', userLevel: true };
+    if (installed !== legacyOpenCodeSource()) {
+      return { provider, status: 'blocked', detail: '用户插件内容不同，拒绝覆盖个性化配置', userLevel: true };
+    }
+    const backup = target + '.awb-original-backup';
+    if (!fs.existsSync(backup)) fs.copyFileSync(target, backup, fs.constants.COPYFILE_EXCL);
+    safeAtomicUserWrite(target, content);
+    return { provider, status: 'installed', detail: '已升级旧版同步 OpenCode 插件为异步流式采集，旧版本已备份', userLevel: true };
   }
   safeAtomicUserWrite(target, content);
   return { provider, status: 'installed', detail: '已安装用户级插件，不修改任何业务仓库', userLevel: true };

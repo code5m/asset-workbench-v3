@@ -78,7 +78,41 @@ export function assertSafeEnterpriseManagedPath(rootInput: string, relative: str
   }
   return current;
 }
+/** A Git exclude does not protect ALREADY TRACKED files. Refuse to manage
+ * business paths that the root repository already tracks. */
+const verifiedGitRootIndex = new Map<string, string>();
+function assertUntrackedManagedData(root: string): void {
+  const gitDot = path.join(root, '.git');
+  if (!fs.existsSync(gitDot)) return;
+  // Use the local index stamp to avoid repeatedly spawning Git for every
+  // snapshot, Mirror and Raw operation; repeat check when the index changes.
+  let stamp: string | null = null;
+  if (fs.lstatSync(gitDot).isDirectory() && !fs.lstatSync(gitDot).isSymbolicLink()) {
+    try {
+      const info = fs.statSync(path.join(gitDot, 'index'));
+      stamp = [info.dev, info.ino, info.size, info.mtimeMs, info.ctimeMs].join(':');
+      if (verifiedGitRootIndex.get(root) === stamp) return;
+    } catch { /* repository may be unborn or use an external index */ }
+  }
+  let top = '';
+  let tracked = '';
+  try {
+    top = fs.realpathSync(execFileSync('git', ['-C', root, 'rev-parse', '--show-toplevel'],
+      { encoding: 'utf8', timeout: 5000, stdio: ['ignore','pipe','ignore'] }).trim());
+    tracked = execFileSync('git', ['-C', root, 'ls-files', '--cached', '--', ROOT_DATA],
+      { encoding: 'utf8', timeout: 5000, stdio: ['ignore','pipe','ignore'] }).trim();
+  } catch {
+    throw new Error('Unable to verify the root Git tracking boundary; managed mode is blocked');
+  }
+  if (top !== root) throw new Error('Root Git toplevel changed; managed mode is blocked');
+  if (tracked) {
+    verifiedGitRootIndex.delete(root);
+    throw new Error('Git already tracks .asset-workbench-data; refusing to overwrite tracked business files');
+  }
+  if (stamp) verifiedGitRootIndex.set(root, stamp);
+}
 function checkManagedDirectory(root: string): string {
+  assertUntrackedManagedData(root);
   const data = path.join(root, ROOT_DATA);
   if (fs.existsSync(data) && (!fs.lstatSync(data).isDirectory() || fs.lstatSync(data).isSymbolicLink())) {
     throw new Error('企业根目录已有非普通目录或符号链接 .asset-workbench-data，拒绝受管模式');
@@ -235,6 +269,27 @@ export function enableManagedEnterpriseStorage(input: string): ManagedMigrationR
   const oldData = path.dirname(destination);
   let migrationAlreadyDone = false;
   if (fs.existsSync(destination)) {
+    // Never adopt a foreign pre-existing destination merely because its
+    // contents happen to be compatible (or because the central source is empty).
+    const receiptPath = path.join(destination, 'managed-migration.json');
+    if (!fs.existsSync(receiptPath) || fs.lstatSync(receiptPath).isSymbolicLink()
+      || !fs.lstatSync(receiptPath).isFile()) {
+      throw new Error('现有企业受管目录没有可信迁移回执；拒绝接管或覆盖已有数据');
+    }
+    let receipt: {
+      schemaVersion?: number; projectRoot?: string; workspaceId?: string;
+      source?: string; digest?: string; sourcePreserved?: boolean;
+      files?: Array<{ relative: string; bytes: number; digest: string }>;
+    };
+    try { receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8')) as typeof receipt; }
+    catch { throw new Error('受管迁移回执损坏；保持原有数据不变'); }
+    if (receipt.schemaVersion !== 1 || receipt.projectRoot !== root
+      || receipt.workspaceId !== entry.workspaceId || receipt.source !== source
+      || receipt.sourcePreserved !== true || receipt.digest !== digest
+      || !Array.isArray(receipt.files)
+      || hash(JSON.stringify(receipt.files)) !== digest) {
+      throw new Error('受管目录迁移回执与项目身份或旧资产校验不一致；拒绝接管');
+    }
     const existingFiles = scanRegularFiles(destination)
       .filter(item => item.relative !== 'managed-migration.json');
     const byFile = new Map(existingFiles.map(x => [x.relative, x.digest]));
