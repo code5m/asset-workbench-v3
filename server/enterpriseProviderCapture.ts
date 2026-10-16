@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { canonicalEnterpriseRoot, readEnterpriseRegistry } from './enterpriseStorage.ts';
+import { assertSafeEnterpriseManagedPath, canonicalEnterpriseRoot, readEnterpriseRegistry } from './enterpriseStorage.ts';
 
 const digest = (s: string) => createHash('sha256').update(s).digest('hex');
 const PROVIDERS = new Set(['codex', 'codebuddy', 'trae', 'opencode', 'codearts', 'chatgpt', 'workbuddy', 'other']);
@@ -89,7 +89,7 @@ export function resolveEnterpriseProviderOrigin(cwd: string, observedCwd?: strin
 }
 function sessionDirectory(root: string, id: string) {
   if (!/^enterprise_capture_[0-9a-f]{48}$/.test(id)) throw new Error('Invalid enterprise capture ID');
-  return path.join(root, '.asset-workbench-data', 'capture', 'sessions', id);
+  return assertSafeEnterpriseManagedPath(root, 'capture/sessions/' + id);
 }
 function redactedPayload(value: unknown, depth = 0): unknown {
   if (depth > 12) return '[truncated]';
@@ -201,7 +201,7 @@ export function appendEnterpriseProviderEvent(input: EnterpriseProviderEvent): E
     state.updatedAt = time;
     if (event.kind === 'session.ended') {
       state.status = 'ended'; state.endedAt = time;
-      const conversation = path.join(origin.projectRoot, '.asset-workbench-data', 'conversations', 'transcripts');
+      const conversation = assertSafeEnterpriseManagedPath(origin.projectRoot, 'conversations/transcripts');
       fs.mkdirSync(conversation, { recursive: true, mode: 0o700 });
       const records = fs.readFileSync(log, 'utf8').split('\n').filter(Boolean)
         .map(line => JSON.parse(line) as typeof event);
@@ -220,7 +220,7 @@ export function appendEnterpriseProviderEvent(input: EnterpriseProviderEvent): E
 }
 export function listEnterpriseProviderSessions(rootInput: string, max = 200): EnterpriseCaptureState[] {
   const root = canonicalEnterpriseRoot(rootInput);
-  const dir = path.join(root, '.asset-workbench-data', 'capture', 'sessions');
+  const dir = assertSafeEnterpriseManagedPath(root, 'capture/sessions');
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir).filter(id => /^enterprise_capture_[0-9a-f]{48}$/.test(id)).flatMap(id => {
     try {
