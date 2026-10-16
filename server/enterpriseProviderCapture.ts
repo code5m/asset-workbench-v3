@@ -3,9 +3,56 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { assertSafeEnterpriseManagedPath, canonicalEnterpriseRoot, enterpriseStorageFor, readEnterpriseRegistry } from './enterpriseStorage.ts';
-import { appendEnterprisePrivateFile, readEnterprisePrivateFile, writeEnterprisePrivateAtomic } from './enterprisePrivateIO.ts';
+import { appendEnterprisePrivateFile, readEnterpriseEventLogDelta, readEnterprisePrivateFile, writeEnterprisePrivateAtomic } from './enterprisePrivateIO.ts';
+import type { EnterpriseEventLogCheckpoint } from './enterprisePrivateIO.ts';
 
 const digest = (s: string) => createHash('sha256').update(s).digest('hex');
+/**
+ * Hook events often arrive as a long stream. An exact per-process ID index
+ * avoids rescanning the whole conversation for every new token/tool event.
+ * A protected JSONL file remains the source of truth; other processes are
+ * observed by reading only newly appended bytes under the session lock.
+ */
+const eventIndex = new Map<string, { checkpoint: EnterpriseEventLogCheckpoint; ids: Set<string> }>();
+const MAX_INDEXED_SESSIONS = 128;
+function seenEnterpriseEventIds(log: string): Set<string> {
+  if (!fs.existsSync(log)) {
+    eventIndex.delete(log);
+    return new Set();
+  }
+  const cached = eventIndex.get(log);
+  const { text, checkpoint, reset } = readEnterpriseEventLogDelta(log, cached?.checkpoint);
+  const ids = reset || !cached ? new Set<string>() : cached.ids;
+  if (text && !text.endsWith('\n')) {
+    throw new Error('Enterprise capture event log contains an incomplete JSONL record');
+  }
+  for (const line of text.split('\n').filter(Boolean)) {
+    const event = JSON.parse(line) as { eventId?: unknown };
+    if (typeof event.eventId !== 'string' || !event.eventId) {
+      throw new Error('Enterprise capture event log contains an event without identity');
+    }
+    ids.add(event.eventId);
+  }
+  eventIndex.delete(log);
+  eventIndex.set(log, { checkpoint, ids });
+  while (eventIndex.size > MAX_INDEXED_SESSIONS) {
+    const first = eventIndex.keys().next().value;
+    if (first === undefined) break;
+    eventIndex.delete(first);
+  }
+  return ids;
+}
+function recordAppendedEnterpriseEvent(log: string, eventId: string): void {
+  const cached = eventIndex.get(log);
+  if (!cached) return;
+  const stat = fs.statSync(log);
+  cached.ids.add(eventId);
+  cached.checkpoint = {
+    size: stat.size, dev: stat.dev, ino: stat.ino,
+    ctimeMs: stat.ctimeMs, mtimeMs: stat.mtimeMs,
+  };
+}
+
 const PROVIDERS = new Set(['codex', 'codebuddy', 'trae', 'opencode', 'codearts', 'chatgpt', 'workbuddy', 'other']);
 type Role = 'user' | 'assistant' | 'system' | 'tool' | 'session';
 export interface EnterpriseProviderEvent {
@@ -209,11 +256,8 @@ export function appendEnterpriseProviderEvent(input: EnterpriseProviderEvent): E
       jsonAtomic(file, state);
     }
     const log = path.join(dir, 'events.jsonl');
-    const prior = fs.existsSync(log) ? readEnterprisePrivateFile(log).toString('utf8') : '';
-    const exists = prior.split('\n').filter(Boolean).some(line => {
-      try { return (JSON.parse(line) as { eventId?: string }).eventId === eventId; }
-      catch { throw new Error('Corrupt enterprise capture log, append refused'); }
-    });
+    const eventIds = seenEnterpriseEventIds(log);
+    const exists = eventIds.has(eventId);
     if (exists) {
       // The process may have crashed after appending SessionEnd but before
       // materializing the transcript. An idempotent retry must repair it.
@@ -242,6 +286,7 @@ export function appendEnterpriseProviderEvent(input: EnterpriseProviderEvent): E
       rawPayload: redactedPayload(input.rawPayload || {}),
     };
     appendEnterprisePrivateFile(log, JSON.stringify(event) + '\n');
+    recordAppendedEnterpriseEvent(log, eventId);
     state.acceptedEvents++;
     state.updatedAt = time;
     if (event.kind === 'session.ended' || event.kind === 'history.import.completed') {
