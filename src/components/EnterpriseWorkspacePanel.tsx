@@ -40,7 +40,7 @@ export function EnterpriseWorkspacePanel() {
   };
   useEffect(() => {
     void assetClient.config().then(async config => {
-      if (config.mode === 'framework-self') {
+      if (!config.lockedToInstance) {
         setCentralMode(true);
         const response = await assetClient.listAttachedEnterprise();
         setAttachedWorkspaces(response.workspaces);
