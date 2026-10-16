@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { canonicalEnterpriseRoot, enterpriseEntryForRoot } from './enterpriseStorage.ts';
+import { assertSafeEnterpriseManagedPath, canonicalEnterpriseRoot, enterpriseEntryForRoot } from './enterpriseStorage.ts';
 
 type Candidate = { relative: string; files: Array<{ filename: string; sha256: string; bytes: number }> };
 const sha = (content: Buffer | string) => createHash('sha256').update(content).digest('hex');
@@ -118,4 +118,53 @@ export function migrateEnterpriseLegacyKnowledge(rootInput: string): LegacyAsset
     skippedUnverified:unverified.slice(0,100),destination,
     status:unverified.length?'partial':'verified',
   };
+}
+
+export interface MigratedLegacyKnowledgeAsset {
+  id: string; relative: string; title: string; type: string; source: string;
+  contentFile: string; capturedAt?: string;
+}
+export function listMigratedEnterpriseLegacyAssets(rootInput: string): MigratedLegacyKnowledgeAsset[] {
+  const root = canonicalEnterpriseRoot(rootInput);
+  if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') return [];
+  const folder = assertSafeEnterpriseManagedPath(root, 'knowledge/legacy-managed');
+  const receipt = path.join(folder, 'migration-receipt.json');
+  if (!fs.existsSync(receipt)) return [];
+  const body = JSON.parse(fs.readFileSync(receipt, 'utf8')) as {
+    workspaceId: string; candidates: Candidate[];
+  };
+  if (body.workspaceId !== enterpriseEntryForRoot(root)?.workspaceId || !Array.isArray(body.candidates)) {
+    throw new Error('Migrated legacy asset receipt has a wrong workspace identity');
+  }
+  return body.candidates.flatMap(candidate => {
+    if (!candidate.relative.startsWith('04-conversations/') && !candidate.relative.startsWith('02-design/')
+      && !candidate.relative.startsWith('03-docs/') && !candidate.relative.startsWith('05-derived/')) return [];
+    if (candidate.relative.split('/').some(part => part === '..' || !part)) return [];
+    const metaPath = assertSafeEnterpriseManagedPath(root, 'knowledge/legacy-managed/' + candidate.relative + '/metadata.json');
+    try {
+      const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8')) as {
+        id?: string; title?: string; type?: string; source?: string; createdAt?: string;
+      };
+      const contentFile = meta.type === 'conversation-transcript' ? 'transcript.md'
+        : meta.type === 'agent-work-record' ? 'conversation.md'
+        : meta.type === 'design' ? 'design.md' : 'decision.md';
+      const expected = candidate.files.find(f => path.basename(f.filename) === contentFile);
+      if (!expected) return [];
+      const content = assertSafeEnterpriseManagedPath(root, 'knowledge/legacy-managed/' + candidate.relative + '/' + contentFile);
+      if (sha(fs.readFileSync(content)) !== expected.sha256) throw new Error('Legacy content changed');
+      return [{ id: meta.id || candidate.relative, relative: candidate.relative,
+        title: meta.title || candidate.relative, type: meta.type || 'unknown',
+        source: meta.source || 'legacy', contentFile, capturedAt: meta.createdAt }];
+    } catch { return []; }
+  });
+}
+export function readMigratedEnterpriseLegacyAsset(rootInput: string, relative: string): {
+  relative: string; content: string;
+} {
+  const root = canonicalEnterpriseRoot(rootInput);
+  const asset = listMigratedEnterpriseLegacyAssets(root).find(x => x.relative === relative);
+  if (!asset) throw new Error('Legacy asset was not verified or does not belong to selected workspace');
+  const file = assertSafeEnterpriseManagedPath(root, 'knowledge/legacy-managed/' + asset.relative + '/' + asset.contentFile);
+  if (fs.statSync(file).size > 1024 * 1024) throw new Error('Legacy asset exceeds display budget');
+  return { relative, content: fs.readFileSync(file, 'utf8') };
 }
