@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { assertSafeEnterpriseManagedPath, canonicalEnterpriseRoot, readEnterpriseRegistry } from './enterpriseStorage.ts';
+import { assertSafeEnterpriseManagedPath, canonicalEnterpriseRoot, enterpriseStorageFor, readEnterpriseRegistry } from './enterpriseStorage.ts';
 import { appendEnterprisePrivateFile, readEnterprisePrivateFile, writeEnterprisePrivateAtomic } from './enterprisePrivateIO.ts';
 
 const digest = (s: string) => createHash('sha256').update(s).digest('hex');
@@ -22,6 +22,9 @@ export interface EnterpriseCaptureState {
   startedAt: string; updatedAt: string; endedAt?: string; status: 'active' | 'ended';
   acceptedEvents: number; duplicates: number;
   attribution: 'observed-process-cwd' | 'provider-reported-cwd';
+  /** Primary repository/module are preserved; each event also carries its own location. */
+  repositories?: string[]; modules?: string[]; lastCwd?: string; workdirTransitions?: number;
+  endedBy?: 'native-hook' | 'official-import';
   transcriptPath?: string;
 }
 export interface EnterpriseCaptureResult {
@@ -71,6 +74,9 @@ export function resolveEnterpriseProviderOrigin(cwd: string, observedCwd?: strin
   if (!selected) throw new Error('No registered managed enterprise workspace covers the provider cwd');
   const projectRoot = canonicalEnterpriseRoot(selected.projectRoot);
   if (projectRoot !== selected.projectRoot) throw new Error('Managed workspace canonical root changed');
+  // Re-check that the root Git still does not track V3's private data. A Git
+  // add -f after enrollment must not turn a Provider hook into an app-code write.
+  enterpriseStorageFor(projectRoot);
   const rel = path.relative(projectRoot, actual).split(path.sep);
   if (rel.includes('.asset-workbench-data') || rel.includes('.git')) throw new Error('Provider event originated in a private/ignored directory');
   let attribution: EnterpriseCaptureState['attribution'] = 'provider-reported-cwd';
@@ -128,13 +134,18 @@ function jsonAtomic(file: string, body: unknown) {
 function finalizeEndedEnterpriseCapture(root: string, state: EnterpriseCaptureState, log: string): boolean {
   const records = readEnterprisePrivateFile(log).toString('utf8').split('\n').filter(Boolean)
     .map(line => JSON.parse(line) as { kind: string; timestamp: string; content: string });
-  const ended = records.find(row => row.kind === 'session.ended');
+  const ended = records.find(row => row.kind === 'session.ended' || row.kind === 'history.import.completed');
   if (!ended) return false;
+  state.endedBy = ended.kind === 'history.import.completed' ? 'official-import' : 'native-hook';
   const conversation = assertSafeEnterpriseManagedPath(root, 'conversations/transcripts');
   fs.mkdirSync(conversation, { recursive: true, mode: 0o700 });
   const md = ['# Provider 会话记录', '', '- Workspace: ' + state.workspaceId,
     '- Repository: ' + (state.repository || 'unresolved'),
-    '- Module: ' + (state.module || 'unresolved'), '- Provider: ' + state.provider,
+    '- Module: ' + (state.module || 'unresolved'),
+    '- Touched repositories: ' + (state.repositories ?? []).join(', '),
+    '- Touched Maven modules: ' + (state.modules ?? []).join(', '),
+    '- Completed by: ' + (state.endedBy ?? 'unknown'),
+    '- Provider: ' + state.provider,
     '- Session ID: ' + state.providerSessionId, '',
     ...records.flatMap(row => row.content
       ? ['## ' + row.kind + ' · ' + row.timestamp, '', row.content, ''] : [])].join('\n');
@@ -148,6 +159,7 @@ function eventKind(name: string, role?: Role) {
   const lower = name.toLowerCase();
   if (lower === 'sessionstart' || lower === 'session.started') return 'session.started';
   if (lower === 'sessionend' || lower === 'session.ended') return 'session.ended';
+  if (lower === 'historyimportcomplete') return 'history.import.completed';
   if (lower === 'userpromptsubmit' || role === 'user') return 'user.message';
   if (lower === 'stop' || role === 'assistant') return 'assistant.message';
   if (lower === 'pretooluse' || lower === 'tool.execute.before') return 'tool.started';
@@ -180,9 +192,8 @@ export function appendEnterpriseProviderEvent(input: EnterpriseProviderEvent): E
     if (fs.existsSync(file)) {
       state = JSON.parse(readEnterprisePrivateFile(file, 512 * 1024).toString('utf8')) as EnterpriseCaptureState;
       if (state.workspaceId !== origin.workspaceId || state.projectRoot !== origin.projectRoot
-        || state.provider !== provider || state.providerSessionId !== providerSessionId
-        || state.repository !== origin.repository || state.cwd !== origin.cwd) {
-        throw new Error('Provider session identity or repository changed (cross-project capture rejected)');
+        || state.provider !== provider || state.providerSessionId !== providerSessionId) {
+        throw new Error('Provider session identity changed (cross-workspace capture rejected)');
       }
     } else {
       state = {
@@ -191,6 +202,9 @@ export function appendEnterpriseProviderEvent(input: EnterpriseProviderEvent): E
         provider, providerSessionId, captureSource: input.captureSource || 'native-hook', status: 'active',
         startedAt: time, updatedAt: time, acceptedEvents: 0, duplicates: 0,
         attribution: origin.attribution,
+        repositories: origin.repository ? [origin.repository] : [],
+        modules: origin.module ? [origin.module] : [],
+        lastCwd: origin.cwd, workdirTransitions: 0,
       };
       jsonAtomic(file, state);
     }
@@ -209,17 +223,28 @@ export function appendEnterpriseProviderEvent(input: EnterpriseProviderEvent): E
       return { state, accepted: false, duplicate: true };
     }
     if (state.status === 'ended') throw new Error('Ended provider session cannot be reopened');
+    // A single agent session may legitimately visit several Git repositories
+    // or Maven modules in one enterprise Workspace. Keep the primary location
+    // for backward compatibility, but preserve every observed location.
+    const seenRepos = new Set(state.repositories ?? (state.repository ? [state.repository] : []));
+    if (origin.repository) seenRepos.add(origin.repository);
+    state.repositories = [...seenRepos].sort();
+    const seenModules = new Set(state.modules ?? (state.module ? [state.module] : []));
+    if (origin.module) seenModules.add(origin.module);
+    state.modules = [...seenModules].sort();
+    if (state.lastCwd && state.lastCwd !== origin.cwd) state.workdirTransitions = (state.workdirTransitions ?? 0) + 1;
+    state.lastCwd = origin.cwd;
     const event = {
       eventId, kind: eventKind(hookEventName, input.role), hookEventName, timestamp: time,
       role: input.role || null, content: contentFor(input),
       provider, providerSessionId, workspaceId: origin.workspaceId,
-      repository: origin.repository, module: origin.module, attribution: origin.attribution,
+      repository: origin.repository, module: origin.module, cwd: origin.cwd, attribution: origin.attribution,
       rawPayload: redactedPayload(input.rawPayload || {}),
     };
     appendEnterprisePrivateFile(log, JSON.stringify(event) + '\n');
     state.acceptedEvents++;
     state.updatedAt = time;
-    if (event.kind === 'session.ended') {
+    if (event.kind === 'session.ended' || event.kind === 'history.import.completed') {
       finalizeEndedEnterpriseCapture(origin.projectRoot, state, log);
     }
     jsonAtomic(file, state);
