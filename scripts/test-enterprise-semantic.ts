@@ -55,19 +55,19 @@ try {
   const snap = freezeEnterpriseWorkspace(root);
   const manifest = importEnterpriseRaw(root, snap.snapshotId, { maxBytes: 1_000_000 });
   assert.equal(manifest.status, 'verified');
-  const java = buildEnterpriseJavaSymbolGraph(root, snap.snapshotId);
+  const java = await buildEnterpriseJavaSymbolGraph(root, snap.snapshotId);
   assert.equal(java.engine, 'jdk-compiler-attribution');
   assert.equal(java.indexedJavaFiles, 2);
   assert.ok(java.crossRepositoryEdges >= 1, JSON.stringify(java));
   assert.ok(java.edges.some(e => e.from.includes('example.Operation#run') && e.to.includes('example.Pay#pay')));
-  const sql = buildEnterpriseDynamicSqlLineage(root, snap.snapshotId);
+  const sql = await buildEnterpriseDynamicSqlLineage(root, snap.snapshotId);
   assert.equal(sql.engine, 'sqlglot-mybatis-symbolic');
   assert.ok(sql.statements.some(s => s.statement.includes('example.Orders.list')
     && s.reads.some(t => t.toLowerCase().includes('orders'))), JSON.stringify(sql.errors));
   assert.ok(sql.statements.some(s => s.writes.some(t => t.toLowerCase().includes('orders'))));
   assert.ok(sql.statements.some(s => s.conditions.some(x => x.includes('status != null'))));
   assert.ok(sql.statements.every(s => s.provenance?.commit));
-  assert.throws(() => validateEnterpriseAiRefactor(root, '../wrong'), /Invalid proposal ID/);
+  await assert.rejects(() => validateEnterpriseAiRefactor(root, '../wrong'), /Invalid proposal ID/);
   // CI does not need production Ollama credentials: stub the *local-only* model
   // response while exercising the real exact-hunk patch and SHA gates.
   const savedFetch = globalThis.fetch;
@@ -85,7 +85,7 @@ try {
     assert.notEqual(proposed.candidateSha256, proposed.originalSha256);
     assert.equal(proposed.commit, snap.repositories.find(v => v.path === 'phantom-payment')?.commit);
   } finally { globalThis.fetch = savedFetch; }
-  const validation = validateEnterpriseAiRefactor(root, proposalId);
+  const validation = await validateEnterpriseAiRefactor(root, proposalId);
   assert.equal(validation.originalSourceModified, false);
   assert.ok(['blocked', 'rejected', 'verified'].includes(validation.status));
   assert.ok(validation.reason.length > 10);
