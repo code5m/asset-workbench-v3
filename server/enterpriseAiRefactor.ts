@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
+import { runGuardedProcess } from './enterpriseSubprocess.ts';
 import { enterpriseStoreFor, listEnterpriseSnapshots } from './enterpriseWorkspace.ts';
 import type { RawImportManifest, RawEntry } from './enterpriseImport.ts';
 
@@ -107,22 +108,22 @@ export async function proposeEnterpriseAiRefactor(root: string, request: {
   atomicJson(proposalFile(store, id), result);
   return result;
 }
-function sandboxedMaven(root: string, repo: string): { exit: number; ms: number; notes: string } {
+async function sandboxedMaven(root: string, repo: string): Promise<{ exit: number; ms: number; notes: string }> {
   const start = Date.now();
-  const run = spawnSync('docker', [
+  const run = await runGuardedProcess('docker', [
     'run', '--rm', '--pull=never', '--network=none', '--read-only',
     '--cap-drop=ALL', '--security-opt=no-new-privileges', '--pids-limit=128',
     '--memory=3g', '--cpus=2', '--tmpfs', '/tmp:rw,nosuid,nodev,mode=1777',
     '-v', root + ':/workspace:rw', '-w', '/workspace/' + repo,
     '--entrypoint', 'mvn', IMAGE, '-B', '--offline', '-q', '-DskipITs', 'test',
   ], {
-    encoding: 'utf8', timeout: 180_000, maxBuffer: 256 * 1024,
+    timeoutMs: 180_000, maxOutputBytes: 256 * 1024,
     env: { PATH: process.env.PATH || '', HOME: process.env.HOME || '' },
   });
-  return { exit: run.status ?? -1, ms: Date.now() - start,
-    notes: (run.error?.message || run.stderr || run.stdout || '').slice(-350) };
+  return { exit: run.exit, ms: Date.now() - start,
+    notes: (run.error || run.stderr || run.stdout || '').slice(-350) };
 }
-export function validateEnterpriseAiRefactor(root: string, proposalId: string): AiRefactorValidation {
+export async function validateEnterpriseAiRefactor(root: string, proposalId: string): Promise<AiRefactorValidation> {
   const store = enterpriseStoreFor(root);
   const proposal = JSON.parse(fs.readFileSync(proposalFile(store, proposalId), 'utf8')) as AiRefactorProposal;
   const { snap, manifest } = snapshotAndManifest(root, proposal.snapshotId);
@@ -161,10 +162,10 @@ export function validateEnterpriseAiRefactor(root: string, proposalId: string): 
   if (sha(updated) !== proposal.candidateSha256) return blocked('Candidate patch checksum mismatch');
   fs.writeFileSync(target, updated, { mode: 0o600 });
   // Baseline MUST pass before candidate is credited with a meaningful result.
-  const before = sandboxedMaven(baseline, proposal.repository);
+  const before = await sandboxedMaven(baseline, proposal.repository);
   if (before.exit !== 0) return { proposalId, status: 'blocked', reason: 'Baseline Maven test failed: ' + before.notes,
     baselineExit: before.exit, baselineMs: before.ms, originalSourceModified: false };
-  const after = sandboxedMaven(candidate, proposal.repository);
+  const after = await sandboxedMaven(candidate, proposal.repository);
   const result: AiRefactorValidation = {
     proposalId, status: after.exit === 0 ? 'verified' : 'rejected',
     reason: after.exit === 0
