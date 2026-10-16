@@ -443,6 +443,18 @@ export function InstanceLifecyclePanel() {
           <small className="instance-release-hint">{lang === 'zh-CN' ? '若首次使用尚无运行包，系统将在首次创建时自动发布。' : 'If no release exists, first-time setup will publish it automatically.'}</small>
         )}
       </section>
+      <section className="workspace-card" aria-label="只读接入现有企业项目">
+        <h3>接入现有企业项目（只读）</h3>
+        <p className="detail-summary">适合 backV8 这样包含多个独立 Git 仓库的公司代码。使用上方业务目录，自动识别仓库并在中央建立只读入口。不会创建实例元数据、安装 Provider Hooks 或修改公司源码；与「一键创建独立工作台」是两种不同操作。</p>
+        <button type="button" className="secondary-button" disabled={busy || !projectRoot.trim()}
+          onClick={() => void run(async () => {
+            const result = await assetClient.attachEnterpriseReadOnly(projectRoot.trim(), name.trim() || undefined);
+            setMessage('只读接入成功：' + result.workspace.label + ' · ' + result.repositoryCount + ' 个 Git 仓库。请到「项目工作台 → 企业多仓库」选择该项目进行快照、分析和实验。' +
+              (result.warnings.length ? ' 扫描提醒：' + result.warnings.slice(0, 3).join('；') : ''));
+          })}>
+          只读接入此企业业务目录
+        </button>
+      </section>
       {message ? <p role="status" className="detail-summary starter-message">{message}</p> : null}
       <details className="instance-advanced-management">
         <summary>{lang === 'zh-CN' ? '高级管理 · 状态验证、版本发布、升级和回滚' : 'Advanced management · Verify, publish, upgrade and rollback'}</summary>
