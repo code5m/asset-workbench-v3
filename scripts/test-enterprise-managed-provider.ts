@@ -84,6 +84,17 @@ try {
   assert.equal(migration.gitExclude, 'added');
   assert.equal(enterpriseEntryForRoot(root)?.sourcePolicy, 'managed');
   assert.equal(enterpriseStoreFor(root), path.join(root, '.asset-workbench-data', 'enterprise'));
+  const rawRoot = path.join(root, '.asset-workbench-data', 'enterprise', 'raw');
+  fs.mkdirSync(rawRoot, { recursive: true });
+  fs.symlinkSync(a, path.join(rawRoot, 'ab'), 'dir');
+  assert.throws(() => enterpriseStoreFor(root), /符号链接/);
+  fs.unlinkSync(path.join(rawRoot, 'ab'));
+  const mirrorsRoot = path.join(root, '.asset-workbench-data', 'enterprise', 'mirrors');
+  fs.mkdirSync(mirrorsRoot, { recursive: true });
+  fs.symlinkSync(b, path.join(mirrorsRoot, 'spoofed.git'), 'dir');
+  assert.throws(() => enterpriseStoreFor(root), /符号链接/);
+  fs.unlinkSync(path.join(mirrorsRoot, 'spoofed.git'));
+
   assert.equal(fs.existsSync(path.join(legacy, 'snapshots', snapshot.snapshotId + '.json')), true,
     'Legacy central evidence must survive migration');
   assert.deepEqual(listEnterpriseSnapshots(root).map(x => x.snapshotId), [snapshot.snapshotId]);
