@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { appendEnterpriseProviderEvent, listEnterpriseProviderSessions } from './enterpriseProviderCapture.ts';
-import { canonicalEnterpriseRoot, readEnterpriseRegistry } from './enterpriseStorage.ts';
+import { readEnterpriseRegistry } from './enterpriseStorage.ts';
 
 function under(base: string, source: string) {
   const parent = fs.realpathSync(base);
@@ -58,8 +58,14 @@ export function importEnterpriseCodeBuddyHistory(source: string, providerSession
   imported: number; duplicates: number; workspaceId: string; missing: number;
 } {
   const base = path.join(home(), '.local', 'share', 'CodeBuddyExtension', 'Data');
-  const file = under(base, source);
-  const folder = path.dirname(file);
+  const location = fs.realpathSync(source);
+  const folder = fs.statSync(location).isDirectory()
+    ? (() => {
+        const baseRoot = fs.realpathSync(base);
+        if (!location.startsWith(baseRoot + path.sep)) throw new Error('CodeBuddy history folder outside official data');
+        return location;
+      })()
+    : path.dirname(under(base, source));
   const index = path.join(folder, 'index.json');
   if (path.basename(file) !== 'index.json' && !fs.existsSync(index)) {
     throw new Error('官方 CodeBuddy 会话索引缺失');
