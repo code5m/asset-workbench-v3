@@ -1,10 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { canonicalEnterpriseRoot, enableManagedEnterpriseStorage, enterpriseWorkspaceId,
+import { canonicalEnterpriseRoot, enableManagedEnterpriseStorage, auditManagedEnterpriseStorage, rollbackManagedEnterpriseStorage, enterpriseWorkspaceId,
   readEnterpriseRegistry, writeEnterpriseRegistry } from './enterpriseStorage.ts';
 import { APP_ROOT } from './config.ts';
 import { discoverEnterpriseWorkspace } from './enterpriseWorkspace.ts';
+import { migrateEnterpriseLegacyKnowledge } from './enterpriseLegacyMigration.ts';
 
 export interface AttachedEnterpriseWorkspace {
   workspaceId: string;
@@ -66,7 +67,26 @@ export function enableEnterpriseWorkspaceManaged(id: string) {
   if (!/^enterprise-[0-9a-f]{24}$/.test(id)) throw new Error('Invalid workspace ID');
   const item = read().find(v => v.workspaceId === id);
   if (!item) throw new Error('请先只读登记此项目');
-  return enableManagedEnterpriseStorage(item.projectRoot);
+  const storage = enableManagedEnterpriseStorage(item.projectRoot);
+  try {
+    const legacy = migrateEnterpriseLegacyKnowledge(item.projectRoot);
+    return { ...storage, legacy };
+  } catch (error) {
+    return { ...storage, warnings: [...storage.warnings,
+      '旧知识资产尚未完成迁移：' + (error as Error).message] };
+  }
+}
+export function auditEnterpriseWorkspaceManaged(id: string) {
+  centralOnly();
+  const item = read().find(v => v.workspaceId === id);
+  if (!item) throw new Error('Unknown attached enterprise workspace');
+  return auditManagedEnterpriseStorage(item.projectRoot);
+}
+export function rollbackEnterpriseWorkspaceManaged(id: string, confirmation: string) {
+  centralOnly();
+  const item = read().find(v => v.workspaceId === id);
+  if (!item) throw new Error('Unknown attached enterprise workspace');
+  return rollbackManagedEnterpriseStorage(item.projectRoot, confirmation);
 }
 export function detachEnterpriseWorkspaceReadOnly(id: string): { detached: boolean; cachedAssetsPreserved: true } {
   centralOnly();
