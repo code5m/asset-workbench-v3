@@ -33,7 +33,7 @@ import { publishFrameworkRelease, currentFrameworkRelease } from './frameworkRel
 import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime, reconcileLegacyInstanceUi, resumeRequestedInstances } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { setupProjectProviders } from './providerSetup.ts';
-import { attachEnterpriseWorkspaceReadOnly, enterpriseApiRoot, listAttachedEnterpriseWorkspaces } from './enterpriseAttachment.ts';
+import { attachEnterpriseWorkspaceReadOnly, detachEnterpriseWorkspaceReadOnly, enterpriseApiRoot, listAttachedEnterpriseWorkspaces } from './enterpriseAttachment.ts';
 import { buildEnterpriseJavaSymbolGraph } from './enterpriseSemanticJava.ts';
 import { buildEnterpriseDynamicSqlLineage } from './enterpriseSqlLineage.ts';
 import { proposeEnterpriseAiRefactor, validateEnterpriseAiRefactor } from './enterpriseAiRefactor.ts';
@@ -149,6 +149,14 @@ export function createHandler() {
       }
       if (req.method === 'GET' && pathPart === '/enterprise/projects/list') {
         sendJson(res, 200, { workspaces: listAttachedEnterpriseWorkspaces() }); return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/projects/detach') {
+        const body = await readBody(req);
+        try {
+          sendJson(res, 200, detachEnterpriseWorkspaceReadOnly(
+            typeof body.workspaceId === 'string' ? body.workspaceId : ''));
+        } catch (e) { sendJson(res, 400, { error: (e as Error).message }); }
+        return;
       }
       if (req.method === 'POST' && pathPart === '/enterprise/projects/attach') {
         const body = await readBody(req);
