@@ -70,11 +70,20 @@ export function EnterpriseWorkspacePanel() {
       {centralMode ? <div className="workspace-card">
         <h3>接入现有企业项目 · 只读</h3>
         <p className="detail-summary">这里只读取业务目录并在中央登记，不会创建 Instance、修改项目源码或写入 Provider Hooks。新建项目请使用独立工作台创建入口。</p>
-        <select aria-label="选择已接入企业工作区" value={workspaceId} onChange={e => {setWorkspaceId(e.target.value); setDiscovery(null);setSnapshots([]);}}>
+        <select aria-label="选择已接入企业工作区" value={workspaceId} onChange={e => {setWorkspaceId(e.target.value); setDiscovery(null);setSnapshots([]);setSelectedBefore('');setSelectedAfter('');setEvolution([]);setPipeline('');setSemanticEvidence('');}}>
           <option value="">请选择业务工作区</option>
           {attachedWorkspaces.map(w => <option key={w.workspaceId} value={w.workspaceId}>{w.label} · {w.projectRoot}</option>)}
         </select>
         {attachedWorkspaces.length === 0 ? <p role="status">尚未接入企业项目。请到中央「独立工作台」选择只读接入已有目录。</p> : null}
+        {workspaceId ? <button type="button" className="secondary-button" disabled={busy}
+          onClick={() => void action(async () => {
+            if (!window.confirm('只移除此工作区的中央登记吗？原始业务代码和已生成分析资产都会保留。')) return;
+            await assetClient.enterpriseCommand('projects/detach', { workspaceId });
+            const response = await assetClient.listAttachedEnterprise();
+            setAttachedWorkspaces(response.workspaces);
+            setWorkspaceId(response.workspaces[0]?.workspaceId || '');
+            setSelectedBefore('');setSelectedAfter('');setDiscovery(null);setSnapshots([]);
+          })}>移除只读登记（保留代码及分析数据）</button> : null}
       </div> : null}
       <p className="detail-summary">只读取本地 Git 对象，不执行 fetch、checkout 或修改业务代码。快照固定每个仓库的 commit 和 tree；元数据保存在中央管理目录。</p>
       <div className="topbar-actions">
@@ -125,6 +134,20 @@ export function EnterpriseWorkspacePanel() {
           const report=await assetClient.enterpriseCommand<{checked:number;changed:number;bytesRemoved:number;status:string}>('optimization/experiment',{snapshotId:selectedAfter},scope);
           setPipeline('隔离优化实验：'+report.checked+' 个文件，候选优化 '+report.changed+' 个，节约空白字节 '+report.bytesRemoved+'；未改动业务源码。');
         })}>运行隔离优化实验</button>
+        <button className="secondary-button" disabled={busy}
+          onClick={() => void action(async () => {
+            const info = await assetClient.enterpriseGet<{
+              javaCompiler: { available: boolean; detail: string };
+              sqlParser: { available: boolean; detail: string };
+              localModel: { available: boolean; detail: string };
+              testSandbox: { available: boolean; detail: string };
+            }>('semantic/toolchain');
+            setSemanticEvidence('环境自检：Java ' + (info.javaCompiler.available ? '就绪' : '不可用') +
+              '；SQLGlot ' + (info.sqlParser.available ? '就绪' : '未安装') +
+              '；本地 AI ' + (info.localModel.available ? '端点在线' : '未连接') +
+              '；测试容器 ' + (info.testSandbox.available ? '已缓存' : '未准备') +
+              '。缺失项目会阻塞对应操作，不会伪造测试成功。');
+          })}>检查 Java / SQL / 本地 AI / 测试环境</button>
         <h3>源码语义与动态 SQL 血缘</h3>
         <p className="detail-summary">Java 使用 JDK AST 与符号归属解析；SQL 使用 MyBatis 条件分支和 SQLGlot AST。分析对象必须先归档 Raw。无法解析的调用、运行时条件与缺少的表结构会报告 PARTIAL，而不是虚构完整血缘。</p>
         <div className="topbar-actions">
