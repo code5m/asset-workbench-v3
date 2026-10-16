@@ -80,8 +80,20 @@ export function assertSafeEnterpriseManagedPath(rootInput: string, relative: str
 }
 /** A Git exclude does not protect ALREADY TRACKED files. Refuse to manage
  * business paths that the root repository already tracks. */
+const verifiedGitRootIndex = new Map<string, string>();
 function assertUntrackedManagedData(root: string): void {
-  if (!fs.existsSync(path.join(root, '.git'))) return;
+  const gitDot = path.join(root, '.git');
+  if (!fs.existsSync(gitDot)) return;
+  // Use the local index stamp to avoid repeatedly spawning Git for every
+  // snapshot, Mirror and Raw operation; repeat check when the index changes.
+  let stamp: string | null = null;
+  if (fs.lstatSync(gitDot).isDirectory() && !fs.lstatSync(gitDot).isSymbolicLink()) {
+    try {
+      const info = fs.statSync(path.join(gitDot, 'index'));
+      stamp = [info.dev, info.ino, info.size, info.mtimeMs, info.ctimeMs].join(':');
+      if (verifiedGitRootIndex.get(root) === stamp) return;
+    } catch { /* repository may be unborn or use an external index */ }
+  }
   let top = '';
   let tracked = '';
   try {
@@ -93,7 +105,11 @@ function assertUntrackedManagedData(root: string): void {
     throw new Error('Unable to verify the root Git tracking boundary; managed mode is blocked');
   }
   if (top !== root) throw new Error('Root Git toplevel changed; managed mode is blocked');
-  if (tracked) throw new Error('Git already tracks .asset-workbench-data; refusing to overwrite tracked business files');
+  if (tracked) {
+    verifiedGitRootIndex.delete(root);
+    throw new Error('Git already tracks .asset-workbench-data; refusing to overwrite tracked business files');
+  }
+  if (stamp) verifiedGitRootIndex.set(root, stamp);
 }
 function checkManagedDirectory(root: string): string {
   assertUntrackedManagedData(root);
