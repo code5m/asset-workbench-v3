@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { canonicalEnterpriseRoot, enterpriseEntryForRoot } from './enterpriseStorage.ts';
+import { assertSafeEnterpriseManagedPath, canonicalEnterpriseRoot, enterpriseEntryForRoot } from './enterpriseStorage.ts';
 import { discoverEnterpriseWorkspace } from './enterpriseWorkspace.ts';
 
 export interface EnterpriseKnowledgeNote {
@@ -15,7 +15,7 @@ function notesDir(root: string) {
   if (!fs.existsSync(base) || !fs.lstatSync(base).isDirectory() || fs.lstatSync(base).isSymbolicLink()) {
     throw new Error('Invalid managed data directory');
   }
-  const folder = path.join(base, 'knowledge', 'notes');
+  const folder = assertSafeEnterpriseManagedPath(canonical, 'knowledge/notes');
   for (const segment of [path.join(base, 'knowledge'), folder]) {
     if (fs.existsSync(segment) && fs.lstatSync(segment).isSymbolicLink()) throw new Error('Knowledge directory is a symlink');
   }
