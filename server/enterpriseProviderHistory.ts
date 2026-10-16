@@ -67,7 +67,7 @@ export function importEnterpriseCodeBuddyHistory(source: string, providerSession
       })()
     : path.dirname(under(base, source));
   const index = path.join(folder, 'index.json');
-  if (path.basename(file) !== 'index.json' && !fs.existsSync(index)) {
+  if (!fs.existsSync(index) || !fs.lstatSync(index).isFile() || fs.lstatSync(index).isSymbolicLink()) {
     throw new Error('官方 CodeBuddy 会话索引缺失');
   }
   const candidates = readEnterpriseRegistry().filter(x => x.sourcePolicy === 'managed');
