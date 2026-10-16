@@ -73,6 +73,21 @@ npm run check
 
 还必须在真实 backV8 本机补做：36 仓库完整盘点、Provider 官方 Hook 事件、Maven/Java/SQL 分析、聊天归属、并发/长时间压测、Git 工作区 clean、敏感数据合规审查。若 Desktop Commander 离线，不得声称已完成这些真实验收。
 
+## 迁移后在工作台查看旧资产
+
+企业受管工作区面板包含「历史聊天、设计与知识迁移」。能在旧版 V3 `04-conversations`、`02-design` 等区域找到匹配 `schemaVersion:1`、受支持 ID 与内容文件的资产时，只读复制到
+`.asset-workbench-data/knowledge/legacy-managed` 并生成 SHA-256 清单。新页面只展示内容和 SHA 校验成功的项目；旧目录始终保留。
+
+「高级：旧资产迁移校验与回滚」可检查中央旧分析数据是否完整复制、有无新增会话与知识；受管期间有新数据时会拒绝自动回滚，不会制造资产丢失。没有明确原工作区归属的旧 Provider 会话仍需人工确权，不能被简单按目录名归入企业项目。
+
+## 真实 Provider 验收判定
+
+1. 已安装用户级配置不等于真实事件采集成功。
+2. 正式验证必须使用实际 Provider 的官方新会话，记录其 `SessionStart/UserPromptSubmit/Stop/SessionEnd` 或对应事件，核对真实 Provider Session ID 与 Hook 进程 cwd。
+3. 只有解析并写入的事件有实际项目归属证据时，才认为采集生效。断开、历史缺失或没有官方结束事件仍需报告 PARTIAL/BLOCKED。
+4. OpenCode 插件和 Trae 的官方 Hooks 事件/配置可能随产品版本改变，需在目标安装上进一步验收；CI 模拟事件不是生产认证。
+5. 安装于 HOME 的用户级 Hooks 可能影响使用者其他项目，因此安装入口强制确认、保留原设置和首次备份；没有配置时使用官方历史导入，不能静默动用用户全局配置。
+
 ## 已知产品边界
 
 - 企业工作区统一入口目前在中央 V3「项目工作台 → 企业多仓库」中，Provider、会话、知识与分析共享选择的 Workspace ID；**不是**把旧单仓 Instance 直接变成 36 个独立实例。
