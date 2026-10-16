@@ -21,6 +21,9 @@ export function EnterpriseWorkspacePanel() {
   const [evidenceRepo, setEvidenceRepo] = useState('');
   const [evidencePath, setEvidencePath] = useState('');
   const [note, setNote] = useState('');
+  const [model, setModel] = useState('qwen2.5-coder:7b');
+  const [refactorProposalId, setRefactorProposalId] = useState('');
+  const [semanticEvidence, setSemanticEvidence] = useState('');
 
   const [busy, setBusy] = useState(false);
   const [centralMode, setCentralMode] = useState(false);
@@ -122,6 +125,49 @@ export function EnterpriseWorkspacePanel() {
           const report=await assetClient.enterpriseCommand<{checked:number;changed:number;bytesRemoved:number;status:string}>('optimization/experiment',{snapshotId:selectedAfter},scope);
           setPipeline('隔离优化实验：'+report.checked+' 个文件，候选优化 '+report.changed+' 个，节约空白字节 '+report.bytesRemoved+'；未改动业务源码。');
         })}>运行隔离优化实验</button>
+        <h3>源码语义与动态 SQL 血缘</h3>
+        <p className="detail-summary">Java 使用 JDK AST 与符号归属解析；SQL 使用 MyBatis 条件分支和 SQLGlot AST。分析对象必须先归档 Raw。无法解析的调用、运行时条件与缺少的表结构会报告 PARTIAL，而不是虚构完整血缘。</p>
+        <div className="topbar-actions">
+          <button type="button" className="secondary-button" disabled={busy || !selectedAfter}
+            onClick={() => void action(async () => {
+              const data = await assetClient.enterpriseCommand<{
+                status: string; indexedJavaFiles: number; declarations: number; resolvedCallEdges: number;
+                crossRepositoryEdges: number; unresolvedCalls: number; diagnostics: string[]; reason?: string;
+              }>('semantic/java', { snapshotId: selectedAfter }, scope);
+              setSemanticEvidence('Java ' + data.status + ' · ' + data.indexedJavaFiles + ' 个源码文件、' + data.declarations +
+                ' 个方法、' + data.resolvedCallEdges + ' 条已匹配调用边（跨仓 ' + data.crossRepositoryEdges +
+                '）、未解析 ' + data.unresolvedCalls + '。' + (data.reason || data.diagnostics.slice(0, 2).join('; ')));
+            })}>解析跨仓 Java 符号调用</button>
+          <button type="button" className="secondary-button" disabled={busy || !selectedAfter}
+            onClick={() => void action(async () => {
+              const data = await assetClient.enterpriseCommand<{
+                status: string; analyzedFiles: number; statements: Array<{ complete: boolean }>; errors: string[]; reason?: string;
+              }>('semantic/sql', { snapshotId: selectedAfter }, scope);
+              setSemanticEvidence('MyBatis SQL ' + data.status + ' · ' + data.analyzedFiles + ' 个文件、' +
+                data.statements.length + ' 个 SQL 条件分支，未完整解析 ' +
+                data.statements.filter(x => !x.complete).length + '。' + (data.reason || data.errors.slice(0, 2).join('; ')));
+            })}>分析 MyBatis 动态 SQL 血缘</button>
+        </div>
+        {semanticEvidence ? <p role="status" className="detail-summary">{semanticEvidence}</p> : null}
+        <h3>AI 隔离重构与自动化验证</h3>
+        <p className="detail-summary">选择下面的证据仓库和 Java 文件，使用本机 Ollama 模型生成候选修改。不会把公司源码传到云端，也不会直接修改 backV8；验证需要完整 Raw、已缓存的 Docker Maven/JDK 镜像与可运行的离线业务测试。</p>
+        <input aria-label="本地重构模型" value={model} onChange={e => setModel(e.target.value)} placeholder="本地 Ollama 模型名称" />
+        <div className="topbar-actions">
+          <button type="button" className="secondary-button" disabled={busy || !selectedAfter || !evidenceRepo || !evidencePath.endsWith('.java')}
+            onClick={() => void action(async () => {
+              const result = await assetClient.enterpriseCommand<{ id: string; rationale: string; originalSha256: string; candidateSha256: string }>(
+                'refactor/propose', { snapshotId: selectedAfter, repository: evidenceRepo, path: evidencePath.trim(), model }, scope);
+              setRefactorProposalId(result.id);
+              setSemanticEvidence('候选重构已生成（未修改业务源码）：' + result.id + ' · ' + result.rationale);
+            })}>AI 生成隔离候选修改</button>
+          <button type="button" className="secondary-button" disabled={busy || !refactorProposalId}
+            onClick={() => void action(async () => {
+              const result = await assetClient.enterpriseCommand<{ status: string; reason: string; baselineMs?: number; candidateMs?: number }>(
+                'refactor/validate', { proposalId: refactorProposalId }, scope);
+              setSemanticEvidence('候选 ' + refactorProposalId + ' · ' + result.status + '。' + result.reason +
+                (result.baselineMs && result.candidateMs ? ' 基线测试 ' + result.baselineMs + ' ms；修改后测试 ' + result.candidateMs + ' ms。' : ''));
+            })}>容器内验证基线与重构结果</button>
+        </div>
         <h3>问题与 Framework 演进</h3>
         <p className="detail-summary">先绑定真实 Git 版本和文件证据。记录问题、实验、验证后才能提交通用能力候选。绝不自动修改业务代码。</p>
         <input aria-label="问题标题" value={title} placeholder="问题标题" onChange={e => setTitle(e.target.value)}/>
