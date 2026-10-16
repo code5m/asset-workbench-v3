@@ -16,14 +16,20 @@ const home = () => {
   return fs.realpathSync(value);
 };
 /** Codex official JSONL history carries its own session_meta.cwd. */
-export function importEnterpriseCodexHistory(source: string, expectedWorkspaceId?: string): { imported: number; duplicates: number; workspaceId: string; sessionId: string } {
+export function importEnterpriseCodexHistory(source: string, expectedWorkspaceId?: string, options: { finalize?: boolean } = {}): {
+  imported: number; duplicates: number; workspaceId: string; sessionId: string; finalized: boolean;
+} {
   const root = path.join(home(), '.codex', 'sessions');
   const file = under(root, source);
   const lines = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean);
+  // Imported historical conversations must be complete and attributable.
+  // Silently dropping malformed JSONL lines could forge a "complete" transcript.
+  let invalid = 0;
   const records = lines.flatMap(line => {
     try { return [JSON.parse(line) as Record<string, any>]; }
-    catch { return []; }
+    catch { invalid++; return []; }
   });
+  if (options.finalize && invalid > 0) throw new Error('Codex JSONL contains invalid/truncated lines; import refused without altering any project asset');
   const meta = records.find(v => v.type === 'session_meta')?.payload;
   if (!meta || typeof meta.cwd !== 'string' || typeof meta.session_id !== 'string') {
     throw new Error('历史 Codex 会话缺少官方 cwd/session_id 证据，不允许自动归属');
@@ -52,7 +58,26 @@ export function importEnterpriseCodexHistory(source: string, expectedWorkspaceId
     workspaceId = result.state.workspaceId;
     imported += Number(result.accepted); duplicates += Number(result.duplicate);
   }
-  return { imported, duplicates, workspaceId, sessionId: meta.session_id };
+  let finalized = false;
+  if (options.finalize && imported + duplicates > 0) {
+    // A historical import is NOT a native Provider SessionEnd event.
+    // Mark its source explicitly and materialize the transcript so it can be
+    // viewed immediately, without falsely claiming a real-time Hook E2E.
+    const state = listEnterpriseProviderSessions(origin.projectRoot)
+      .find(item => item.provider === 'codex' && item.providerSessionId === meta.session_id);
+    if (state?.status === 'ended') {
+      finalized = true;
+    } else {
+      const done = appendEnterpriseProviderEvent({
+        provider: 'codex', providerSessionId: meta.session_id, captureSource: 'official-import',
+        hookEventName: 'HistoryImportComplete', cwd: meta.cwd,
+        eventId: 'codex-history:' + meta.session_id + ':import-complete',
+        rawPayload: { source: 'official-history', completion: 'import-finished' },
+      });
+      finalized = done.state.status === 'ended' && Boolean(done.state.transcriptPath);
+    }
+  }
+  return { imported, duplicates, workspaceId, sessionId: meta.session_id, finalized };
 }
 /**
  * A CodeBuddy transcript has no independent project root proof.
