@@ -149,7 +149,7 @@ export const AssetWorkbenchEnterpriseCapture = async (ctx) => {
       const data = JSON.stringify(record);
       if (!data || Buffer.byteLength(data) > 128 * 1024) { dropped += 1; return; }
       if (!worker || worker.exitCode !== null || worker.killed) {
-        worker = spawn(process.execPath, ['--experimental-strip-types', ${script}, '--provider=opencode', '--stream'], {
+        worker = spawn('node', ['--experimental-strip-types', ${script}, '--provider=opencode', '--stream'], {
           cwd: directory, stdio: ['pipe', 'ignore', 'ignore'], windowsHide: true,
         });
         const active = worker;
