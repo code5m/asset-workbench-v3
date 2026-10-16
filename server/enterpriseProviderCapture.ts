@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { assertSafeEnterpriseManagedPath, canonicalEnterpriseRoot, readEnterpriseRegistry } from './enterpriseStorage.ts';
+import { appendEnterprisePrivateFile, readEnterprisePrivateFile, writeEnterprisePrivateAtomic } from './enterprisePrivateIO.ts';
 
 const digest = (s: string) => createHash('sha256').update(s).digest('hex');
 const PROVIDERS = new Set(['codex', 'codebuddy', 'trae', 'opencode', 'codearts', 'chatgpt', 'workbuddy', 'other']);
@@ -122,9 +123,26 @@ function withLock<T>(dir: string, task: () => T): T {
   throw new Error('Enterprise capture session is busy');
 }
 function jsonAtomic(file: string, body: unknown) {
-  const tmp = file + '.' + randomUUID() + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(body, null, 2) + '\n', { mode: 0o600 });
-  fs.renameSync(tmp, file);
+  writeEnterprisePrivateAtomic(file, JSON.stringify(body, null, 2) + '\n');
+}
+function finalizeEndedEnterpriseCapture(root: string, state: EnterpriseCaptureState, log: string): boolean {
+  const records = readEnterprisePrivateFile(log).toString('utf8').split('\n').filter(Boolean)
+    .map(line => JSON.parse(line) as { kind: string; timestamp: string; content: string });
+  const ended = records.find(row => row.kind === 'session.ended');
+  if (!ended) return false;
+  const conversation = assertSafeEnterpriseManagedPath(root, 'conversations/transcripts');
+  fs.mkdirSync(conversation, { recursive: true, mode: 0o700 });
+  const md = ['# Provider 会话记录', '', '- Workspace: ' + state.workspaceId,
+    '- Repository: ' + (state.repository || 'unresolved'),
+    '- Module: ' + (state.module || 'unresolved'), '- Provider: ' + state.provider,
+    '- Session ID: ' + state.providerSessionId, '',
+    ...records.flatMap(row => row.content
+      ? ['## ' + row.kind + ' · ' + row.timestamp, '', row.content, ''] : [])].join('\n');
+  const name = state.id + '.md';
+  writeEnterprisePrivateAtomic(path.join(conversation, name), md + '\n');
+  state.transcriptPath = 'conversations/transcripts/' + name;
+  state.status = 'ended'; state.endedAt = ended.timestamp;
+  return true;
 }
 function eventKind(name: string, role?: Role) {
   const lower = name.toLowerCase();
@@ -160,7 +178,7 @@ export function appendEnterpriseProviderEvent(input: EnterpriseProviderEvent): E
     const file = path.join(dir, 'state.json');
     let state: EnterpriseCaptureState;
     if (fs.existsSync(file)) {
-      state = JSON.parse(fs.readFileSync(file, 'utf8')) as EnterpriseCaptureState;
+      state = JSON.parse(readEnterprisePrivateFile(file, 512 * 1024).toString('utf8')) as EnterpriseCaptureState;
       if (state.workspaceId !== origin.workspaceId || state.projectRoot !== origin.projectRoot
         || state.provider !== provider || state.providerSessionId !== providerSessionId
         || state.repository !== origin.repository || state.cwd !== origin.cwd) {
@@ -177,12 +195,15 @@ export function appendEnterpriseProviderEvent(input: EnterpriseProviderEvent): E
       jsonAtomic(file, state);
     }
     const log = path.join(dir, 'events.jsonl');
-    const prior = fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '';
+    const prior = fs.existsSync(log) ? readEnterprisePrivateFile(log).toString('utf8') : '';
     const exists = prior.split('\n').filter(Boolean).some(line => {
       try { return (JSON.parse(line) as { eventId?: string }).eventId === eventId; }
       catch { throw new Error('Corrupt enterprise capture log, append refused'); }
     });
     if (exists) {
+      // The process may have crashed after appending SessionEnd but before
+      // materializing the transcript. An idempotent retry must repair it.
+      if (state.status !== 'ended') finalizeEndedEnterpriseCapture(origin.projectRoot, state, log);
       state.duplicates++;
       jsonAtomic(file, state);
       return { state, accepted: false, duplicate: true };
@@ -195,25 +216,11 @@ export function appendEnterpriseProviderEvent(input: EnterpriseProviderEvent): E
       repository: origin.repository, module: origin.module, attribution: origin.attribution,
       rawPayload: redactedPayload(input.rawPayload || {}),
     };
-    const fd = fs.openSync(log, 'a', 0o600);
-    try { fs.writeSync(fd, JSON.stringify(event) + '\n'); fs.fsyncSync(fd); }
-    finally { fs.closeSync(fd); }
+    appendEnterprisePrivateFile(log, JSON.stringify(event) + '\n');
     state.acceptedEvents++;
     state.updatedAt = time;
     if (event.kind === 'session.ended') {
-      state.status = 'ended'; state.endedAt = time;
-      const conversation = assertSafeEnterpriseManagedPath(origin.projectRoot, 'conversations/transcripts');
-      fs.mkdirSync(conversation, { recursive: true, mode: 0o700 });
-      const records = fs.readFileSync(log, 'utf8').split('\n').filter(Boolean)
-        .map(line => JSON.parse(line) as typeof event);
-      const md = ['# Provider 会话记录', '', '- Workspace: ' + origin.workspaceId,
-        '- Repository: ' + (origin.repository || 'unresolved'),
-        '- Module: ' + (origin.module || 'unresolved'), '- Provider: ' + provider,
-        '- Session ID: ' + providerSessionId, '', ...records.flatMap(row =>
-          row.content ? ['## ' + row.kind + ' · ' + row.timestamp, '', row.content, ''] : [])].join('\n');
-      const name = id + '.md';
-      fs.writeFileSync(path.join(conversation, name), md + '\n', { mode: 0o600 });
-      state.transcriptPath = 'conversations/transcripts/' + name;
+      finalizeEndedEnterpriseCapture(origin.projectRoot, state, log);
     }
     jsonAtomic(file, state);
     return { state, accepted: true, duplicate: false };
@@ -225,14 +232,32 @@ export function listEnterpriseProviderSessions(rootInput: string, max = 200): En
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir).filter(id => /^enterprise_capture_[0-9a-f]{48}$/.test(id)).flatMap(id => {
     try {
-      const state = JSON.parse(fs.readFileSync(path.join(dir, id, 'state.json'), 'utf8')) as EnterpriseCaptureState;
-      return state.projectRoot === root ? [state] : [];
+      const state = JSON.parse(readEnterprisePrivateFile(path.join(sessionDirectory(root, id), 'state.json'), 512 * 1024).toString('utf8')) as EnterpriseCaptureState;
+      return state.projectRoot === root && state.workspaceId === readEnterpriseRegistry().find(x => x.projectRoot === root)?.workspaceId ? [state] : [];
     } catch { return []; }
   }).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, Math.min(500, Math.max(1, max)));
 }
 export function readEnterpriseCaptureEvents(rootInput: string, id: string): unknown[] {
   const root = canonicalEnterpriseRoot(rootInput);
-  const records = fs.readFileSync(path.join(sessionDirectory(root, id), 'events.jsonl'), 'utf8')
-    .split('\n').filter(Boolean).slice(0, 20_000);
-  return records.map(s => JSON.parse(s) as unknown);
+  const dir = sessionDirectory(root, id);
+  const state = JSON.parse(readEnterprisePrivateFile(path.join(dir, 'state.json'), 512 * 1024).toString('utf8')) as EnterpriseCaptureState;
+  if (state.projectRoot !== root || state.id !== id
+    || state.workspaceId !== readEnterpriseRegistry().find(item => item.projectRoot === root)?.workspaceId) {
+    throw new Error('Enterprise Provider session identity mismatch');
+  }
+  // Raw hook payloads may contain application-specific secrets even after key
+  // redaction. This public UI endpoint intentionally never returns them.
+  const records = readEnterprisePrivateFile(path.join(dir, 'events.jsonl')).toString('utf8')
+    .split('\n').filter(Boolean).slice(-200);
+  return records.map(line => {
+    const event = JSON.parse(line) as {
+      eventId: string; kind: string; timestamp: string; content: string;
+      repository: string | null; module: string | null; provider: string;
+    };
+    return {
+      eventId: event.eventId, kind: event.kind, timestamp: event.timestamp,
+      content: event.content, repository: event.repository, module: event.module,
+      provider: event.provider,
+    };
+  });
 }
