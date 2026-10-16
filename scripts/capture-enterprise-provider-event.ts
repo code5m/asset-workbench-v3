@@ -34,6 +34,16 @@ try {
     event.project?.directory, properties.cwd, properties.directory, observedCwd);
   const stamp = firstText(event.timestamp, event.receivedAt) || new Date().toISOString();
   const rawPayload = JSON.parse(JSON.stringify(event)) as Record<string, unknown>;
+  if (provider === 'codebuddy' && hookEventName === 'SessionEnd'
+    && typeof event.transcript_path === 'string' && event.transcript_path) {
+    try {
+      const { importEnterpriseCodeBuddyHistory } = await import('../server/enterpriseProviderHistory.ts');
+      importEnterpriseCodeBuddyHistory(event.transcript_path, providerSessionId);
+    } catch {
+      // Preserve actual End evidence even when the optional official
+      // transcript import is unavailable. Such a capture may be partial.
+    }
+  }
   appendEnterpriseProviderEvent({
     provider, providerSessionId, hookEventName,
     cwd, observedCwd, timestamp: stamp, rawPayload,
