@@ -37,9 +37,13 @@ public final class SymbolIndexer {
   }
   private static void emit(PrintWriter output, String kind, String file, long line,
                            String signature, String label) {
+    emit(output, kind, file, line, signature, label, "");
+  }
+  private static void emit(PrintWriter output, String kind, String file, long line,
+                           String signature, String label, String caller) {
     output.println("{\"kind\":" + json(kind) + ",\"file\":" + json(file)
       + ",\"line\":" + line + ",\"symbol\":" + json(signature)
-      + ",\"label\":" + json(label) + "}");
+      + ",\"label\":" + json(label) + ",\"caller\":" + json(caller) + "}");
   }
   public static void main(String[] args) throws Exception {
     if (args.length != 2) throw new IllegalArgumentException("usage: <source-root> <output.jsonl>");
