@@ -37,6 +37,7 @@ import { attachEnterpriseWorkspaceReadOnly, detachEnterpriseWorkspaceReadOnly, e
 import { buildEnterpriseJavaSymbolGraph } from './enterpriseSemanticJava.ts';
 import { buildEnterpriseDynamicSqlLineage } from './enterpriseSqlLineage.ts';
 import { proposeEnterpriseAiRefactor, validateEnterpriseAiRefactor } from './enterpriseAiRefactor.ts';
+import { semanticToolchainStatus } from './enterpriseToolchain.ts';
 import { importEnterpriseRaw, verifyEnterpriseRaw } from './enterpriseImport.ts';
 import { mirrorEnterpriseSnapshot } from './enterpriseMirror.ts';
 import { buildEnterpriseMavenGraph } from './enterpriseGraph.ts';
@@ -171,6 +172,10 @@ export function createHandler() {
       }
       // Enterprise read-only multi-repository evidence. Never fetch, checkout, or
       // mutate source repos; snapshots reside in central managed storage.
+      if (req.method === 'GET' && pathPart === '/enterprise/semantic/toolchain') {
+        sendJson(res, 200, await semanticToolchainStatus());
+        return;
+      }
       if (req.method === 'POST' && pathPart === '/enterprise/semantic/java') {
         const body = await readBody(req);
         if (typeof body.snapshotId !== 'string') throw new Error('snapshotId required');
