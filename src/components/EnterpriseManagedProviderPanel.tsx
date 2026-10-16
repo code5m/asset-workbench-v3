@@ -15,7 +15,7 @@ type Note = {
   createdAt: string;
 };
 export function EnterpriseManagedProviderPanel(props: {
-  workspaceId: string; sourcePolicy: 'read-only' | 'managed'; onManaged?: () => Promise<void>;
+  workspaceId: string; sourcePolicy: 'read-only' | 'managed'; onManaged?: () => Promise<void>; onModeChanged?: () => Promise<void>;
 }) {
   const { workspaceId, sourcePolicy } = props;
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -155,6 +155,27 @@ export function EnterpriseManagedProviderPanel(props: {
         <span>{note.module || '未指定模块'}</span>
         <small>{note.content.slice(0, 260)}</small>
       </div>)}</div>
+    <details className="instance-optional-settings">
+      <summary>高级：旧资产迁移校验与回滚</summary>
+      <p className="detail-summary">仅校验复制数据；源中央备份和现有聊天不会自动删除。受管期产生新聊天、知识或分析时，将阻止回滚以避免资产被隐藏。</p>
+      <div className="topbar-actions">
+        <button className="secondary-button" disabled={busy} onClick={() => void action(async () => {
+          const audit = await assetClient.enterpriseManagedAudit(workspaceId);
+          setMessage('旧资产复制校验：' + audit.verifiedFiles + '/' + audit.expectedFiles +
+            '；源数据保留：' + (audit.sourcePreserved ? '是' : '否') +
+            '；新增受管内容 ' + audit.newManagedFiles + '；可安全回滚：' + (audit.rollbackSafe ? '是' : '否') +
+            (audit.mismatches.length ? '；差异：' + audit.mismatches.slice(0,5).join(', ') : ''));
+        })}>校验旧资产与备份</button>
+        <button className="secondary-button" disabled={busy} onClick={() => void action(async () => {
+          const audit = await assetClient.enterpriseManagedAudit(workspaceId);
+          if (!audit.rollbackSafe || !audit.sourcePreserved) throw new Error('新增受管资产或校验差异导致回滚被阻止，所有数据已保留');
+          if (!window.confirm('将存储路由切回中央。原始与受管目录文件都不会删除；确认操作？')) return;
+          const result = await assetClient.enterpriseManagedRollback(workspaceId);
+          setMessage(result.detail);
+          await props.onModeChanged?.();
+        })}>确认回滚到完全只读</button>
+      </div>
+    </details>
     {error ? <p role="alert" className="detail-summary">{error}</p> : null}
     {message ? <p role="status" className="detail-summary">{message}</p> : null}
   </section>;
