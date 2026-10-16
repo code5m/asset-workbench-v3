@@ -47,11 +47,18 @@ function clearProviderClientCache(): void {
   providerDetailCache.clear();
 }
 
+function localizeLegacyApiError(message: string, code?: string): string {
+  if (code === 'CENTRAL_ONLY' || message.includes('This action is available only in central Framework management')) {
+    return '此操作只能在中央 Framework 管理界面执行，请返回主 V3 工作台的「独立工作台管理」。';
+  }
+  return message;
+}
+
 export class ApiError extends Error {
   status: number;
 
   constructor(status: number, message: string) {
-    super(message);
+    super(localizeLegacyApiError(message));
     this.status = status;
     this.name = 'ApiError';
   }
@@ -67,8 +74,8 @@ async function getJson<T>(url: string): Promise<T> {
 }
 
 async function errorMessage(res: Response): Promise<string> {
-  const value = await res.json().catch(() => ({})) as { error?: string };
-  return value.error ?? res.statusText;
+  const value = await res.json().catch(() => ({})) as { error?: string; code?: string };
+  return localizeLegacyApiError(value.error ?? res.statusText, value.code);
 }
 
 function encode(rel: string): string {
