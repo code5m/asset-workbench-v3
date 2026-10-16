@@ -214,6 +214,36 @@ try {
   assert.equal(retry.duplicate, true);
   assert.equal(retry.state.status, 'ended');
   assert.ok(fs.existsSync(path.join(root, '.asset-workbench-data', retry.state.transcriptPath!)));
+  // A long-running Hook helper caches IDs but must observe events produced by
+  // a different process and reject partial/corrupt external appends.
+  const incrementalSession = 'incremental-multi-process';
+  const incremental = appendEnterpriseProviderEvent({ ...original,
+    provider: 'opencode', providerSessionId: incrementalSession,
+    cwd: b, observedCwd: b, hookEventName: 'SessionStart', eventId: 'incremental:start' });
+  const externalWorker = path.join(process.cwd(), 'scripts', 'capture-enterprise-provider-event.ts');
+  const externalEvent = { type: 'message.part.updated', sessionID: incrementalSession,
+    projectDirectory: b, eventId: 'incremental:remote',
+    properties: { sessionID: incrementalSession, part: { text: 'A second process added this event' } } };
+  execFileSync('node', ['--experimental-strip-types', externalWorker, '--provider=opencode', '--stream'], {
+    cwd: b, timeout: 20_000, encoding: 'utf8',
+    input: JSON.stringify(externalEvent) + '\\n', env: process.env,
+  });
+  const duplicateRemote = appendEnterpriseProviderEvent({ ...original, provider: 'opencode',
+    providerSessionId: incrementalSession, cwd: b, observedCwd: b,
+    hookEventName: 'Notification', eventId: 'incremental:remote' });
+  assert.equal(duplicateRemote.duplicate, true, 'cached indexes must see remote process writes');
+  assert.equal(duplicateRemote.state.acceptedEvents, 2);
+  const incrementalLog = path.join(privateSessions, incremental.state.id, 'events.jsonl');
+  const lengthBeforeCorruption = fs.statSync(incrementalLog).size;
+  fs.appendFileSync(incrementalLog, '{"eventId":"broken-event"');
+  assert.throws(() => appendEnterpriseProviderEvent({ ...original, provider: 'opencode',
+    providerSessionId: incrementalSession, cwd: b, observedCwd: b,
+    eventId: 'incremental:after-broken' }), /incomplete JSONL/);
+  fs.truncateSync(incrementalLog, lengthBeforeCorruption);
+  assert.equal(appendEnterpriseProviderEvent({ ...original, provider: 'opencode',
+    providerSessionId: incrementalSession, cwd: b, observedCwd: b,
+    eventId: 'incremental:after-recovery' }).state.acceptedEvents, 3);
+
   // The UI endpoint may expose conversational content but must NEVER expose
   // complete raw provider payloads containing unrecognized secret fields.
   const visible = readEnterpriseCaptureEvents(root, ended.state.id) as Array<Record<string, unknown>>;
