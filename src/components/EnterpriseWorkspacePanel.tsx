@@ -96,6 +96,10 @@ export function EnterpriseWorkspacePanel() {
           const response = await assetClient.listAttachedEnterprise();
           setAttachedWorkspaces(response.workspaces);
         }}
+        onModeChanged={async () => {
+          const response = await assetClient.listAttachedEnterprise();
+          setAttachedWorkspaces(response.workspaces);
+        }}
       /> : null}
       <p className="detail-summary">只读取业务 Git 对象，不执行 fetch、checkout 或修改业务代码。快照固定各仓库的 commit/tree，分析结果保存在工作区当前授权的数据位置。</p>
       <div className="topbar-actions">
