@@ -49,6 +49,16 @@ try {
   assert.equal(enterpriseApiRoot(attached, process.cwd()), fs.realpathSync(root));
   assert.ok(listAttachedEnterpriseWorkspaces().some(w => w.workspaceId === attached));
   assert.throws(() => enterpriseApiRoot('enterprise-' + '0'.repeat(24), process.cwd()), /Unknown/);
+  assert.throws(() => enterpriseApiRoot(undefined, process.cwd()), /必须先只读接入/);
+  const priorInstanceEnvironment = process.env.AWB_INSTANCE_PROJECT_ROOT;
+  process.env.AWB_INSTANCE_PROJECT_ROOT = root;
+  try {
+    assert.throws(() => enterpriseApiRoot(attached, root), /不能访问其他工作区/);
+    assert.equal(enterpriseApiRoot(undefined, root), root);
+  } finally {
+    if (priorInstanceEnvironment === undefined) delete process.env.AWB_INSTANCE_PROJECT_ROOT;
+    else process.env.AWB_INSTANCE_PROJECT_ROOT = priorInstanceEnvironment;
+  }
   assert.equal(fs.existsSync(path.join(root, '.asset-workbench-data')), false, 'business root must remain untouched');
   for (const dir of [payment, operation]) assert.equal(git(dir, 'status', '--porcelain'), '');
 
