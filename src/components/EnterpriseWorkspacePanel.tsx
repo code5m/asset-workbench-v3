@@ -22,6 +22,7 @@ export function EnterpriseWorkspacePanel() {
   const [evidencePath, setEvidencePath] = useState('');
   const [note, setNote] = useState('');
   const [model, setModel] = useState('qwen2.5-coder:7b');
+  const [rawBudgetMiB, setRawBudgetMiB] = useState(64);
   const [refactorProposalId, setRefactorProposalId] = useState('');
   const [semanticEvidence, setSemanticEvidence] = useState('');
 
@@ -106,6 +107,15 @@ export function EnterpriseWorkspacePanel() {
       {snapshots.length > 0 ? <section className="workspace-card">
         <h3>归档与 Maven 架构认知</h3>
         <p className="detail-summary">从固定的 Git commit 导入受管 Raw；大小超限或缺失会标为 partial，不会伪装完整。只有实际导入的数据才能进入 Maven 模块分析。</p>
+        <label>单次 Raw 归档容量上限（实际导入超过限制时报告 PARTIAL，不是导入成功）
+          <select aria-label="Raw 归档容量上限" value={rawBudgetMiB} onChange={e => setRawBudgetMiB(Number(e.target.value))}>
+            <option value={16}>16 MiB（快速试验）</option>
+            <option value={64}>64 MiB</option>
+            <option value={128}>128 MiB</option>
+            <option value={256}>256 MiB</option>
+            <option value={512}>512 MiB（较大企业项目）</option>
+          </select>
+        </label>
         <div className="topbar-actions">
           <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
             const result = await assetClient.enterpriseCommand<{ results: Array<{status:string;reason?:string}> }>('mirrors/sync',{snapshotId:selectedAfter},scope);
@@ -113,7 +123,7 @@ export function EnterpriseWorkspacePanel() {
             setPipeline('本地镜像归档：'+(result.results.length-failed.length)+'/'+result.results.length+' 已验证。'+(failed.length?'失败：'+failed.map(x=>x.reason).join('；'):''));
           })}>建立或更新本地受管 Git 镜像</button>
           <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
-            const result = await assetClient.enterpriseCommand<{ status: string; total: number; materialized: number; missing: number }>('raw/import', { snapshotId: selectedAfter },scope);
+            const result = await assetClient.enterpriseCommand<{ status: string; total: number; materialized: number; missing: number }>('raw/import', { snapshotId: selectedAfter, maxBytes: rawBudgetMiB * 1024 * 1024, maxFiles: 100000 },scope);
             setPipeline('Raw '+result.status+'：'+result.materialized+'/'+result.total+' 文件；未物化 '+result.missing);
           })}>归档当前快照 Raw</button>
           <button className="secondary-button" disabled={busy || !selectedAfter} onClick={() => void action(async () => {
