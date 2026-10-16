@@ -183,6 +183,44 @@ export const assetClient = {
     if (!res.ok) throw new ApiError(res.status, result.error ?? res.statusText);
     return result;
   },
+  async enableEnterpriseManaged(workspaceId: string): Promise<{
+    mode: 'managed'; files: number; bytes: number; digest: string; sourcePreserved: true;
+    destination: string; gitExclude: string; warnings: string[];
+    legacy?: { copies: number; bytes: number; status: 'verified' | 'partial';
+      skippedUnverified: string[]; sourcePreserved: true };
+  }> {
+    return this.enterpriseCommand('projects/managed/enable', { workspaceId });
+  },
+  enterpriseManagedAudit(workspaceId: string): Promise<{
+    mode: 'read-only' | 'managed'; sourcePreserved: boolean; expectedFiles: number;
+    verifiedFiles: number; mismatches: string[]; newManagedFiles: number; rollbackSafe: boolean;
+  }> {
+    return this.enterpriseGet('projects/managed/audit', workspaceId);
+  },
+  enterpriseManagedRollback(workspaceId: string): Promise<{ mode: 'read-only'; dataPreserved: true; detail: string }> {
+    return this.enterpriseCommand('projects/managed/rollback',
+      { workspaceId, confirm: 'ROLLBACK_MANAGED_ROUTING' });
+  },
+  enterpriseProviderStatus(workspaceId: string): Promise<{
+    mode: 'managed' | 'read-only'; detail?: string;
+    providers: Array<{ provider: string; configuration: string; captureVerified: boolean; completedSessions: number; detail: string }>;
+    sessions: Array<{ id: string; repository: string | null; module: string | null; provider: string;
+      providerSessionId: string; status: string; acceptedEvents: number; updatedAt: string; transcriptPath?: string }>;
+  }> {
+    return this.enterpriseGet('provider/status', workspaceId);
+  },
+  enterpriseProviderEvents(workspaceId: string, id: string): Promise<{
+    events: Array<{ eventId: string; kind: string; timestamp: string; content: string;
+      provider: string; repository: string | null; module: string | null }>;
+  }> {
+    return this.enterpriseGet('provider/session/events?id=' + encodeURIComponent(id), workspaceId);
+  },
+  async setupEnterpriseProviderHooks(workspaceId: string): Promise<{
+    results: Array<{ provider: string; status: string; detail: string; userLevel: true }>;
+  }> {
+    return this.enterpriseCommand('provider/hooks/setup',
+      { workspaceId, confirm: 'INSTALL_USER_LEVEL_PROVIDER_HOOKS' });
+  },
   enterpriseDiscovery(workspaceId?: string): Promise<{ root: string; scannedAt: string; repositories: Array<{ path: string; remote?: string; branch: string | null; headCommit: string; dirty: boolean; modifiedCount: number; untrackedCount: number }>; warnings: string[] }> {
     return this.enterpriseGet('discovery', workspaceId);
   },

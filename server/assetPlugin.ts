@@ -33,7 +33,13 @@ import { publishFrameworkRelease, currentFrameworkRelease } from './frameworkRel
 import { instanceRuntimeStatus, startInstanceRuntime, stopInstanceRuntime, adoptInstanceRelease, rollbackInstanceRelease, listInstanceRuntimes, registerInstanceRuntime, reconcileLegacyInstanceUi, resumeRequestedInstances } from './instanceRuntimeManager.ts';
 import { isLocalApiRequest, MAX_API_BODY_BYTES } from './localApiSecurity.ts';
 import { setupProjectProviders } from './providerSetup.ts';
-import { attachEnterpriseWorkspaceReadOnly, detachEnterpriseWorkspaceReadOnly, enterpriseApiRoot, listAttachedEnterpriseWorkspaces } from './enterpriseAttachment.ts';
+import { attachEnterpriseWorkspaceReadOnly, detachEnterpriseWorkspaceReadOnly, enableEnterpriseWorkspaceManaged, auditEnterpriseWorkspaceManaged, rollbackEnterpriseWorkspaceManaged, enterpriseApiRoot, listAttachedEnterpriseWorkspaces } from './enterpriseAttachment.ts';
+import { enterpriseEntryForRoot } from './enterpriseStorage.ts';
+import { enterpriseProviderStatuses, setupEnterpriseUserProviderHooks } from './enterpriseProviderSetup.ts';
+import { listEnterpriseProviderSessions, readEnterpriseCaptureEvents } from './enterpriseProviderCapture.ts';
+import { importEnterpriseCodexHistory } from './enterpriseProviderHistory.ts';
+import { createEnterpriseKnowledgeNote, listEnterpriseKnowledgeNotes } from './enterpriseKnowledge.ts';
+import { listMigratedEnterpriseLegacyAssets, readMigratedEnterpriseLegacyAsset } from './enterpriseLegacyMigration.ts';
 import { buildEnterpriseJavaSymbolGraph } from './enterpriseSemanticJava.ts';
 import { buildEnterpriseDynamicSqlLineage } from './enterpriseSqlLineage.ts';
 import { proposeEnterpriseAiRefactor, validateEnterpriseAiRefactor } from './enterpriseAiRefactor.ts';
@@ -150,6 +156,118 @@ export function createHandler() {
       }
       if (req.method === 'GET' && pathPart === '/enterprise/projects/list') {
         sendJson(res, 200, { workspaces: listAttachedEnterpriseWorkspaces() }); return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/projects/managed/audit') {
+        try {
+          const id = new URLSearchParams(query || '').get('workspaceId') || '';
+          sendJson(res, 200, auditEnterpriseWorkspaceManaged(id));
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/projects/managed/rollback') {
+        const body = await readBody(req);
+        try {
+          sendJson(res, 200, rollbackEnterpriseWorkspaceManaged(
+            typeof body.workspaceId === 'string' ? body.workspaceId : '',
+            typeof body.confirm === 'string' ? body.confirm : ''));
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/projects/managed/enable') {
+        const body = await readBody(req);
+        try {
+          if (typeof body.workspaceId !== 'string') throw new Error('workspaceId required');
+          sendJson(res, 200, enableEnterpriseWorkspaceManaged(body.workspaceId));
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/provider/history/import') {
+        const body = await readBody(req);
+        try {
+          if (body.provider !== 'codex' || typeof body.path !== 'string'
+            || typeof body.workspaceId !== 'string') throw new Error('仅支持有官方 cwd 证据的 Codex JSONL 导入');
+          const root = enterpriseApiRoot(body.workspaceId, getProjectRoot());
+          if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') throw new Error('需要先启用受管模式');
+          const result = importEnterpriseCodexHistory(body.path, body.workspaceId);
+          sendJson(res, 200, result);
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/knowledge/legacy') {
+        try {
+          const params = new URLSearchParams(query || '');
+          const root = enterpriseApiRoot(params.get('workspaceId'), getProjectRoot());
+          if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') throw new Error('仅企业受管工作区可查看迁移资产');
+          sendJson(res, 200, { assets: listMigratedEnterpriseLegacyAssets(root) });
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/knowledge/legacy/content') {
+        try {
+          const params = new URLSearchParams(query || '');
+          const root = enterpriseApiRoot(params.get('workspaceId'), getProjectRoot());
+          if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') throw new Error('仅企业受管工作区可查看迁移资产');
+          sendJson(res, 200, readMigratedEnterpriseLegacyAsset(root, params.get('relative') || ''));
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/knowledge/notes') {
+        try {
+          const id = new URLSearchParams(query || '').get('workspaceId');
+          const root = enterpriseApiRoot(id, getProjectRoot());
+          if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') {
+            sendJson(res, 200, { notes: [], status: 'read-only' });
+          } else sendJson(res, 200, { notes: listEnterpriseKnowledgeNotes(root), status: 'managed' });
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/knowledge/notes') {
+        const body = await readBody(req);
+        try {
+          const root = enterpriseApiRoot(body.workspaceId, getProjectRoot());
+          const note = createEnterpriseKnowledgeNote(root, {
+            title: typeof body.title === 'string' ? body.title : '',
+            content: typeof body.content === 'string' ? body.content : '',
+            repository: typeof body.repository === 'string' ? body.repository : null,
+            module: typeof body.module === 'string' ? body.module : null,
+          });
+          sendJson(res, 201, note);
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/provider/status') {
+        try {
+          const params = new URLSearchParams(query || '');
+          const root = enterpriseApiRoot(params.get('workspaceId'), getProjectRoot());
+          if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') {
+            sendJson(res, 200, { mode: 'read-only', providers: [], sessions: [], detail: '请先授权开启企业受管模式' });
+          } else {
+            sendJson(res, 200, { mode: 'managed', providers: enterpriseProviderStatuses(root),
+              sessions: listEnterpriseProviderSessions(root, 100) });
+          }
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/provider/session/events') {
+        try {
+          const params = new URLSearchParams(query || '');
+          const root = enterpriseApiRoot(params.get('workspaceId'), getProjectRoot());
+          if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') throw new Error('Only managed enterprise workspaces can view Provider captures');
+          const id = params.get('id') || '';
+          sendJson(res, 200, { events: readEnterpriseCaptureEvents(root, id) });
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/provider/hooks/setup') {
+        const body = await readBody(req);
+        try {
+          if (typeof body.workspaceId !== 'string') throw new Error('workspaceId required');
+          const root = enterpriseApiRoot(body.workspaceId, getProjectRoot());
+          if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') throw new Error('企业工作区必须先开启受管模式');
+          const confirm = typeof body.confirm === 'string' ? body.confirm : '';
+          sendJson(res, 200, { results: setupEnterpriseUserProviderHooks(confirm) });
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
       }
       if (req.method === 'POST' && pathPart === '/enterprise/projects/detach') {
         const body = await readBody(req);

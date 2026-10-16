@@ -3,10 +3,11 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { APP_ROOT } from './config.ts';
+import { enterpriseStorageFor } from './enterpriseStorage.ts';
 
 /**
  * Multi-repository enterprise workspace. All Git operations are read-only;
- * metadata is stored OUTSIDE the business checkout and no remote is fetched.
+ * read-only workspace metadata is central; managed mode stores it exclusively\n * under the approved workspace root's .asset-workbench-data/enterprise/ directory.
  * A snapshot pins exact locally available Git objects, never a moving branch.
  */
 const IGNORED = new Set([
@@ -79,7 +80,7 @@ function canonicalRoot(root: string): string {
   return resolved;
 }
 function dataHome(root: string): string {
-  return path.join(APP_ROOT, '.asset-workbench-data', 'enterprise-workspaces', sha(root).slice(0, 32));
+  return enterpriseStorageFor(root);
 }
 export function enterpriseStoreFor(root: string): string {
   return dataHome(canonicalRoot(root));

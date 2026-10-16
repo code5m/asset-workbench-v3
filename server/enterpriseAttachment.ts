@@ -1,15 +1,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+import { canonicalEnterpriseRoot, enableManagedEnterpriseStorage, auditManagedEnterpriseStorage, rollbackManagedEnterpriseStorage, enterpriseWorkspaceId,
+  readEnterpriseRegistry, writeEnterpriseRegistry } from './enterpriseStorage.ts';
 import { APP_ROOT } from './config.ts';
 import { discoverEnterpriseWorkspace } from './enterpriseWorkspace.ts';
+import { migrateEnterpriseLegacyKnowledge } from './enterpriseLegacyMigration.ts';
 
 export interface AttachedEnterpriseWorkspace {
   workspaceId: string;
   projectRoot: string;
   label: string;
   registeredAt: string;
-  sourcePolicy: 'read-only';
+  sourcePolicy: 'read-only' | 'managed';
+  managedAt?: string;
 }
 const digest = (root: string) => createHash('sha256').update(root).digest('hex').slice(0, 24);
 const registry = () => path.join(APP_ROOT, '.asset-workbench-data', 'enterprise-workspaces', 'attached.json');
@@ -28,19 +32,10 @@ function validatedRoot(input: string): string {
   return root;
 }
 function read(): AttachedEnterpriseWorkspace[] {
-  try {
-    const raw = JSON.parse(fs.readFileSync(registry(), 'utf8')) as AttachedEnterpriseWorkspace[];
-    if (!Array.isArray(raw)) return [];
-    return raw.filter(v => typeof v.workspaceId === 'string' && /^enterprise-[0-9a-f]{24}$/.test(v.workspaceId)
-      && typeof v.projectRoot === 'string' && v.sourcePolicy === 'read-only');
-  } catch { return []; }
+  return readEnterpriseRegistry();
 }
 function save(items: AttachedEnterpriseWorkspace[]) {
-  const file = registry();
-  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  const temp = file + '.' + randomUUID() + '.tmp';
-  fs.writeFileSync(temp, JSON.stringify(items, null, 2) + '\n', { mode: 0o600 });
-  fs.renameSync(temp, file);
+  writeEnterpriseRegistry(items);
 }
 export function listAttachedEnterpriseWorkspaces(): AttachedEnterpriseWorkspace[] {
   centralOnly();
@@ -56,7 +51,7 @@ export function attachEnterpriseWorkspaceReadOnly(input: string, label?: string)
   const root = validatedRoot(input);
   const found = discoverEnterpriseWorkspace(root);
   if (found.repositories.length === 0) throw new Error('目录内没有可识别的 Git 仓库');
-  const workspaceId = 'enterprise-' + digest(root);
+  const workspaceId = enterpriseWorkspaceId(root);
   const previous = read();
   const existing = previous.find(v => v.workspaceId === workspaceId);
   const workspace = existing ?? {
@@ -66,6 +61,32 @@ export function attachEnterpriseWorkspaceReadOnly(input: string, label?: string)
   if (!existing) save([...previous, workspace]);
   // No Instance Manifest or Provider Hooks; registration is stored ONLY in Framework.
   return { workspace, repositoryCount: found.repositories.length, warnings: found.warnings, sourceFilesModified: false };
+}
+export function enableEnterpriseWorkspaceManaged(id: string) {
+  centralOnly();
+  if (!/^enterprise-[0-9a-f]{24}$/.test(id)) throw new Error('Invalid workspace ID');
+  const item = read().find(v => v.workspaceId === id);
+  if (!item) throw new Error('请先只读登记此项目');
+  const storage = enableManagedEnterpriseStorage(item.projectRoot);
+  try {
+    const legacy = migrateEnterpriseLegacyKnowledge(item.projectRoot);
+    return { ...storage, legacy };
+  } catch (error) {
+    return { ...storage, legacy: undefined, warnings: [...storage.warnings,
+      '旧知识资产尚未完成迁移：' + (error as Error).message] };
+  }
+}
+export function auditEnterpriseWorkspaceManaged(id: string) {
+  centralOnly();
+  const item = read().find(v => v.workspaceId === id);
+  if (!item) throw new Error('Unknown attached enterprise workspace');
+  return auditManagedEnterpriseStorage(item.projectRoot);
+}
+export function rollbackEnterpriseWorkspaceManaged(id: string, confirmation: string) {
+  centralOnly();
+  const item = read().find(v => v.workspaceId === id);
+  if (!item) throw new Error('Unknown attached enterprise workspace');
+  return rollbackManagedEnterpriseStorage(item.projectRoot, confirmation);
 }
 export function detachEnterpriseWorkspaceReadOnly(id: string): { detached: boolean; cachedAssetsPreserved: true } {
   centralOnly();
