@@ -56,6 +56,28 @@ export function enterpriseEntryForRoot(input: string): EnterpriseRegistryEntry |
   const root = canonicalEnterpriseRoot(input);
   return readEnterpriseRegistry().find(entry => entry.projectRoot === root);
 }
+/** Validate every pre-existing segment before reading or writing managed assets.
+ * This prevents a symlink inside the private root from redirecting V3 into a Git repository. */
+export function assertSafeEnterpriseManagedPath(rootInput: string, relative: string): string {
+  const root = canonicalEnterpriseRoot(rootInput);
+  if (!relative || path.isAbsolute(relative) || relative.includes('\\0')
+    || relative.includes('\\\\') || relative.split('/').some(part => !part || part === '.' || part === '..')) {
+    throw new Error('Invalid managed storage relative path');
+  }
+  const parts = [ROOT_DATA, ...relative.split('/')];
+  let current = root;
+  for (const part of parts) {
+    current = path.join(current, part);
+    if (fs.existsSync(current)) {
+      const stats = fs.lstatSync(current);
+      if (stats.isSymbolicLink()) throw new Error('Managed path symlink is forbidden: ' + part);
+      if (part !== parts[parts.length - 1] && !stats.isDirectory()) {
+        throw new Error('Managed path ancestor is not a directory: ' + part);
+      }
+    }
+  }
+  return current;
+}
 function checkManagedDirectory(root: string): string {
   const data = path.join(root, ROOT_DATA);
   if (fs.existsSync(data) && (!fs.lstatSync(data).isDirectory() || fs.lstatSync(data).isSymbolicLink())) {
