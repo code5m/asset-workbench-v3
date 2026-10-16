@@ -37,6 +37,8 @@ import { attachEnterpriseWorkspaceReadOnly, detachEnterpriseWorkspaceReadOnly, e
 import { enterpriseEntryForRoot } from './enterpriseStorage.ts';
 import { enterpriseProviderStatuses, setupEnterpriseUserProviderHooks } from './enterpriseProviderSetup.ts';
 import { listEnterpriseProviderSessions, readEnterpriseCaptureEvents } from './enterpriseProviderCapture.ts';
+import { importEnterpriseCodexHistory } from './enterpriseProviderHistory.ts';
+import { createEnterpriseKnowledgeNote, listEnterpriseKnowledgeNotes } from './enterpriseKnowledge.ts';
 import { buildEnterpriseJavaSymbolGraph } from './enterpriseSemanticJava.ts';
 import { buildEnterpriseDynamicSqlLineage } from './enterpriseSqlLineage.ts';
 import { proposeEnterpriseAiRefactor, validateEnterpriseAiRefactor } from './enterpriseAiRefactor.ts';
@@ -159,6 +161,43 @@ export function createHandler() {
         try {
           if (typeof body.workspaceId !== 'string') throw new Error('workspaceId required');
           sendJson(res, 200, enableEnterpriseWorkspaceManaged(body.workspaceId));
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/provider/history/import') {
+        const body = await readBody(req);
+        try {
+          if (body.provider !== 'codex' || typeof body.path !== 'string'
+            || typeof body.workspaceId !== 'string') throw new Error('仅支持有官方 cwd 证据的 Codex JSONL 导入');
+          const root = enterpriseApiRoot(body.workspaceId, getProjectRoot());
+          if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') throw new Error('需要先启用受管模式');
+          const result = importEnterpriseCodexHistory(body.path);
+          if (result.workspaceId !== body.workspaceId && result.imported > 0) throw new Error('历史会话归属与选中的工作区不一致');
+          sendJson(res, 200, result);
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'GET' && pathPart === '/enterprise/knowledge/notes') {
+        try {
+          const id = new URLSearchParams(query || '').get('workspaceId');
+          const root = enterpriseApiRoot(id, getProjectRoot());
+          if (enterpriseEntryForRoot(root)?.sourcePolicy !== 'managed') {
+            sendJson(res, 200, { notes: [], status: 'read-only' });
+          } else sendJson(res, 200, { notes: listEnterpriseKnowledgeNotes(root), status: 'managed' });
+        } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
+        return;
+      }
+      if (req.method === 'POST' && pathPart === '/enterprise/knowledge/notes') {
+        const body = await readBody(req);
+        try {
+          const root = enterpriseApiRoot(body.workspaceId, getProjectRoot());
+          const note = createEnterpriseKnowledgeNote(root, {
+            title: typeof body.title === 'string' ? body.title : '',
+            content: typeof body.content === 'string' ? body.content : '',
+            repository: typeof body.repository === 'string' ? body.repository : null,
+            module: typeof body.module === 'string' ? body.module : null,
+          });
+          sendJson(res, 201, note);
         } catch (error) { sendJson(res, 400, { error: (error as Error).message }); }
         return;
       }
