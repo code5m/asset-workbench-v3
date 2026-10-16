@@ -13,6 +13,10 @@ type Provider = {
 type Note = {
   id: string; title: string; content: string; repository: string | null; module: string | null;
   createdAt: string;
+}
+type LegacyAsset = {
+  id: string; relative: string; title: string; type: string; source: string;
+  contentFile: string; capturedAt?: string;
 };
 export function EnterpriseManagedProviderPanel(props: {
   workspaceId: string; sourcePolicy: 'read-only' | 'managed'; onManaged?: () => Promise<void>; onModeChanged?: () => Promise<void>;
@@ -21,6 +25,9 @@ export function EnterpriseManagedProviderPanel(props: {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [legacyAssets, setLegacyAssets] = useState<LegacyAsset[]>([]);
+  const [legacyContent, setLegacyContent] = useState('');
+  const [legacySelected, setLegacySelected] = useState('');
   const [repositories, setRepositories] = useState<string[]>([]);
   const [filter, setFilter] = useState('');
   const [sessionEvents, setSessionEvents] = useState<Array<{ kind: string; content: string; timestamp: string }>>([]);
@@ -35,18 +42,21 @@ export function EnterpriseManagedProviderPanel(props: {
   const [message, setMessage] = useState('');
   const load = async () => {
     if (sourcePolicy !== 'managed') return;
-    const [status, knowledge, inventory] = await Promise.all([
+    const [status, knowledge, inventory, historical] = await Promise.all([
       assetClient.enterpriseProviderStatus(workspaceId),
       assetClient.enterpriseGet<{ notes: Note[] }>('knowledge/notes', workspaceId),
       assetClient.enterpriseDiscovery(workspaceId),
+      assetClient.enterpriseGet<{ assets: LegacyAsset[] }>('knowledge/legacy', workspaceId),
     ]);
     setProviders(status.providers);
     setSessions(status.sessions);
     setNotes(knowledge.notes);
+    setLegacyAssets(historical.assets);
     setRepositories(inventory.repositories.map(repo => repo.path));
   };
   useEffect(() => {
-    setProviders([]); setSessions([]); setNotes([]); setSelectedId('');
+    setProviders([]); setSessions([]); setNotes([]); setLegacyAssets([]); setSelectedId('');
+    setLegacySelected(''); setLegacyContent('');
     setSessionEvents([]); setError(''); setMessage('');
     void load().catch(e => setError(e instanceof Error ? e.message : String(e)));
   }, [workspaceId, sourcePolicy]);
@@ -155,6 +165,24 @@ export function EnterpriseManagedProviderPanel(props: {
         <span>{note.module || '未指定模块'}</span>
         <small>{note.content.slice(0, 260)}</small>
       </div>)}</div>
+    <h3>历史聊天、设计与知识迁移</h3>
+    <p className="detail-summary">已迁移且 SHA-256 校验通过的旧版 V3 资产在这里查看。来源不明或校验不通过的记录留在原处，不强行归属。</p>
+    {legacyAssets.length === 0 ? <p className="detail-summary">暂时没有已确认并迁移的旧版资产。</p> : null}
+    <div className="repository-list">
+      {legacyAssets.slice(0, 100).map(asset => <div className="repository-row" key={asset.relative}>
+        <strong>{asset.title}</strong><span>{asset.source} · {asset.type}</span>
+        <button className="secondary-button" disabled={busy} onClick={() => void action(async () => {
+          const result = await assetClient.enterpriseGet<{ relative: string; content: string }>(
+            'knowledge/legacy/content?relative=' + encodeURIComponent(asset.relative), workspaceId);
+          setLegacySelected(result.relative);
+          setLegacyContent(result.content);
+        })}>查看旧资产内容</button>
+      </div>)}
+    </div>
+    {legacySelected ? <div className="workspace-card">
+      <h4>旧资产内容 · {legacySelected}</h4>
+      <pre className="detail-summary" style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{legacyContent.slice(0, 80000)}</pre>
+    </div> : null}
     <details className="instance-optional-settings">
       <summary>高级：旧资产迁移校验与回滚</summary>
       <p className="detail-summary">仅校验复制数据；源中央备份和现有聊天不会自动删除。受管期产生新聊天、知识或分析时，将阻止回滚以避免资产被隐藏。</p>
