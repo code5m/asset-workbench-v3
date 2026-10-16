@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { attachEnterpriseWorkspaceReadOnly, detachEnterpriseWorkspaceReadOnly } from '../server/enterpriseAttachment.ts';
+import { attachEnterpriseWorkspaceReadOnly, detachEnterpriseWorkspaceReadOnly, enableEnterpriseWorkspaceManaged,
+  auditEnterpriseWorkspaceManaged, rollbackEnterpriseWorkspaceManaged } from '../server/enterpriseAttachment.ts';
 import { centralEnterpriseStore, enterpriseEntryForRoot, enableManagedEnterpriseStorage } from '../server/enterpriseStorage.ts';
 import { enterpriseStoreFor, freezeEnterpriseWorkspace, listEnterpriseSnapshots } from '../server/enterpriseWorkspace.ts';
 import { appendEnterpriseProviderEvent, listEnterpriseProviderSessions,
@@ -40,6 +41,14 @@ try {
   git(a, 'add', '.');git(a,'commit','-qm','payment init');
   fs.writeFileSync(path.join(b, 'pom.xml'), '<project/>');
   git(b, 'add', '.');git(b, 'commit','-qm','operation init');
+  // Legacy V3 transcript under the project root is copied only with valid
+  // managed-asset metadata; the original is kept as a recovery source.
+  const oldTranscript = path.join(root, '04-conversations', 'transcripts', 'codex', 'history');
+  fs.mkdirSync(oldTranscript, { recursive: true });
+  fs.writeFileSync(path.join(oldTranscript, 'metadata.json'),
+    JSON.stringify({ schemaVersion: 1, id: 'transcript_1234567890abcd', type: 'conversation-transcript',
+      title: 'Old session', source: 'codex' }));
+  fs.writeFileSync(path.join(oldTranscript, 'transcript.md'), '# Previous work record\n');
   const paymentBefore = git(a, 'status', '--porcelain');
   const operationBefore = git(b, 'status', '--porcelain');
   const rootBefore = git(root,'status','--porcelain');
@@ -56,7 +65,11 @@ try {
   assert.equal(enterpriseEntryForRoot(root)?.sourcePolicy, 'read-only');
   assert.equal(fs.existsSync(path.join(root, '.asset-workbench-data')), false);
 
-  const migration = enableManagedEnterpriseStorage(root);
+  const migration = enableEnterpriseWorkspaceManaged(workspaceId);
+  assert.equal(migration.legacy?.copies, 1);
+  assert.equal(fs.existsSync(path.join(oldTranscript, 'transcript.md')), true);
+  assert.ok(fs.existsSync(path.join(root, '.asset-workbench-data', 'knowledge', 'legacy-managed',
+    '04-conversations', 'transcripts', 'codex', 'history', 'transcript.md')));
   assert.equal(migration.mode, 'managed');
   assert.equal(migration.sourcePreserved, true);
   assert.ok(migration.files >= 1);
@@ -67,6 +80,10 @@ try {
     'Legacy central evidence must survive migration');
   assert.deepEqual(listEnterpriseSnapshots(root).map(x => x.snapshotId), [snapshot.snapshotId]);
   assert.equal(enableManagedEnterpriseStorage(root).digest, migration.digest, 'Migration must be idempotent');
+  const auditBeforeCapture = auditEnterpriseWorkspaceManaged(workspaceId);
+  assert.equal(auditBeforeCapture.expectedFiles, auditBeforeCapture.verifiedFiles);
+  assert.equal(auditBeforeCapture.rollbackSafe, true);
+
   assert.ok(fs.readFileSync(path.join(root, '.git', 'info', 'exclude'), 'utf8')
     .includes('/.asset-workbench-data/'));
   assert.equal(git(root, 'check-ignore', '-q', '.asset-workbench-data') || '', '');
@@ -96,6 +113,10 @@ try {
     /disagree/);
   const ended = appendEnterpriseProviderEvent({ ...original, hookEventName:'SessionEnd', eventId:'cb:end', content:'' });
   assert.equal(ended.state.status, 'ended');
+  assert.equal(auditEnterpriseWorkspaceManaged(workspaceId).rollbackSafe, false);
+  assert.throws(() => rollbackEnterpriseWorkspaceManaged(workspaceId, 'ROLLBACK_MANAGED_ROUTING'),
+    /拒绝自动回滚/);
+
   const transcript = path.join(root, '.asset-workbench-data', ended.state.transcriptPath!);
   assert.ok(fs.readFileSync(transcript, 'utf8').includes('How does payment work?'));
   assert.ok(!fs.readFileSync(path.join(root,'.asset-workbench-data','capture','sessions',ended.state.id,'events.jsonl'),'utf8')
