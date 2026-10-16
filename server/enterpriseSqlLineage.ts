@@ -44,7 +44,6 @@ export function buildEnterpriseDynamicSqlLineage(root: string, snapshotId: strin
     const target = path.join(stage, ...relative.split('/'));
     try {
       const content = fs.readFileSync(path.join(store, 'raw', entry.sha256.slice(0, 2), entry.sha256));
-      if (sha(content.toString('binary')) === '') throw new Error('unexpected empty hash');
       if (createHash('sha256').update(content).digest('hex') !== entry.sha256) throw new Error('Invalid Raw content checksum');
       fs.mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 });
       if (!fs.existsSync(target)) fs.writeFileSync(target, content, { flag: 'wx', mode: 0o600 });
@@ -56,7 +55,9 @@ export function buildEnterpriseDynamicSqlLineage(root: string, snapshotId: strin
     analyzedFiles: 0, statements: [], errors: [], limitations: [], excludedFiles };
   if (!reverse.size) return { ...base, reason: '没有可解析的 XML/SQL Raw 文件。请先归档。' };
   const output = path.join(store, 'semantic', snapshotId, 'dynamic-sql.json');
-  const run = spawnSync('python3',
+  const venvPython = path.join(APP_ROOT, '.asset-workbench-data', 'toolchains', 'sql-python', 'bin', 'python3');
+  const python = fs.existsSync(venvPython) ? venvPython : 'python3';
+  const run = spawnSync(python,
     [path.join(APP_ROOT, 'tools', 'semantic', 'mybatis_lineage.py'), stage, output], {
     cwd: APP_ROOT, encoding: 'utf8', maxBuffer: 1024 * 1024, timeout: 150_000,
     env: { PATH: process.env.PATH || '', HOME: process.env.HOME || '', LANG: 'C.UTF-8', PYTHONNOUSERSITE: '0' },
