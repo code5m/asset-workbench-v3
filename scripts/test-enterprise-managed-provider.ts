@@ -335,7 +335,7 @@ try {
   assert.throws(() => appendEnterpriseProviderEvent({ ...original,
     providerSessionId: 'after-forced-tracking', eventId: 'after-tracking:1' }),
     /Git already tracks/);
-  git(root, 'reset', '-q', '--cached', '--', trackedPath);
+  git(root, 'reset', '-q', '--', trackedPath);
   assert.equal(git(root, 'status', '--porcelain'), rootBefore);
   assert.equal(git(a,'status','--porcelain'),paymentBefore);
   assert.equal(git(b,'status','--porcelain'),operationBefore);
