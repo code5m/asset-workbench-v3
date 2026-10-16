@@ -7,7 +7,7 @@ type SupportedHook = 'codex' | 'codebuddy' | 'trae';
 type Integration = SupportedHook | 'opencode' | 'chatgpt' | 'codearts' | 'workbuddy';
 export interface GlobalProviderStatus {
   provider: Integration; configuration: 'configured' | 'not-configured' | 'blocked' | 'import-only';
-  captureVerified: boolean; completedSessions: number; detail: string;
+  captureVerified: boolean; completedSessions: number; importedSessions: number; detail: string;
 }
 export interface ProviderSetupReport {
   provider: Integration; status: 'installed' | 'already-configured' | 'blocked' | 'import-only';
@@ -214,7 +214,10 @@ export function setupEnterpriseUserProviderHooks(confirmation: string): Provider
 export function enterpriseProviderStatuses(root: string): GlobalProviderStatus[] {
   const sessions = listEnterpriseProviderSessions(root);
   return (['codex','codebuddy','trae','opencode','chatgpt','codearts','workbuddy'] as Integration[]).map(provider => {
-    const verified = sessions.filter(s => s.provider === provider && s.status === 'ended' && s.transcriptPath);
+    const completed = sessions.filter(s => s.provider === provider && s.status === 'ended' && s.transcriptPath);
+    const native = completed.filter(s => s.endedBy === 'native-hook'
+      && s.captureSource === 'native-hook' && s.attribution === 'observed-process-cwd');
+    const imported = completed.filter(s => s.endedBy === 'official-import');
     const isInstalled = provider === 'opencode'
       ? (() => { try { return fs.existsSync(globalOpenCodePlugin())
         && fs.readFileSync(globalOpenCodePlugin(), 'utf8').includes(SIGNATURE); } catch { return false; } })()
@@ -223,12 +226,16 @@ export function enterpriseProviderStatuses(root: string): GlobalProviderStatus[]
       provider,
       configuration: ['chatgpt','codearts','workbuddy'].includes(provider)
         ? 'import-only' : isInstalled ? 'configured' : 'not-configured',
-      captureVerified: verified.length > 0,
-      completedSessions: verified.length,
-      detail: verified.length
-        ? '已找到真实保存并结束的会话；需进一步校验 Provider 官方事件来源'
-        : isInstalled ? '配置存在，但尚未观察到真实完成的 Provider 会话'
-          : '没有真实采集证据；需配置支持的用户级 Hook 或官方导入',
+      // A saved import must NEVER be presented as proof that live hooks run.
+      captureVerified: native.length > 0,
+      completedSessions: completed.length,
+      importedSessions: imported.length,
+      detail: native.length
+        ? '已保存 ' + native.length + ' 次本机 Hook 结束记录；仍需确认当前官方 Provider 版本的真实事件来源'
+        : imported.length
+          ? '已有 ' + imported.length + ' 份完成归档的官方历史导入；尚无实时 Hook 成功证据'
+          : isInstalled ? '用户级采集配置存在，但尚未观察到已完成的真实 Hook 会话'
+            : '没有采集完成证据；需配置支持的用户级 Hook 或官方导入',
     };
   });
 }
