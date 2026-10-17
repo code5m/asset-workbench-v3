@@ -122,3 +122,19 @@ npm run check
 - 本轮 E2E 验证了 Git 跟踪保护、伪造迁移回执拒绝、未知受管目录拒绝、OpenCode JSONL 多事件流和新用户级插件的 JavaScript 语法。
 
 本机 Provider 官方版本和真实 backV8 工作目录仍需授权机器在线后进行集成验收；模拟事件不会冒充真实供应商身份验证。
+
+## GitHub CI 增补：从实际工作目录执行 Provider 命令
+
+`npm run test:enterprise-provider-cli` 会在临时目录中建立模拟 backV8 根仓库、
+`phantom-payment/payment-service` 和 `phantom-operation` 两个独立 Git 仓库，
+并**通过实际子进程调用** `scripts/capture-enterprise-provider-event.ts`，
+而不只是单元测试 `appendEnterpriseProviderEvent`。
+
+该集成测试覆盖同一 Codex 会话跨两仓库活动、重复事件去重、伪造 cwd 与外部工作区的拒绝、
+SessionEnd 后 Markdown 存档、OpenCode 的 `--stream` JSONL 采集、
+Maven 最近模块归属和子仓库 Git 状态未修改。另验证受管目录中的
+**悬空符号链接**（路径存在但目标不存在）不会绕过 V3 存储边界。
+
+测试使用明确标记为 **synthetic CI fixture** 的模拟 Provider 事件；
+它证明本地 Hook CLI 与资产存储链路可执行，但**不代表各个官方 Provider 版本已在真实 backV8 上通过 E2E**。
+用户级 Hook 安装、认证和真实会话需要在有权限的机器上验证。
