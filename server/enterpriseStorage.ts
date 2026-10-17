@@ -68,8 +68,11 @@ export function assertSafeEnterpriseManagedPath(rootInput: string, relative: str
   let current = root;
   for (const [index, part] of parts.entries()) {
     current = path.join(current, part);
-    if (fs.existsSync(current)) {
-      const stats = fs.lstatSync(current);
+    // lstat with throwIfNoEntry distinguishes a missing path from a dangling
+    // symlink. existsSync follows links and would silently treat the latter
+    // as absent, bypassing our no-symlink managed-storage boundary.
+    const stats = fs.lstatSync(current, { throwIfNoEntry: false });
+    if (stats) {
       if (stats.isSymbolicLink()) throw new Error('Managed path symlink is forbidden: ' + part);
       if (index !== parts.length - 1 && !stats.isDirectory()) {
         throw new Error('Managed path ancestor is not a directory: ' + part);
@@ -114,11 +117,13 @@ function assertUntrackedManagedData(root: string): void {
 function checkManagedDirectory(root: string): string {
   assertUntrackedManagedData(root);
   const data = path.join(root, ROOT_DATA);
-  if (fs.existsSync(data) && (!fs.lstatSync(data).isDirectory() || fs.lstatSync(data).isSymbolicLink())) {
+  const dataKind = fs.lstatSync(data, { throwIfNoEntry: false });
+  if (dataKind && (!dataKind.isDirectory() || dataKind.isSymbolicLink())) {
     throw new Error('企业根目录已有非普通目录或符号链接 .asset-workbench-data，拒绝受管模式');
   }
   const target = path.join(data, 'enterprise');
-  if (fs.existsSync(target) && (!fs.lstatSync(target).isDirectory() || fs.lstatSync(target).isSymbolicLink())) {
+  const targetKind = fs.lstatSync(target, { throwIfNoEntry: false });
+  if (targetKind && (!targetKind.isDirectory() || targetKind.isSymbolicLink())) {
     throw new Error('企业工作台存储目录不是普通目录，拒绝写入');
   }
   return target;
@@ -128,8 +133,8 @@ const PROTECTED_STORES = ['raw', 'mirrors', 'snapshots', 'imports', 'derived',
 function ensureManagedAnalysisChildrenSafe(root: string, directory: string): void {
   for (const sub of PROTECTED_STORES) {
     const child = path.join(directory, sub);
-    if (!fs.existsSync(child)) continue;
-    const kind = fs.lstatSync(child);
+    const kind = fs.lstatSync(child, { throwIfNoEntry: false });
+    if (!kind) continue;
     if (kind.isSymbolicLink() || !kind.isDirectory()) {
       throw new Error('企业分析受管路径不是独立普通目录: ' + sub);
     }
@@ -154,7 +159,11 @@ export function enterpriseStorageFor(input: string): string {
   return centralEnterpriseStore(root);
 }
 function scanRegularFiles(dir: string): Array<{ relative: string; bytes: number; digest: string }> {
-  if (!fs.existsSync(dir)) return [];
+  const kind = fs.lstatSync(dir, { throwIfNoEntry: false });
+  if (!kind) return [];
+  if (!kind.isDirectory() || kind.isSymbolicLink()) {
+    throw new Error('Migration source/destination must be a real directory, not a symlink');
+  }
   const result: Array<{ relative: string; bytes: number; digest: string }> = [];
   const walk = (abs: string, rel: string) => {
     for (const item of fs.readdirSync(abs, { withFileTypes: true })) {
