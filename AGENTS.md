@@ -85,6 +85,75 @@ Implementation and acceptance rules:
   guidance may explain or focus content but must not silently remove real
   project components or replace them with a simplified fake tree.
 
+### Shared beginner UI intent: decisions and non-goals (mandatory)
+
+This subsection resolves ambiguities found during the product discussion. **UI is
+the primary learning medium**, not an optional technical appendix. Make a change
+only if a complete beginner can still see the actual project and understand it
+without being taught the internal architecture first.
+
+1. **一棵树，不是两棵树。** 项目知识资产（实际存在的 \`00-introduction\` ~ \`05-derived\`）
+   与 Workbench 程序源码（实际存在的 \`src\`、\`server\`、\`packages\` 等）
+   原本是同一项目根目录下的同级条目。首页和资产空间必须如实展示；
+   不创建 \`knowledge/\`、\`implementation/\` 等虚拟父目录，也不把目录移动进去。
+   Visual grouping is allowed only as decoration that cannot be mistaken for a
+   real path or parent/child relationship.
+2. **不额外编号。** \`00–05\` 已有的数字是资产规范名称，不是整个项目的学习步骤。
+   不得擅自改成 \`06-src\`、\`07-server\`；学习顺序由说明或引导表达，
+   不通过重命名目录表达。
+3. **分类说人话。** UI 使用“项目资料 / 工作台程序 / 工具与设置”
+   （英文：Project knowledge / Workbench software / Tools & settings）
+   来解释用途。不要直接把“实现”“底层基础设施”“Provider Adapter”
+   等术语扔给第一次接触编程的用户。第一层先说明“这里有什么、能做什么”，
+   第二层再教“前端 / 后端 / Provider / 模块”等专业名词。
+   Class labels are **annotations**, not extra asset categories or folders.
+4. **原名、图标、中文同屏。** 保留 \`src\`、\`server\` 等真实名称；
+   辅以克制的语义图标、至多三种概念色、一句通俗解释。
+   Ordinary nested folders keep standard folder styling. Accessibility must
+   not depend on color alone, and clickable directories need keyboard support.
+5. **明确解开两组最容易混淆的名称：**
+   - \`01-code\`: 代码来源、仓库版本、代码知识资产；\`src\`: Workbench 自己
+     真正运行的前端源码。**绝不是同一份代码的两个副本。**
+   - \`03-docs\`: 项目知识资产中的文档；\`docs\`: Workbench 自身的工程技术说明。
+   Their real paths stay separate; teaching must explicitly compare them.
+6. **首页可见、原位学习。** 默认首页在介绍之后直接显示扫描器返回的全部
+   允许浏览的真实顶层目录和文件；点击真实条目可定位资产空间中的原位置。
+   在资产空间点击一个真实目录，右侧就地回答“这是什么／为什么需要／
+   如何开始”，不强迫用户切到另一个页面才能获得基础解释。
+   Keep advanced framework-learning views available for deeper study.
+7. **存在性与能力要真实。** 静态说明不能生成目录节点。
+   推荐文件、架构图跳转和关联路径，在提供可点击链接之前必须查验真实路径；
+   不存在、无法确认、尚未生成应明确显示。不能把未来能力画成已完成。
+   Scanner/Watcher remains the filesystem discovery authority; deep folders
+   may lazy-load for performance.
+8. **显示边界要诚实。** \`.git\`、运行私有数据、生成目录等仍按统一忽略与
+   安全策略处理；页面要解释存在排除规则及原因，但**不得**泄露受保护内容、
+   穿透路径保护或暗示每个被忽略的目录必然存在。
+9. **Framework Self 与业务项目分清。** 只有 Framework Self 可以显示
+   Workbench 专属的 \`src = React 前端\` 等解释。业务实例必须显示其实际绑定
+   项目的真实目录，不得将同名的业务 \`src\` 错误解释成 Workbench React 源码。
+   当前仍为“一实例绑定一个业务系统”，不要默认引入多项目聚合。
+10. **保留现有产品价值。** 保留已有整体视觉语言、五种 Asset Categories
+    卡片、六目录 Expected Skeleton、框架学习和知识证据模型；
+    增强展示与理解即可，不做无根据的物理目录重构、大规模基础设施迁移，
+    不修改业务仓库，也不允许伪造扫描成功。
+
+**UI acceptance contract:**
+
+- Homepage renders real root entries fetched from \`assetClient.tree('')\`;
+  no static list is ever rendered as the filesystem tree, including under errors.
+- Framework Self renders the *actual* \`00–05\` paths and \`src/server/packages\`
+  at their real sibling level when present. Business mode never uses
+  framework-specific descriptions for unrelated \`src\` paths.
+- Path click opens the same path in Asset Space. An annotated "start here" or
+  comparison link is actionable only after real path existence is verified.
+- Directory explanation uses plain language before a technical label, and
+  the visual labels do not alter the five Asset Categories taxonomy.
+- Scan failures show an error rather than a fabricated success; ignored-path
+  policy, safe writes, Git provenance, and lazy directory loading still hold.
+- Add or update UI tests for the above; run typecheck/build and focused tests
+  before claiming completion.
+
 ## Version Model Rules
 
 - `WorkspaceVersion` is a frozen project-level version.
