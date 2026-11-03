@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen, RefreshCw, AlertTriangle, Plus } from 'lucide-react';
+import { Archive, Blocks, BookMarked, BookOpen, ChevronDown, ChevronRight, FileText, Files, Folder, FolderOpen, MessagesSquare, Network, PanelsTopLeft, PencilRuler, Plug, RefreshCw, AlertTriangle, Plus, Server, Settings, Terminal, Wrench, type LucideIcon } from 'lucide-react';
 import { assetClient } from '../services/assetClient';
 import type { FrameworkFocus } from '../domain/workspace';
 import type {
@@ -11,7 +11,9 @@ import type {
   RepositoryRevision,
 } from '../domain/asset';
 import { useI18n } from '../i18n/I18nProvider';
-import { ROOT_TREE_GROUP_ORDER, assetTreePurposeKey, nestedTreeEntryHelp, rootTreeGroupHintKey, rootTreeGroupKey, rootTreePresentation } from '../domain/rootTreePresentation';
+import { assetTreePurposeKey, nestedTreeEntryHelp, rootTreePresentation } from '../domain/rootTreePresentation';
+import { BEGINNER_ROLE_NAMES, beginnerRootRole, getBeginnerDirectoryGuide, type BeginnerDirectoryRole, type BeginnerDirectoryGuide } from '../data/beginnerDirectoryGuide';
+import { DirectoryLearningPanel } from './DirectoryLearningPanel';
 import { CreateAssetDialog, type CreateMode, type PromoteFrom } from './CreateAssetDialog';
 import { KnowledgeLifecycle } from './KnowledgeLifecycle';
 
@@ -29,8 +31,17 @@ function formatDate(iso: string): string {
 
 type LoadStatus = 'loading' | 'ready' | 'error';
 
+const BEGINNER_ROOT_ICONS: Record<string, LucideIcon> = {
+  '00-introduction': BookOpen, '01-code': Archive, '02-design': PencilRuler,
+  '03-docs': Files, '04-conversations': MessagesSquare, '05-derived': Network,
+  src: PanelsTopLeft, server: Server, packages: Blocks, providers: Plug,
+  public: Folder, docs: BookMarked, scripts: Terminal, tools: Wrench,
+  '.github': Settings, '.codex': Settings, '.codebuddy': Settings,
+  '.opencode': Settings, '.trae': Settings,
+};
+
 export function AssetExplorer({ deepLink, onOpenFramework }: { deepLink: { path: string; token: number } | null; onOpenFramework: (focus: FrameworkFocus) => void }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   const [rootChildren, setRootChildren] = useState<AssetNode[]>([]);
@@ -385,44 +396,35 @@ export function AssetExplorer({ deepLink, onOpenFramework }: { deepLink: { path:
             </div>
             <FolderOpen size={26} />
           </div>
-          <div className="asset-tree">
+          <p className="beginner-tree-equality">
+            {lang === 'zh-CN' ? '这里所有顶层条目都是同一级真实目录或文件；文字和图标只是说明，不是新建的父目录。' : 'All top-level entries are real siblings. Icons and labels do not create extra folders.'}
+          </p>
+          <div className="asset-tree real-root-list">
             {rootChildren.length === 0 && status === 'ready' ? (
               <p className="detail-summary">{t('emptyDirectory')}</p>
-            ) : (
-              ROOT_TREE_GROUP_ORDER.map((group) => {
-                const nodes = rootChildren.filter((node) => rootTreePresentation(node.name).group === group);
-                if (nodes.length === 0) return null;
-                return (
-                  <section className="root-tree-group" key={group}>
-                    <div className="root-tree-group-heading">
-                      <strong>{t(rootTreeGroupKey(group))}</strong>
-                      <span>{t(rootTreeGroupHintKey(group))}</span>
-                    </div>
-                    <div className="root-tree-group-items">
-                      {nodes.map((node) => {
-                        const presentation = rootTreePresentation(node.name);
-                        return (
-                          <TreeNode
-                            key={node.id}
-                            node={node}
-                            depth={0}
-                            expanded={expanded}
-                            childrenCache={childrenCache}
-                            selectedId={selected?.id ?? null}
-                            onToggle={toggleExpand}
-                            onSelect={selectNode}
-                            purposeKey={presentation.purposeKey}
-                            learnMoreFocus={presentation.learnMoreFocus}
-                            onLearnMore={onOpenFramework}
-                          />
-                        );
-                      })}
-                    </div>
-                  </section>
-                );
-              })
-            )}
+            ) : rootChildren.map((node) => {
+              const presentation = runtimeMode === 'framework-self' ? rootTreePresentation(node.name) : undefined;
+              return (
+                <TreeNode
+                  key={node.id}
+                  node={node}
+                  depth={0}
+                  mode={runtimeMode}
+                  expanded={expanded}
+                  childrenCache={childrenCache}
+                  selectedId={selected?.id ?? null}
+                  onToggle={toggleExpand}
+                  onSelect={selectNode}
+                  purposeKey={presentation?.purposeKey}
+                  learnMoreFocus={presentation?.learnMoreFocus}
+                  onLearnMore={onOpenFramework}
+                />
+              );
+            })}
           </div>
+          <p className="beginner-tree-equality">
+            {lang === 'zh-CN' ? '注：.git、运行数据及生成缓存等内容按安全和性能规则排除。这不表示这些目录一定不存在。' : 'Note: .git, runtime data, and caches are skipped by safety/performance policy; they may exist on disk.'}
+          </p>
         </article>
 
         <article className="panel asset-detail">
@@ -441,7 +443,10 @@ export function AssetExplorer({ deepLink, onOpenFramework }: { deepLink: { path:
               contentError={contentError}
               managedMeta={managedMeta}
               onPromote={(mode, from) => openCreate(mode, from)}
-              purposeKey={assetTreePurposeKey(selected.relativePath)}
+              purposeKey={runtimeMode === 'framework-self' ? assetTreePurposeKey(selected.relativePath) : undefined}
+              beginnerGuide={selected.kind === 'directory' ? getBeginnerDirectoryGuide(selected.relativePath, runtimeMode) : undefined}
+              rootPaths={rootChildren.map((node) => node.relativePath)}
+              onOpenPath={(path) => { void openPath(path); }}
             />
           ) : (
             <p className="detail-summary">{t('selectFileOrDirHint')}</p>
@@ -467,6 +472,7 @@ export function AssetExplorer({ deepLink, onOpenFramework }: { deepLink: { path:
 interface TreeNodeProps {
   node: AssetNode;
   depth: number;
+  mode: 'framework-self' | 'business-project';
   expanded: Set<string>;
   childrenCache: Record<string, AssetNode[]>;
   selectedId: string | null;
@@ -477,19 +483,23 @@ interface TreeNodeProps {
   onLearnMore?: (focus: FrameworkFocus) => void;
 }
 
-function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, onSelect, purposeKey, learnMoreFocus, onLearnMore }: TreeNodeProps) {
-  const { t } = useI18n();
+function TreeNode({ node, depth, mode, expanded, childrenCache, selectedId, onToggle, onSelect, purposeKey, learnMoreFocus, onLearnMore }: TreeNodeProps) {
+  const { t, loc } = useI18n();
   const isDir = node.kind === 'directory';
   const isOpen = expanded.has(node.relativePath);
   const kids = isOpen ? childrenCache[node.relativePath] : undefined;
-  const Icon = isDir ? (isOpen ? FolderOpen : Folder) : FileText;
-  const nestedHelp = depth > 0 ? nestedTreeEntryHelp(node.relativePath) : undefined;
+  const guide = depth === 0 && isDir ? getBeginnerDirectoryGuide(node.relativePath, mode) : undefined;
+  const role: BeginnerDirectoryRole | undefined = depth === 0 ? beginnerRootRole(node.relativePath, mode) : undefined;
+  const Icon = depth === 0 && mode === 'framework-self' && isDir
+    ? BEGINNER_ROOT_ICONS[node.name] ?? (isOpen ? FolderOpen : Folder)
+    : isDir ? (isOpen ? FolderOpen : Folder) : FileText;
+  const nestedHelp = mode === 'framework-self' && depth > 0 ? nestedTreeEntryHelp(node.relativePath) : undefined;
   const effectivePurposeKey = purposeKey ?? (nestedHelp?.showInTree ? nestedHelp.purposeKey : undefined);
   const effectiveLearnMoreFocus = learnMoreFocus ?? (nestedHelp?.showInTree ? nestedHelp.learnMoreFocus : undefined);
 
   return (
     <div className="tree-node" style={{ marginLeft: depth === 0 ? 0 : 16 }}>
-      <div className={`tree-row ${selectedId === node.id ? 'selected' : ''}`}>
+      <div className={`tree-row ${selectedId === node.id ? 'selected' : ''}`} data-root-role={role}>
         <button
           className="tree-toggle"
           aria-label={isOpen ? t('collapseDetail') : t('expandDetail')}
@@ -499,13 +509,14 @@ function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, 
           {isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
         </button>
         <button className="tree-label" onClick={() => onSelect(node)}>
-          <Icon size={17} />
+          <span className="beginner-tree-icon"><Icon size={17} /></span>
           <div>
             <strong>{node.name}</strong>
-            <small>{node.relativePath || '/'}</small>
-            {effectivePurposeKey ? <em className="tree-purpose">{t(effectivePurposeKey)}</em> : null}
+            <small>{guide ? loc(guide.summary) : (node.relativePath || '/')}</small>
+            {effectivePurposeKey && !guide ? <em className="tree-purpose">{t(effectivePurposeKey)}</em> : null}
           </div>
         </button>
+        {role ? <small className="beginner-tree-role">{loc(BEGINNER_ROLE_NAMES[role])}</small> : null}
         {effectiveLearnMoreFocus && onLearnMore ? (
           <button
             className="tree-learn-more"
@@ -525,6 +536,7 @@ function TreeNode({ node, depth, expanded, childrenCache, selectedId, onToggle, 
                 key={child.id}
                 node={child}
                 depth={depth + 1}
+                mode={mode}
                 expanded={expanded}
                 childrenCache={childrenCache}
                 selectedId={selectedId}
@@ -550,16 +562,20 @@ interface DetailPanelProps {
   managedMeta: ManagedAssetMetadata | null;
   onPromote: (mode: CreateMode, from: PromoteFrom) => void;
   purposeKey?: string;
+  beginnerGuide?: BeginnerDirectoryGuide;
+  rootPaths: string[];
+  onOpenPath: (path: string) => void;
 }
 
-function DetailPanel({ node, content, contentLoading, contentError, managedMeta, onPromote, purposeKey }: DetailPanelProps) {
+function DetailPanel({ node, content, contentLoading, contentError, managedMeta, onPromote, purposeKey, beginnerGuide, rootPaths, onOpenPath }: DetailPanelProps) {
   const { t } = useI18n();
   const kindLabel = useMemo(() => t(`type_${node.assetType ?? 'other'}`), [t, node.assetType]);
   const showManaged = !!managedMeta && node.kind === 'file';
 
   return (
     <div className="detail-body">
-      {purposeKey ? (
+      {beginnerGuide ? <DirectoryLearningPanel node={node} guide={beginnerGuide} rootPaths={rootPaths} onOpenPath={onOpenPath} /> : null}
+      {purposeKey && !beginnerGuide ? (
         <div className="asset-purpose-note">
           <span>{t('assetPurpose')}</span>
           <strong>{t(purposeKey)}</strong>

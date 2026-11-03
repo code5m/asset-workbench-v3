@@ -7,6 +7,7 @@ import type { ExpectedSkeletonEntry } from '../domain/asset';
 import type { ProviderStatusView } from '../services/assetClient';
 import { useI18n } from '../i18n/I18nProvider';
 import { KnowledgeLifecycle } from './KnowledgeLifecycle';
+import { RealDirectoryOverview } from './RealDirectoryOverview';
 
 interface WelcomePageProps {
   onNavigate: (section: AppSection) => void;
@@ -120,6 +121,9 @@ export function WelcomePage({ onNavigate, onOpenAsset }: WelcomePageProps) {
           <p>{t('whyNotCopyBody')}</p>
         </div>
       </section>
+
+      {/* Real, flat root overview: data comes from Local Asset Runtime, not static teaching paths. */}
+      <RealDirectoryOverview onOpenAsset={onOpenAsset} />
 
       {/* Layer 2 — Workflow: process overview, intentionally lightweight. */}
       <section className="flow-strip">
