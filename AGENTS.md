@@ -46,6 +46,45 @@ chat.
 - Every file should fit a unified asset detail model: path, type, source,
   version, summary, related assets, and derived outputs.
 
+## Beginner-First Real Directory Learning (mandatory)
+
+**Product principle: 所见即是全部，所点即是真实，所学皆有依据。**
+The actual project directory tree is the beginner's first learning map, not
+implementation clutter to be hidden behind a separate, invented navigation
+structure. Preserve all five rules below in product, architecture, and UI work:
+
+1. **真实目录是第一事实。** 页面展示必须来自实际文件系统，不能用虚拟目录伪装真实目录，也不能因为设计分类而随意改变实际路径。
+2. **所有有意义的顶层目录默认可见。** 不要求用户先理解菜单、切换模式或打开多个页面，才能知道项目有哪些组成部分。技术性排除目录也应该说明原因。
+3. **解释附着在目录上，而不是替代目录。** 保留 `src`、`server`、`00-introduction` 等原名，同时给出中文含义、用途和学习建议。
+4. **任何知识都可以追溯到实际位置。** 点击架构图中的模块，应能定位源码；点击一个设计决策，应能找到关联文档和代码版本。
+5. **循序渐进地理解，不隐藏项目复杂度。** 新手可以先阅读介绍和简单功能，进阶后继续学习架构，但看到的始终是同一个真实项目。
+
+Implementation and acceptance rules:
+
+- In **Framework self mode**, show both the `00-introduction` … `05-derived`
+  knowledge-asset directories **and** implementation directories such as
+  `src/`, `server/`, `packages/`, `providers/`, `scripts/`, and `docs/`
+  when they actually exist. Explain their differing responsibilities without
+  splitting, renaming, moving, duplicating, or hiding the real directory tree.
+  In **Business project mode**, show the real bound project's tree; do not
+  misrepresent the framework repository as the business project.
+- Derive the visible tree from the Local Asset Runtime's actual filesystem
+  scan. Show eligible top-level entries by default; deeper levels may load
+  lazily for performance. The Expected Skeleton is an explicitly labeled
+  comparison, **not** a fabricated filesystem tree. Preserve the separate
+  five-category Asset Categories rule above.
+- Explanations, learning depth, related assets, and diagrams are annotations
+  attached to real paths, not replacements for those paths. Make source links
+  navigable to real files; preserve repository/ref or commit and source
+  evidence for versioned relations. Mark unresolved, missing, or planned links
+  explicitly rather than inventing targets.
+- If technical, ignored, sensitive, or unsafe directories are excluded by
+  policy, explain the exclusion reason in the UI without exposing protected
+  contents or weakening existing ignore, path-guard, or write-boundary rules.
+- Teach progressively **within the same truthful project structure**. Beginner
+  guidance may explain or focus content but must not silently remove real
+  project components or replace them with a simplified fake tree.
+
 ## Version Model Rules
 
 - `WorkspaceVersion` is a frozen project-level version.
